@@ -643,6 +643,6 @@ if __name__ == "__main__":
             }
         }
     }
-
-    print(reaction_selector(monomer_dictionary))
+    import json
+    print(json.dumps(reaction_selector(monomer_dictionary), indent=4))
 
