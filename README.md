@@ -8,6 +8,6 @@ A Python-based toolkit for managing and automating reaction modeling in LAMMPS, 
 Clone the repository and install in editable mode:
 
 ```bash
-git clone [https://github.com/YourUsername/reaction_lammps_mupt.git](https://github.com/YourUsername/reaction_lammps_mupt.git)
+git clone https://github.com/janitha1996/reaction_lammps_mupt
 cd reaction_lammps_mupt
 pip install -e .
