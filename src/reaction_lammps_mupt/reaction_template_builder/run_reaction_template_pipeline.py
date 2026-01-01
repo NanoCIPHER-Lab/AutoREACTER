@@ -5,73 +5,9 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit.Chem import rdChemReactions
 from rdkit.Chem import Draw
-
 path = pathlib.Path(__file__).parent.resolve()
+from reaction_template_pipeline.map_reactant_atoms import map_reactant_atoms
 
-
-def map_reactant_atoms(reactant1, reactant2, rxn, delete_atom):
-    for atom in reactant1.GetAtoms():
-        atom.SetAtomMapNum(atom.GetIdx() + 1001)
-    for atom in reactant2.GetAtoms():
-        atom.SetAtomMapNum(atom.GetIdx() + 2001)
-    def smart_mapping(reactant, smarts_template, match_tuple):
-        if not match_tuple:
-            return
-        print(match_tuple)
-
-        SMARTS_index_to_Map_Number = {}
-        for smarts_atom in smarts_template.GetAtoms():
-            map_num = smarts_atom.GetAtomMapNum()
-            if map_num != 0:
-                SMARTS_index_to_Map_Number[smarts_atom.GetIdx()] = map_num
-
-        for smarts_pos, map_num in SMARTS_index_to_Map_Number.items():
-            if smarts_pos < len(match_tuple):
-                atom_index_in_mol = match_tuple[smarts_pos]
-                atom = reactant.GetAtomWithIdx(atom_index_in_mol)
-                atom.SetAtomMapNum(map_num)
-
-    mapping_dict = {
-        "reactant1": {
-            "reactant": reactant1,
-            "smarts_template": rxn.GetReactants()[0],
-            "match": reactant1.GetSubstructMatch(rxn.GetReactants()[0])
-        },
-        "reactant2": {
-            "reactant": reactant2,
-            "smarts_template": rxn.GetReactants()[1],
-            "match": reactant2.GetSubstructMatch(rxn.GetReactants()[1])
-        }
-    }
-    smart_mapping(
-        mapping_dict["reactant1"]["reactant"], 
-        mapping_dict["reactant1"]["smarts_template"], 
-        mapping_dict["reactant1"]["match"])
-
-    smart_mapping(
-        mapping_dict["reactant2"]["reactant"], 
-        mapping_dict["reactant2"]["smarts_template"], 
-        mapping_dict["reactant2"]["match"])
-    reactants_tuple = (reactant1, reactant2)
-    def reveal_template_map_numbers(mol : Chem.Mol) -> None:
-        '''Make map numbers assigned to products of reaction visible for display'''
-        for atom in mol.GetAtoms():
-            if atom.HasProp('old_mapno'): # RDKit sets certain "magic" properties post-reaction, including map numbers and reactant atom indices
-                map_num = atom.GetIntProp('old_mapno')
-                atom.SetAtomMapNum(map_num)
-
-    for products in rxn.RunReactants(reactants_tuple):
-        for product in products:
-            reveal_template_map_numbers(product)
-    if delete_atom:
-        byproduct_map_numbers = []
-        byproduct = products[1]
-        for atom in byproduct.GetAtoms():
-            num_byproduct_atoms = byproduct.GetNumAtoms()
-            byproduct_map_numbers.append(atom.GetAtomMapNum())
-    combined_reactants = Chem.CombineMols(reactant1, reactant2)
-    combined_products = Chem.CombineMols(*products)
-    return combined_reactants, combined_products, byproduct_map_numbers 
 
 def reaction_selector(selected_reactions_dict):
     """Still there is no method to verify the all possible reactions 
