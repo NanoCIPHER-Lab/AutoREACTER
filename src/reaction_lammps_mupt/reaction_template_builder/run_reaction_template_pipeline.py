@@ -1,4 +1,28 @@
+import rdkit
+from rdkit import Chem
+from rdkit.Chem import AllChem
+from rdkit.Chem import rdChemReactions
 
+def reaction_selector(selected_reactions_dict):
+    for key, reaction in selected_reactions_dict.items():
+        print(f"Processing Reaction ID: {key}")
+        print(f"Reaction Name: {reaction['reaction_name']}")
+        print(f"Same Reactants: {reaction['same_reactants']}")
+        print(f"Reactant 1: {reaction['reactant_1']}")
+        if not reaction['same_reactants']:
+            print(f"Reactant 2: {reaction['reactant_2']}")
+        print(f"Product: {reaction['product']}")
+        print(f"Delete Atom: {reaction['delete_atom']}")
+        print(f"Reaction SMARTS: {reaction['reaction']}")
+        print("Monomer 1 Details:")
+        for monomer_key, monomer_value in reaction['monomer_1'].items():
+            print(f"  {monomer_key}: {monomer_value}")
+        if not reaction['same_reactants']:
+            print("Monomer 2 Details:")
+            for monomer_key, monomer_value in reaction['monomer_2'].items():
+                print(f"  {monomer_key}: {monomer_value}")
+        print("-" * 40)        
+        break  # Remove this break to process all reactions
 
 if __name__ == "__main__":
      # Example monomer dictionary
@@ -88,4 +112,4 @@ if __name__ == "__main__":
             }
         }
     }
-
+    reaction_selector(selected_reactions_dict)
