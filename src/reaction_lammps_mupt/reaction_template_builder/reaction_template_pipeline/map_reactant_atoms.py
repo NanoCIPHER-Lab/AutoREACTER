@@ -63,7 +63,6 @@ def map_reactant_atoms(reactant1, reactant2, rxn, delete_atom=False):
         atom.SetAtomMapNum(atom.GetIdx() + 1001)
     for atom in reactant2.GetAtoms():
         atom.SetAtomMapNum(atom.GetIdx() + 2001)
-        print(atom.GetIdx())  # Debug: print atom indices
 
     def smart_mapping(reactant, smarts_template, match_tuple):
         """
