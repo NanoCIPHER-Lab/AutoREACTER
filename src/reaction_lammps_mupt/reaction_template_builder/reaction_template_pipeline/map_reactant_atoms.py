@@ -160,6 +160,34 @@ def map_reactant_atoms(reactant1, reactant2, rxn, delete_atom=False):
     combined_products = Chem.CombineMols(*products)
     return combined_reactants, combined_products, byproduct_map_numbers
 
+def map_product_atoms(combined_reactants, combined_products, byproduct_map_numbers, delete_atom):
+    MAP_dict = {"reactant": "product"}
+    cont_1 = 0
+    cont_2 = 0
+    initiator_atom = []
+    byproduct_atom = []
+    for r_atom in combined_reactants.GetAtoms():
+        cont_1 += 1
+        for p_atom in combined_products.GetAtoms():
+            if r_atom.GetAtomMapNum() == 1 or r_atom.GetAtomMapNum() == 2:
+                if r_atom.GetIdx() not in initiator_atom:
+                    initiator_atom.append(r_atom.GetIdx())
+            if delete_atom and r_atom.GetAtomMapNum() in byproduct_map_numbers and r_atom.GetAtomMapNum() != 0:
+                if r_atom.GetIdx() not in byproduct_atom:
+                    byproduct_atom.append(r_atom.GetIdx())
+            if r_atom.GetAtomMapNum() == p_atom.GetAtomMapNum() and r_atom.GetIdx() not in MAP_dict and p_atom.GetIdx() not in MAP_dict.values():
+                print(f"Reactant atom {r_atom.GetIdx()} is mapped to product atom {p_atom.GetIdx()}")
+                MAP_dict[r_atom.GetIdx()] = p_atom.GetIdx()
+                r_atom.SetAtomMapNum(0)
+                p_atom.SetAtomMapNum(0)
+                cont_2 += 1
+
+    for molecule in [combined_reactants, combined_products]:
+        for atom in molecule.GetAtoms():
+            if atom.GetAtomMapNum() != 0:
+                raise ValueError(f"Unmapped atom found in the reaction SMIRKS Contact Developers: {atom.GetAtomMapNum()}")
+    return MAP_dict, initiator_atom, byproduct_atom
+
 
 if __name__ == "__main__":
     # Example usage: Esterification- reaction 
@@ -186,3 +214,10 @@ if __name__ == "__main__":
     print("Combined Reactants SMILES:", Chem.MolToSmiles(combined_reactants))
     print("Combined Products SMILES:", Chem.MolToSmiles(combined_products))
     print("Byproduct Map Numbers:", byproduct_map_numbers)
+
+    MAP_dict, initiator_atom, byproduct_atom = map_product_atoms(
+        combined_reactants, combined_products, byproduct_map_numbers, delete_atom
+    )
+    print("Atom Mapping Dictionary:", MAP_dict)
+    print("Initiator Atoms:", initiator_atom)
+    print("Byproduct Atoms:", byproduct_atom)

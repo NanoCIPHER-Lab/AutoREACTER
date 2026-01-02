@@ -6,7 +6,7 @@ from rdkit.Chem import AllChem
 from rdkit.Chem import rdChemReactions
 from rdkit.Chem import Draw
 path = pathlib.Path(__file__).parent.resolve()
-from reaction_template_pipeline.map_reactant_atoms import map_reactant_atoms
+from reaction_template_pipeline.map_reactant_atoms import map_reactant_atoms, map_product_atoms
 
 
 def reaction_selector(selected_reactions_dict):
@@ -52,6 +52,10 @@ def reaction_selector(selected_reactions_dict):
         reactant1 = Chem.AddHs(reactant1)
         reactant2 = Chem.AddHs(reactant2)
         combined_reactants, combined_products, byproduct_map_numbers = map_reactant_atoms(reactant1, reactant2, rxn , delete_atom)
+        MAP_dict, initiator_atom, byproduct_atom = map_product_atoms(
+            combined_reactants, combined_products, byproduct_map_numbers, delete_atom
+        )
+        print("Initiator Atoms:", initiator_atom)
         ## for debugging purpose, save the image
         Draw.MolsToGridImage([combined_reactants, combined_products], molsPerRow=2, subImgSize=(1800, 1800)).save(path / f"reaction_{key}.png")
         print("Delete Atom Map Numbers:", byproduct_map_numbers)
@@ -59,9 +63,14 @@ def reaction_selector(selected_reactions_dict):
         if not same_reactants:
             print("Processing second reaction case:")
             combined_reactants, combined_products, byproduct_map_numbers = map_reactant_atoms(reactant2, reactant1, rxn, delete_atom)
+            MAP_dict, initiator_atom, byproduct_atom = map_product_atoms(
+                combined_reactants, combined_products, byproduct_map_numbers, delete_atom
+            )
+            
             ## for debugging purpose, save the image
             Draw.MolsToGridImage([combined_reactants, combined_products], molsPerRow=2, subImgSize=(1800, 1800)).save(path / f"reaction_{key}_same_reaction.png")
             print("Delete Atom Map Numbers (swapped reactants):", byproduct_map_numbers)
+            print("Initiator Atoms:", initiator_atom)
         
         print("=" * 80)     
         break  # Remove this break to process all reactions
