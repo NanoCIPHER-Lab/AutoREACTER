@@ -7,6 +7,7 @@ from rdkit.Chem import rdChemReactions
 from rdkit.Chem import Draw
 path = pathlib.Path(__file__).parent.resolve()
 from reaction_template_pipeline.map_reactant_atoms import map_reactant_atoms, map_product_atoms
+from reaction_template_pipeline.walker import reaction_atom_walker
 
 # TODO: Transfer and store each detail in a Dictionary for better readability and access
 def reaction_selector(selected_reactions_dict):
@@ -58,6 +59,8 @@ def reaction_selector(selected_reactions_dict):
         )
         print("Initiator Atoms:", initiator_atom)
         ## for debugging purpose, save the image
+        template_mapped_dict, edge_atoms = reaction_atom_walker(combined_reactants, initiator_atom, MAP_dict, max_bonds=4)
+        print("Template Mapped Dict:", template_mapped_dict)
         Draw.MolsToGridImage([combined_reactants_with_map_nums, combined_products_with_map_nums], molsPerRow=2, subImgSize=(1800, 1800)).save(path / f"reaction_{key}.png")
         print("Delete Atom Map Numbers:", byproduct_map_numbers)
 
@@ -73,6 +76,8 @@ def reaction_selector(selected_reactions_dict):
             Draw.MolsToGridImage([combined_reactants_with_map_nums, combined_products_with_map_nums], molsPerRow=2, subImgSize=(1800, 1800)).save(path / f"reaction_{key}_same_reaction.png")
             print("Delete Atom Map Numbers (swapped reactants):", byproduct_map_numbers)
             print("Initiator Atoms:", initiator_atom)
+            template_mapped_dict, edge_atoms = reaction_atom_walker(combined_reactants, initiator_atom, MAP_dict, max_bonds=4)
+            print("Template Mapped Dict (swapped reactants):", template_mapped_dict)
         
         print("=" * 80)     
         break  # Remove this break to process all reactions
