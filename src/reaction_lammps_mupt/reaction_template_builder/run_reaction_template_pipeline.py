@@ -8,7 +8,7 @@ from rdkit.Chem import Draw
 path = pathlib.Path(__file__).parent.resolve()
 from reaction_template_pipeline.map_reactant_atoms import map_reactant_atoms, map_product_atoms
 
-
+# TODO: Transfer and store each detail in a Dictionary for better readability and access
 def reaction_selector(selected_reactions_dict):
     """Still there is no method to verify the all possible reactions 
     can be implemented correctly. So, for now, we will just process with one or two reactions.
