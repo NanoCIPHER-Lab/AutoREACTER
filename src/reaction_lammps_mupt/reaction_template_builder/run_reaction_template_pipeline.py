@@ -52,23 +52,25 @@ def reaction_selector(selected_reactions_dict):
         reactant1 = Chem.AddHs(reactant1)
         reactant2 = Chem.AddHs(reactant2)
         combined_reactants, combined_products, byproduct_map_numbers = map_reactant_atoms(reactant1, reactant2, rxn , delete_atom)
+        combined_reactants_with_map_nums, combined_products_with_map_nums = combined_reactants, combined_products # Keep copies with map numbers for debugging
         MAP_dict, initiator_atom, byproduct_atom = map_product_atoms(
             combined_reactants, combined_products, byproduct_map_numbers, delete_atom
         )
         print("Initiator Atoms:", initiator_atom)
         ## for debugging purpose, save the image
-        Draw.MolsToGridImage([combined_reactants, combined_products], molsPerRow=2, subImgSize=(1800, 1800)).save(path / f"reaction_{key}.png")
+        Draw.MolsToGridImage([combined_reactants_with_map_nums, combined_products_with_map_nums], molsPerRow=2, subImgSize=(1800, 1800)).save(path / f"reaction_{key}.png")
         print("Delete Atom Map Numbers:", byproduct_map_numbers)
 
         if not same_reactants:
             print("Processing second reaction case:")
             combined_reactants, combined_products, byproduct_map_numbers = map_reactant_atoms(reactant2, reactant1, rxn, delete_atom)
+            combined_reactants_with_map_nums, combined_products_with_map_nums = combined_reactants, combined_products # Keep copies with map numbers for debugging
             MAP_dict, initiator_atom, byproduct_atom = map_product_atoms(
                 combined_reactants, combined_products, byproduct_map_numbers, delete_atom
             )
             
             ## for debugging purpose, save the image
-            Draw.MolsToGridImage([combined_reactants, combined_products], molsPerRow=2, subImgSize=(1800, 1800)).save(path / f"reaction_{key}_same_reaction.png")
+            Draw.MolsToGridImage([combined_reactants_with_map_nums, combined_products_with_map_nums], molsPerRow=2, subImgSize=(1800, 1800)).save(path / f"reaction_{key}_same_reaction.png")
             print("Delete Atom Map Numbers (swapped reactants):", byproduct_map_numbers)
             print("Initiator Atoms:", initiator_atom)
         
