@@ -15,7 +15,6 @@ Notes / TODO:
 
 import os
 from typing import Dict, Tuple
-
 import numpy as np
 from rdkit import Chem
 from rdkit.Chem import AllChem
@@ -185,11 +184,11 @@ if __name__ == "__main__":
     # Use the local `cache` variable (TODO: replace with config/cache module)
     cache = r"C:\Users\Janitha\Documents\GitHub\reaction_lammps_mupt\cache\lunar"
 
-    # Example SMILES for two reactants (phenol-like and a carboxylic alcohol)
+    # Example SMILES for two reactants 
     reactant_smiles1 = "C1=CC=C(C(=C1)C(=O)O)O"
     reactant_smiles2 = "OCCC(O)=O"
 
-    # SMARTS describing an acid-catalyzed or esterification-like mapping (example)
+    # SMARTS describing esterification example
     reaction_smarts = (
         "[O;!$(OC=*):1]-[H:3].[CX3:2](=[O:5])[OX2H1:4]>>[OX2:1]-[CX3:2](=[O:5]).[O:4]-[H:3]"
     )
@@ -202,9 +201,6 @@ if __name__ == "__main__":
 
     # Create an RDKit reaction from SMARTS
     rxn = AllChem.ReactionFromSmarts(reaction_smarts)
-
-    # This example expects a small byproduct (e.g., water) that might be removed later.
-    delete_atom = True  # (unused in this snippet, but kept for compatibility)
 
     # Combine reactants into a single RDKit Mol for visualization/complex handling
     combined_reactants = Chem.CombineMols(reactant1, reactant2)

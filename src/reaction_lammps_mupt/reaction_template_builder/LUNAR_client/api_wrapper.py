@@ -1,4 +1,6 @@
-"""Main API wrapper for interacting with LUNAR."""
+"""Main API wrapper for interacting with LUNAR.
+Provides functions to run LUNAR atom typing, all2lmp conversion, and bond_react_merge utilities.
+This module can handle arbitrary molecule files and manage temporary cache directories."""
 import subprocess
 import os, sys
 import subprocess
@@ -8,11 +10,12 @@ import datetime
 import time
 from rdkit import Chem
 from rdkit.Chem import AllChem
+import re
 
 test_cache = r"C:\Users\Janitha\Documents\GitHub\reaction_lammps_mupt\cache\lunar"
-test_cache_atom_typing = r"C:\Users\Janitha\Documents\GitHub\reaction_lammps_mupt\cache\lunar\atom_typing"
-test_cache_all2lmp = r"C:\Users\Janitha\Documents\GitHub\reaction_lammps_mupt\cache\lunar\all2lmp"
-test_cache_bond_react_merge = r"C:\Users\Janitha\Documents\GitHub\reaction_lammps_mupt\cache\lunar\bond_react_merge"
+test_cache_atom_typing = f"{test_cache}\\atom_typing"
+test_cache_all2lmp = f"{test_cache}\\all2lmp"
+test_cache_bond_react_merge = f"{test_cache}\\bond_react_merge"
 
 try:
     os.makedirs(test_cache)
@@ -39,6 +42,19 @@ def run_LUNAR_all2lmp(input_file: str, output_file: str):
     command = [LUNAR_LOCATION, '-i', input_file, '-o', output_file, '--all2lmp']
     subprocess.run(command, check=True)
 
+def get_ending_integer(s):
+    """
+    Extracts and converts the trailing integer from a string.
+    Returns the integer if found, otherwise None.
+    """
+    # The pattern r'\d+$' matches one or more digits (\d+) at the end of the string ($)
+    match = re.search(r'\d+$', s)
+    if match:
+        # Get the matched substring and convert it to an integer
+        return int(match.group())
+    else:
+        return None
+    
 if __name__ == "__main__":
     from pathlib import Path
 
@@ -51,7 +67,57 @@ if __name__ == "__main__":
 
     atom_typing_py = os.path.join(LUNAR_LOCATION, "atom_typing.py")
     all2lmp_py = os.path.join(LUNAR_LOCATION, "all2lmp.py")
+
     bond_react_merge_py = os.path.join(LUNAR_LOCATION, "bond_react_merge.py")
+    molecule_files_typed: dict[str, Path] = {}
     for name, file in molecule_files.items():
         print(f"Processing {name} from {file}")
+        "python3   atom_typing.py    -topo   test1.mol   -dir   testing_directory    -ff   PCFF-IFF   -del-method   mass   -del-crit   0 "
         subprocess.run([sys.executable, atom_typing_py, '-topo', str(file),  '-dir', test_cache_atom_typing, "-ff", "PCFF-IFF", "-del-method", "mass", "-del-crit", "0"])
+        molecule_files_typed[name] = [Path(test_cache_atom_typing) / f"{file.stem}_typed.data", Path(test_cache_atom_typing) / f"{file.stem}_typed.nta"]
+
+    # sometime LUNAR can't identify the .frc file location automatically so we give the full path
+    frc_file = os.path.join(LUNAR_LOCATION, "frc_files", "pcff.frc")
+    molecule_files_all2lmp: dict[str, Path] = {}
+    for name, (data_file, nta_file) in molecule_files_typed.items():
+        print(f"Converting {name} typed files to LAMMPS format")
+        "python3   all2lmp.py    -topo   test1.data   -nta  test1.nta   -class  2  -frc  pcff.frc   -dir  testing_directory "
+        subprocess.run([sys.executable, all2lmp_py, '-topo', str(data_file), '-nta', str(nta_file), '-frc', frc_file, '-dir', test_cache_all2lmp])
+        molecule_files_all2lmp[name] = f"{data_file.stem}_IFF.data"
+
+    # Example of bond_react_merge usage
+    sub_run_bond_react_merge = []
+    merge_files:str = f"""# anything following the “#” character will be ignored 
+ 
+# Specify a desired path to append to the front of each filename (optional however if not present 
+# and the files are a path from LUNAR on your computer each file below must have that path 
+# specified in front of the filename) 
+
+path = f"{test_cache_all2lmp}" 
+
+{"# file-tag":<15}{"filename":<40}{"comment (required)"}  
+"""
+    for name, lammps_file in molecule_files_all2lmp.items():
+        if name.startswith("data"):
+            comment = "# This datafile will have all coeffs in it"
+        else:
+            rxn_number = get_ending_integer(name)
+            comment = f"# for rxn{rxn_number}" 
+        merge_files += f"{name:<15}{lammps_file:<40}{comment} file\n"
+    merge_files +=f""" 
+# Specify the parent_directory of where to write results (optional) 
+{test_cache_bond_react_merge}
+"""
+    try:
+        os.makedirs(test_cache_bond_react_merge, exist_ok=True)
+    except FileExistsError:
+        pass
+    with open(os.path.join(test_cache_bond_react_merge, "merge_input.txt"), "w") as f:
+        f.write(merge_files)
+
+        
+
+
+
+    
+    
