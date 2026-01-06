@@ -161,12 +161,12 @@ def map_reactant_atoms(reactant1, reactant2, rxn, delete_atom=False):
 
 def map_product_atoms(combined_reactants, combined_products, byproduct_map_numbers, delete_atom):
     MAP_dict = {}
-    atom_count_reactnts = 0
+    atom_count_reactants = 0
     atom_count_products = 0
     initiator_atom = []
     byproduct_atom = []
     for r_atom in combined_reactants.GetAtoms():
-        atom_count_reactnts += 1
+        atom_count_reactants += 1
         for p_atom in combined_products.GetAtoms():
             if r_atom.GetAtomMapNum() == 1 or r_atom.GetAtomMapNum() == 2:
                 if r_atom.GetIdx() not in initiator_atom:
@@ -180,7 +180,7 @@ def map_product_atoms(combined_reactants, combined_products, byproduct_map_numbe
                 r_atom.SetAtomMapNum(0)
                 p_atom.SetAtomMapNum(0)
                 atom_count_products += 1
-    if atom_count_reactnts != atom_count_products:
+    if atom_count_reactants != atom_count_products:
         raise ValueError(f"Mismatch in Number of mapped atoms between reactants and products. {atom_count_reactnts} vs {atom_count_products}"
                          "  Contact Developers.")
 
