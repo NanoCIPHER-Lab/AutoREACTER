@@ -19,7 +19,6 @@ This may also require modifications to the reaction selector logic inside
 `run_reaction_template_pipeline.py` to support iterating through multiple match candidates.
 """
 
-import rdkit
 from rdkit import Chem
 from rdkit.Chem import AllChem
 
