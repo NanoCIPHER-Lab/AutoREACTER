@@ -160,7 +160,7 @@ def map_reactant_atoms(reactant1, reactant2, rxn, delete_atom=False):
     return combined_reactants, combined_products, byproduct_map_numbers
 
 def map_product_atoms(combined_reactants, combined_products, byproduct_map_numbers, delete_atom):
-    MAP_dict = {"reactant": "product"}
+    MAP_dict = {}
     atom_count_reactnts = 0
     atom_count_products = 0
     initiator_atom = []
