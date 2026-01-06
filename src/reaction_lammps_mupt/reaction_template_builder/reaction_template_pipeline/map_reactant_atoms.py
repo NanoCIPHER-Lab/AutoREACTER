@@ -188,7 +188,10 @@ def map_product_atoms(combined_reactants, combined_products, byproduct_map_numbe
     for molecule in [combined_reactants, combined_products]:
         for atom in molecule.GetAtoms():
             if atom.GetAtomMapNum() != 0:
-                raise ValueError(f"Unmapped atom found in the reaction SMIRKS Contact Developers: {atom.GetAtomMapNum()}")
+                raise ValueError(
+                    f"Unmapped atom with map number {atom.GetAtomMapNum()} found after reaction processing. "
+                    "Please contact developers."
+                )
     return MAP_dict, initiator_atom, byproduct_atom
 
 
