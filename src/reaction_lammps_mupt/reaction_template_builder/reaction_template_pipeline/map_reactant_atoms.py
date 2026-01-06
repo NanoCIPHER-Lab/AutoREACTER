@@ -218,15 +218,23 @@ def map_product_atoms(combined_reactants, combined_products, byproduct_map_numbe
             if r_atom.GetIdx() not in byproduct_atom:
                 byproduct_atom.append(r_atom.GetIdx())
     
-    # Second pass: create atom mapping
+    # Create a dictionary mapping atom map numbers to product atoms for O(1) lookup
+    product_map_num_to_atom = {}
+    for p_atom in combined_products.GetAtoms():
+        map_num = p_atom.GetAtomMapNum()
+        if map_num != 0:
+            product_map_num_to_atom[map_num] = p_atom
+    
+    # Second pass: create atom mapping using the dictionary
     for r_atom in combined_reactants.GetAtoms():
-        for p_atom in combined_products.GetAtoms():
-            if r_atom.GetAtomMapNum() == p_atom.GetAtomMapNum() and r_atom.GetIdx() not in MAP_dict and p_atom.GetIdx() not in MAP_dict.values():
+        r_map_num = r_atom.GetAtomMapNum()
+        if r_map_num != 0 and r_map_num in product_map_num_to_atom:
+            p_atom = product_map_num_to_atom[r_map_num]
+            if r_atom.GetIdx() not in MAP_dict and p_atom.GetIdx() not in MAP_dict.values():
                 print(f"Reactant atom {r_atom.GetIdx()} is mapped to product atom {p_atom.GetIdx()}")
                 MAP_dict[r_atom.GetIdx()] = p_atom.GetIdx()
                 r_atom.SetAtomMapNum(0)
                 p_atom.SetAtomMapNum(0)
-                break
 
     for molecule in [combined_reactants, combined_products]:
         for atom in molecule.GetAtoms():
