@@ -5,74 +5,11 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit.Chem import rdChemReactions
 from rdkit.Chem import Draw
-
 path = pathlib.Path(__file__).parent.resolve()
+from reaction_template_pipeline.map_reactant_atoms import map_reactant_atoms, map_product_atoms
+from reaction_template_pipeline.walker import reaction_atom_walker
 
-
-def map_reactant_atoms(reactant1, reactant2, rxn, delete_atom):
-    for atom in reactant1.GetAtoms():
-        atom.SetAtomMapNum(atom.GetIdx() + 1001)
-    for atom in reactant2.GetAtoms():
-        atom.SetAtomMapNum(atom.GetIdx() + 2001)
-    def smart_mapping(reactant, smarts_template, match_tuple):
-        if not match_tuple:
-            return
-        print(match_tuple)
-
-        SMARTS_index_to_Map_Number = {}
-        for smarts_atom in smarts_template.GetAtoms():
-            map_num = smarts_atom.GetAtomMapNum()
-            if map_num != 0:
-                SMARTS_index_to_Map_Number[smarts_atom.GetIdx()] = map_num
-
-        for smarts_pos, map_num in SMARTS_index_to_Map_Number.items():
-            if smarts_pos < len(match_tuple):
-                atom_index_in_mol = match_tuple[smarts_pos]
-                atom = reactant.GetAtomWithIdx(atom_index_in_mol)
-                atom.SetAtomMapNum(map_num)
-
-    mapping_dict = {
-        "reactant1": {
-            "reactant": reactant1,
-            "smarts_template": rxn.GetReactants()[0],
-            "match": reactant1.GetSubstructMatch(rxn.GetReactants()[0])
-        },
-        "reactant2": {
-            "reactant": reactant2,
-            "smarts_template": rxn.GetReactants()[1],
-            "match": reactant2.GetSubstructMatch(rxn.GetReactants()[1])
-        }
-    }
-    smart_mapping(
-        mapping_dict["reactant1"]["reactant"], 
-        mapping_dict["reactant1"]["smarts_template"], 
-        mapping_dict["reactant1"]["match"])
-
-    smart_mapping(
-        mapping_dict["reactant2"]["reactant"], 
-        mapping_dict["reactant2"]["smarts_template"], 
-        mapping_dict["reactant2"]["match"])
-    reactants_tuple = (reactant1, reactant2)
-    def reveal_template_map_numbers(mol : Chem.Mol) -> None:
-        '''Make map numbers assigned to products of reaction visible for display'''
-        for atom in mol.GetAtoms():
-            if atom.HasProp('old_mapno'): # RDKit sets certain "magic" properties post-reaction, including map numbers and reactant atom indices
-                map_num = atom.GetIntProp('old_mapno')
-                atom.SetAtomMapNum(map_num)
-
-    for products in rxn.RunReactants(reactants_tuple):
-        for product in products:
-            reveal_template_map_numbers(product)
-    if delete_atom:
-        byproduct_map_numbers = []
-        byproduct = products[1]
-        for atom in byproduct.GetAtoms():
-            num_byproduct_atoms = byproduct.GetNumAtoms()
-            byproduct_map_numbers.append(atom.GetAtomMapNum())
-    combined_reactants = Chem.CombineMols(reactant1, reactant2)
-    combined_products = Chem.CombineMols(*products)
-    return combined_reactants, combined_products, byproduct_map_numbers 
-
+# TODO: Transfer and store each detail in a Dictionary for better readability and access
 def reaction_selector(selected_reactions_dict):
     """Still there is no method to verify the all possible reactions 
     can be implemented correctly. So, for now, we will just process with one or two reactions.
@@ -116,16 +53,31 @@ def reaction_selector(selected_reactions_dict):
         reactant1 = Chem.AddHs(reactant1)
         reactant2 = Chem.AddHs(reactant2)
         combined_reactants, combined_products, byproduct_map_numbers = map_reactant_atoms(reactant1, reactant2, rxn , delete_atom)
+        combined_reactants_with_map_nums, combined_products_with_map_nums = combined_reactants, combined_products # Keep copies with map numbers for debugging
+        MAP_dict, initiator_atom, byproduct_atom = map_product_atoms(
+            combined_reactants, combined_products, byproduct_map_numbers, delete_atom
+        )
+        print("Initiator Atoms:", initiator_atom)
         ## for debugging purpose, save the image
-        Draw.MolsToGridImage([combined_reactants, combined_products], molsPerRow=2, subImgSize=(1800, 1800)).save(path / f"reaction_{key}.png")
+        template_mapped_dict, edge_atoms = reaction_atom_walker(combined_reactants, initiator_atom, MAP_dict, max_bonds=4)
+        print("Template Mapped Dict:", template_mapped_dict)
+        Draw.MolsToGridImage([combined_reactants_with_map_nums, combined_products_with_map_nums], molsPerRow=2, subImgSize=(1800, 1800)).save(path / f"reaction_{key}.png")
         print("Delete Atom Map Numbers:", byproduct_map_numbers)
 
         if not same_reactants:
             print("Processing second reaction case:")
             combined_reactants, combined_products, byproduct_map_numbers = map_reactant_atoms(reactant2, reactant1, rxn, delete_atom)
+            combined_reactants_with_map_nums, combined_products_with_map_nums = combined_reactants, combined_products # Keep copies with map numbers for debugging
+            MAP_dict, initiator_atom, byproduct_atom = map_product_atoms(
+                combined_reactants, combined_products, byproduct_map_numbers, delete_atom
+            )
+            
             ## for debugging purpose, save the image
-            Draw.MolsToGridImage([combined_reactants, combined_products], molsPerRow=2, subImgSize=(1800, 1800)).save(path / f"reaction_{key}_same_reaction.png")
+            Draw.MolsToGridImage([combined_reactants_with_map_nums, combined_products_with_map_nums], molsPerRow=2, subImgSize=(1800, 1800)).save(path / f"reaction_{key}_same_reaction.png")
             print("Delete Atom Map Numbers (swapped reactants):", byproduct_map_numbers)
+            print("Initiator Atoms:", initiator_atom)
+            template_mapped_dict, edge_atoms = reaction_atom_walker(combined_reactants, initiator_atom, MAP_dict, max_bonds=4)
+            print("Template Mapped Dict (swapped reactants):", template_mapped_dict)
         
         print("=" * 80)     
         break  # Remove this break to process all reactions
