@@ -76,9 +76,6 @@ def reactant_atom_walker(reactant_molecule_object, start_atom_indexs, max_bonds=
             # Get neighbors not present in any previous shell
             new_neighbors = get_new_neighbors(reactant_molecule_object, atom_idx, template_indexes)
             
-            if new_neighbors is None:
-                return None
-            
             # Add unique new neighbors to the next shell
             current_next_shell = template_indexes[neighbor_index + 1]
             for n in new_neighbors:
