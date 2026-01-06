@@ -194,7 +194,7 @@ def map_product_atoms(combined_reactants, combined_products, byproduct_map_numbe
                 p_atom.SetAtomMapNum(0)
 
     if atom_count_reactants != atom_count_products:
-        raise ValueError(f"Mismatch in Number of mapped atoms between reactants and products. {atom_count_reactnts} vs {atom_count_products}"
+        raise ValueError(f"Mismatch in Number of mapped atoms between reactants and products. {atom_count_reactants} vs {atom_count_products}"
                          "  Contact Developers.")
 
     for molecule in [combined_reactants, combined_products]:
