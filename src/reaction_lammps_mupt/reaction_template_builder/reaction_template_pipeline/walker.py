@@ -71,10 +71,6 @@ def reactant_atom_walker(reactant_molecule_object, start_atom_indexs, max_bonds=
     while neighbor_index < max_bonds:
         neighbor_index += 1
         
-        # Stop if we've reached the user-defined maximum depth
-        if neighbor_index == max_bonds:
-            break
-        
         # Iterate through atoms found in the current shell to find their neighbors
         for atom_idx in template_indexes[neighbor_index]:
             # Get neighbors not present in any previous shell
