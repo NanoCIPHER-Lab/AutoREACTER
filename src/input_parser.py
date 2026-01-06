@@ -94,8 +94,6 @@ inputs = {
     "Number of total atoms": [10000, 100000, 1000000],
 }
 
-
-
 def input(inputs):
     parser = InputParser()
     parser.validate_smiles_rdkit(inputs)
@@ -104,3 +102,19 @@ def input(inputs):
 if __name__ == "__main__":
     user_inputs = input(inputs)
     print(user_inputs)
+"""
+TODO: Proceed with the rest of the program using user_inputs
+    in here we have to process the inputs dictionary
+    e.g.,
+"Number of monomers": {
+        1: 1000,
+        2: 1000,
+    }, # or
+    "stoichiometric_ratio": {
+        1: 1,
+        2: 1,
+    },
+    as for given inputs we have to calculate the number of monomers based on total atoms and stoichiometric ratio
+    also in here we will be able to calculate the box size and inital density based on the number of monomers and their molar masses can be obtained from rdkit
+    at the end we will have to give properly formatted inputs to the main.py file
+"""
