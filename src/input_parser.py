@@ -18,9 +18,7 @@ except ModuleNotFoundError:
 monomers = {1: 'CCO', 2: 'CCC'}
 
 
-# relative Import 
-# this will go to the main.py file and import the lunar handler class
-lunar = LUNAR.LunarHandler(monomer_dictionary=monomers)
+from rdkit import Chem
     
     
 class InputParser:
@@ -47,7 +45,28 @@ class InputParser:
             else:
                 return smiles_string
             
+    def validate_smiles_rdkit(self, inputs: dict) -> None:
+        """
+        Prompt user for a SMILES string and validate with RDKit.
 
+        Args:
+            monomer_number (int): The index of the current monomer being requested.
+
+        Returns:
+            str: A validated SMILES string.
+        """
+        def validate_smiles_rdkit(smiles_monomer: str) -> bool:
+                mol = Chem.MolFromSmiles(smiles_monomer)
+                if mol is None:
+                    raise ValueError("Invalid SMILES string. Terminating program.")
+                else:
+                    return True
+
+        for monomer_number in inputs["monomers"]:
+            smiles_string = inputs["monomers"][monomer_number]
+            validate_smiles_rdkit(smiles_string)
+        return
+    
 # Each every data will be stored in one dictionary
 # will have series of Temparatures 
 # Will have series of Number of monomers/ atoms (most probably will)
@@ -76,5 +95,12 @@ inputs = {
 }
 
 
-def input(inputs=inputs):
+
+def input(inputs):
+    parser = InputParser()
+    parser.validate_smiles_rdkit(inputs)
     return inputs
+
+if __name__ == "__main__":
+    user_inputs = input(inputs)
+    print(user_inputs)
