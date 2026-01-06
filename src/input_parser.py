@@ -47,13 +47,17 @@ class InputParser:
             
     def validate_smiles_rdkit(self, inputs: dict) -> None:
         """
-        Prompt user for a SMILES string and validate with RDKit.
+        Validate all SMILES strings in the provided inputs dictionary using RDKit.
 
         Args:
-            monomer_number (int): The index of the current monomer being requested.
+            inputs (dict): A dictionary containing monomer SMILES strings under the
+                "monomers" key, mapping monomer indices to SMILES strings.
 
         Returns:
-            str: A validated SMILES string.
+            None
+
+        Raises:
+            ValueError: If any SMILES string in the inputs is invalid.
         """
         def validate_smiles_rdkit(smiles_monomer: str) -> bool:
                 mol = Chem.MolFromSmiles(smiles_monomer)
