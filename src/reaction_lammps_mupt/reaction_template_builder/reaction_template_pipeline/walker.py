@@ -140,7 +140,10 @@ if __name__ == "__main__":
     reactant_smiles2 = "OCCC(O)=O"                
     reaction_smarts = "[O;!$(OC=*):1]-[H:3].[CX3:2](=[O:5])[OX2H1:4]>>[OX2:1]-[CX3:2](=[O:5]).[O:4]-[H:3]"
     
-    # Example mapping dictionary: Reactant Atom Index -> Product Atom Index
+    # Example mapping dictionary: Reactant Atom Index -> Product Atom Index.
+    # This mapping was manually derived for this specific salicylic acid esterification
+    # example by inspecting the atom indices in the combined reactant and product
+    # RDKit molecules; it encodes the correspondence used in this demo workflow.
     mapped_atoms = {9: 0, 19: 1, 3: 3, 15: 26, 18: 17, 20: 25, 21: 2, 2: 4, 4: 5, 17: 18, 25: 19, 26: 20, 27: 27, 1: 6, 12: 7, 5: 8, 6: 9, 16: 21, 23: 22, 24: 23}
     
     # Load and add hydrogens to reactants to ensure full graph connectivity
