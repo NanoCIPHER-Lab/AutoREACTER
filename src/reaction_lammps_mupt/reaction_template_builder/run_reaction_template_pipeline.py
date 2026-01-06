@@ -53,7 +53,9 @@ def reaction_selector(selected_reactions_dict):
         reactant1 = Chem.AddHs(reactant1)
         reactant2 = Chem.AddHs(reactant2)
         combined_reactants, combined_products, byproduct_map_numbers = map_reactant_atoms(reactant1, reactant2, rxn , delete_atom)
-        combined_reactants_with_map_nums, combined_products_with_map_nums = combined_reactants, combined_products # Keep copies with map numbers for debugging
+        # Keep copies with map numbers for debugging by deep-copying the molecules
+        combined_reactants_with_map_nums = Chem.Mol(combined_reactants)
+        combined_products_with_map_nums = Chem.Mol(combined_products)
         MAP_dict, initiator_atom, byproduct_atom = map_product_atoms(
             combined_reactants, combined_products, byproduct_map_numbers, delete_atom
         )
@@ -67,7 +69,9 @@ def reaction_selector(selected_reactions_dict):
         if not same_reactants:
             print("Processing second reaction case:")
             combined_reactants, combined_products, byproduct_map_numbers = map_reactant_atoms(reactant2, reactant1, rxn, delete_atom)
-            combined_reactants_with_map_nums, combined_products_with_map_nums = combined_reactants, combined_products # Keep copies with map numbers for debugging
+            # Keep copies with map numbers for debugging by deep-copying the molecules
+            combined_reactants_with_map_nums = Chem.Mol(combined_reactants)
+            combined_products_with_map_nums = Chem.Mol(combined_products)
             MAP_dict, initiator_atom, byproduct_atom = map_product_atoms(
                 combined_reactants, combined_products, byproduct_map_numbers, delete_atom
             )

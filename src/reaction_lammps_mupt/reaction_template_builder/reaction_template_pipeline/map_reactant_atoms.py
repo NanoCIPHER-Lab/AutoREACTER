@@ -19,7 +19,6 @@ This may also require modifications to the reaction selector logic inside
 `run_reaction_template_pipeline.py` to support iterating through multiple match candidates.
 """
 
-import rdkit
 from rdkit import Chem
 from rdkit.Chem import AllChem
 
@@ -142,8 +141,8 @@ def map_reactant_atoms(reactant1, reactant2, rxn, delete_atom=False):
     products = products_sets[0]
 
     # Reveal map numbers on all products across all sets (for completeness)
-    for products in products_sets:
-        for product in products:
+    for product_set in products_sets:
+        for product in product_set:
             reveal_template_map_numbers(product)
 
     # Handle byproduct if requested
@@ -161,31 +160,81 @@ def map_reactant_atoms(reactant1, reactant2, rxn, delete_atom=False):
     return combined_reactants, combined_products, byproduct_map_numbers
 
 def map_product_atoms(combined_reactants, combined_products, byproduct_map_numbers, delete_atom):
-    MAP_dict = {"reactant": "product"}
-    cont_1 = 0
-    cont_2 = 0
+    """
+    Maps atoms in the combined reactant molecule to atoms in the combined product
+    molecule using atom map numbers, while identifying initiator and byproduct atoms.
+
+    This function is intended to be used after `map_reactant_atoms`, which prepares
+    and combines the reactant and product molecules and optionally provides atom map
+    numbers corresponding to deletable byproduct atoms. Here, atom map numbers are
+    used to:
+
+        - Build a mapping dictionary from reactant atom indices to product atom indices.
+        - Identify "initiator" atoms (those with template map numbers 1 or 2).
+        - Identify atoms in the reactants corresponding to byproduct atoms, when
+          `delete_atom` is True, based on `byproduct_map_numbers`.
+
+    Args:
+        combined_reactants (Chem.Mol): Single molecule containing all reactant atoms,
+            typically generated via `Chem.CombineMols(reactant1, reactant2)`.
+        combined_products (Chem.Mol): Single molecule containing all product atoms,
+            typically generated via `Chem.CombineMols(*products)`.
+        byproduct_map_numbers (list[int]): Atom map numbers associated with atoms
+            that belong to a byproduct to be removed. Can be an empty list if
+            `delete_atom` is False or no byproduct is considered.
+        delete_atom (bool): If True, marks reactant atoms whose map numbers appear in
+            `byproduct_map_numbers` (and are non-zero) as byproduct atoms.
+
+    Returns:
+        tuple:
+            - MAP_dict (dict[int, int]): Mapping from reactant atom indices in
+              `combined_reactants` to product atom indices in `combined_products`.
+            - initiator_atom (list[int]): List of reactant atom indices identified as
+              initiator atoms (those that originally carried map numbers 1 or 2).
+            - byproduct_atom (list[int]): List of reactant atom indices whose map
+              numbers correspond to atoms in the byproduct (empty if `delete_atom`
+              is False or `byproduct_map_numbers` is empty).
+
+    Raises:
+        ValueError: If, after mapping, any atom in the combined reactants or products
+            still has a non-zero atom map number, indicating an unmapped atom in the
+            reaction SMARTS/SMIRKS.
+
+    Notes:
+        - Atom map numbers are used as a temporary key for mapping and are reset to 0
+          on both reactant and product atoms once a match is made.
+    """
+    MAP_dict = {}
     initiator_atom = []
     byproduct_atom = []
+    
+    # First pass: identify initiator and byproduct atoms (independent of product atoms)
     for r_atom in combined_reactants.GetAtoms():
-        cont_1 += 1
+        atom_map_num = r_atom.GetAtomMapNum()
+        if atom_map_num == 1 or atom_map_num == 2:
+            if r_atom.GetIdx() not in initiator_atom:
+                initiator_atom.append(r_atom.GetIdx())
+        if delete_atom and atom_map_num in byproduct_map_numbers and atom_map_num != 0:
+            if r_atom.GetIdx() not in byproduct_atom:
+                byproduct_atom.append(r_atom.GetIdx())
+    
+    # Second pass: create atom mapping
+    for r_atom in combined_reactants.GetAtoms():
         for p_atom in combined_products.GetAtoms():
-            if r_atom.GetAtomMapNum() == 1 or r_atom.GetAtomMapNum() == 2:
-                if r_atom.GetIdx() not in initiator_atom:
-                    initiator_atom.append(r_atom.GetIdx())
-            if delete_atom and r_atom.GetAtomMapNum() in byproduct_map_numbers and r_atom.GetAtomMapNum() != 0:
-                if r_atom.GetIdx() not in byproduct_atom:
-                    byproduct_atom.append(r_atom.GetIdx())
             if r_atom.GetAtomMapNum() == p_atom.GetAtomMapNum() and r_atom.GetIdx() not in MAP_dict and p_atom.GetIdx() not in MAP_dict.values():
                 print(f"Reactant atom {r_atom.GetIdx()} is mapped to product atom {p_atom.GetIdx()}")
                 MAP_dict[r_atom.GetIdx()] = p_atom.GetIdx()
                 r_atom.SetAtomMapNum(0)
                 p_atom.SetAtomMapNum(0)
-                cont_2 += 1
+                break
 
     for molecule in [combined_reactants, combined_products]:
         for atom in molecule.GetAtoms():
             if atom.GetAtomMapNum() != 0:
-                raise ValueError(f"Unmapped atom found in the reaction SMIRKS Contact Developers: {atom.GetAtomMapNum()}")
+                raise ValueError(
+                    f"Unmapped atom with map number {atom.GetAtomMapNum()} found after reaction processing. "
+                    "Please contact developers."
+                )
     return MAP_dict, initiator_atom, byproduct_atom
 
 

@@ -38,14 +38,14 @@ def get_new_neighbors(molecule_object, atom_index, visited):
             neighbors.append(neighbor.GetIdx())
     return neighbors
 
-def reactant_atom_walker(reactant_molecule_object, start_atom_indexs, max_bonds=4):
+def reactant_atom_walker(reactant_molecule_object, start_atom_indices, max_bonds=4):
     """
     Performs a breadth-first traversal of the molecular graph starting from 
     specified seed atoms up to a maximum bond distance.
 
     Args:
         reactant_molecule_object (rdkit.Chem.rdchem.Mol): The molecule to traverse.
-        start_atom_indexs (int or list): The starting atom index (or indices) for the walk.
+        start_atom_indices (int or list): The starting atom index (or indices) for the walk.
         max_bonds (int): The maximum distance (number of bonds) to explore from the start.
 
     Returns:
@@ -53,43 +53,33 @@ def reactant_atom_walker(reactant_molecule_object, start_atom_indexs, max_bonds=
             - reactant_template_indexes (list): All atom indices encountered during the walk.
             - edge_atoms (list): Atom indices located exactly at the max_bonds distance.
     """
-    # Ensure start_atom_indexs is a list even if a single integer is passed
+    # Ensure start_atom_indices is a list even if a single integer is passed
     try:
-        start_atom_indexs = list(start_atom_indexs)
+        start_atom_indices = list(start_atom_indices)
     except TypeError:
-        start_atom_indexs = [start_atom_indexs]
+        start_atom_indices = [start_atom_indices]
     
     neighbor_index = 0
     
     # Initialize the shell dictionary. 
     # Key 1 contains starting atoms, keys 2 to max_bonds+1 will contain subsequent shells.
     template_indexes = {i: [] for i in range(1, max_bonds + 2)}
-    template_indexes[1] = start_atom_indexs
-    processed_indexes = []
+    template_indexes[1] = start_atom_indices
 
     # Expand the search shell by shell
     while neighbor_index < max_bonds:
         neighbor_index += 1
-        
-        # Stop if we've reached the user-defined maximum depth
-        if neighbor_index == max_bonds:
-            break
         
         # Iterate through atoms found in the current shell to find their neighbors
         for atom_idx in template_indexes[neighbor_index]:
             # Get neighbors not present in any previous shell
             new_neighbors = get_new_neighbors(reactant_molecule_object, atom_idx, template_indexes)
             
-            if new_neighbors is None:
-                return None
-            
             # Add unique new neighbors to the next shell
             current_next_shell = template_indexes[neighbor_index + 1]
             for n in new_neighbors:
                 if n not in current_next_shell:
                     template_indexes[neighbor_index + 1].append(n)
-            
-            processed_indexes.append(atom_idx)
             
     # Atoms at the furthest distance reached to create the edge atom section in the map file
     edge_atoms = template_indexes[max_bonds]
@@ -119,14 +109,14 @@ def product_atom_walker(template_indexes, MAP_dict):
             template_mapped_dict[i] = atom
     return template_mapped_dict
             
-def reaction_atom_walker(molecule_object, start_atom_indexs, MAP_dict, max_bonds=4):
+def reaction_atom_walker(molecule_object, start_atom_indices, MAP_dict, max_bonds=4):
     """
     High-level orchestrator that walks the reactant graph and then maps the 
     resulting environment to the product indices.
 
     Args:
         molecule_object (rdkit.Chem.rdchem.Mol): The reactant molecule.
-        start_atom_indexs (list): Starting points for the graph walk.
+        start_atom_indices (list): Starting points for the graph walk.
         MAP_dict (dict): Atom mapping between reactant and product.
         max_bonds (int): Depth of the environment search.
 
@@ -134,7 +124,7 @@ def reaction_atom_walker(molecule_object, start_atom_indexs, MAP_dict, max_bonds
         tuple: (template_mapped_dict, edge_atoms)
     """
     # 1. Identify the local environment in the reactant
-    reactant_template_indexes, edge_atoms = reactant_atom_walker(molecule_object, start_atom_indexs, max_bonds)
+    reactant_template_indexes, edge_atoms = reactant_atom_walker(molecule_object, start_atom_indices, max_bonds)
     
     # 2. Map those reactant atoms to product atoms
     template_mapped_dict = product_atom_walker(reactant_template_indexes, MAP_dict)

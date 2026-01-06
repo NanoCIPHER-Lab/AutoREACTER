@@ -45,17 +45,18 @@ class InputParser:
             else:
                 return smiles_string
             
-    def validate_smiles_rdkit(self, inputs: dict) -> None:
+    def validate_smiles_rdkit_batch(self, inputs: dict) -> None:
         """
-        Prompt user for a SMILES string and validate with RDKit.
+        Validate SMILES strings provided in the inputs dictionary using RDKit.
 
         Args:
-            monomer_number (int): The index of the current monomer being requested.
+            inputs (dict): Dictionary containing a "monomers" mapping from
+                monomer indices to their SMILES strings to be validated.
 
         Returns:
-            str: A validated SMILES string.
+            None
         """
-        def validate_smiles_rdkit(smiles_monomer: str) -> bool:
+        def _validate_single_smiles(smiles_monomer: str) -> bool:
                 mol = Chem.MolFromSmiles(smiles_monomer)
                 if mol is None:
                     raise ValueError("Invalid SMILES string. Terminating program.")
@@ -64,7 +65,7 @@ class InputParser:
 
         for monomer_number in inputs["monomers"]:
             smiles_string = inputs["monomers"][monomer_number]
-            validate_smiles_rdkit(smiles_string)
+            _validate_single_smiles(smiles_string)
         return
     
 # Each every data will be stored in one dictionary
@@ -94,13 +95,13 @@ inputs = {
     "Number of total atoms": [10000, 100000, 1000000],
 }
 
-def input(inputs):
+def process_inputs(inputs):
     parser = InputParser()
-    parser.validate_smiles_rdkit(inputs)
+    parser.validate_smiles_rdkit_batch(inputs)
     return inputs
 
 if __name__ == "__main__":
-    user_inputs = input(inputs)
+    user_inputs = process_inputs(inputs)
     print(user_inputs)
 """
 TODO: Proceed with the rest of the program using user_inputs
@@ -115,6 +116,6 @@ TODO: Proceed with the rest of the program using user_inputs
         2: 1,
     },
     as for given inputs we have to calculate the number of monomers based on total atoms and stoichiometric ratio
-    also in here we will be able to calculate the box size and inital density based on the number of monomers and their molar masses can be obtained from rdkit
+    also in here we will be able to calculate the box size and initial density based on the number of monomers and their molar masses can be obtained from rdkit
     at the end we will have to give properly formatted inputs to the main.py file
 """
