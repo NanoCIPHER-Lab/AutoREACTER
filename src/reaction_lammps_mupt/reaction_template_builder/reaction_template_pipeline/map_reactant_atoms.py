@@ -171,7 +171,7 @@ def map_product_atoms(combined_reactants, combined_products, byproduct_map_numbe
             if r_atom.GetAtomMapNum() == 1 or r_atom.GetAtomMapNum() == 2:
                 if r_atom.GetIdx() not in initiator_atom:
                     initiator_atom.append(r_atom.GetIdx())
-            if delete_atom and r_atom.GetAtomMapNum() in byproduct_map_numbers and r_atom.GetAtomMapNum() != 0:
+            if delete_atom and r_atom.GetAtomMapNum() in byproduct_map_numbers:
                 if r_atom.GetIdx() not in byproduct_atom:
                     byproduct_atom.append(r_atom.GetIdx())
             if r_atom.GetAtomMapNum() == p_atom.GetAtomMapNum() and r_atom.GetIdx() not in MAP_dict and p_atom.GetIdx() not in MAP_dict.values():
