@@ -2,19 +2,29 @@ from platformdirs import user_cache_dir
 import os, datetime, shutil
 from pathlib import Path
 
+current_dir = Path(__file__).parent.parent.resolve()
+# should implemet this for now we will use the project directory
+# cache_dir = user_cache_dir("ReactionLammpsMuPT", "MUPT") 
+os.makedirs(current_dir / "lunar" / "cache", exist_ok=True)
+cache_dir = current_dir / "lunar" / "cache"
+print(f"[cache] current_dir   = {current_dir}")
+print(f"[cache] cache_dir     = {cache_dir}")
 
-app_name = "ReactionLammpsMuPT"
-app_author = "" # Optional, can be omitted on some platforms
+from platformdirs import user_cache_dir
+from pathlib import Path
 
-cache_dir = user_cache_dir(f"{app_name}", app_author)
+APP_NAME = "ReactionLammpsMuPT"
+APP_AUTHOR = "MUPT"  # fine
 
-# Ensure the directory exists
-os.makedirs(cache_dir, exist_ok=True)
-lunar_cache_dir = os.path.join(cache_dir, "lunar")
-os.makedirs(lunar_cache_dir, exist_ok=True)
+cache_dir = Path(user_cache_dir(APP_NAME, APP_AUTHOR))
+lunar_cache_dir = cache_dir / "lunar"
 
-# Use the cache_dir path for storing files (e.g., SQLite DB, pickle files)
-print(f"Cache location: {cache_dir}")
+lunar_cache_dir.mkdir(parents=True, exist_ok=True)
+
+print(f"[cache] cache_dir      = {cache_dir}")
+print(f"[cache] lunar_cache_dir= {lunar_cache_dir}")
+
+
 """
 TODO:
 # from here needs to be added to the functions
