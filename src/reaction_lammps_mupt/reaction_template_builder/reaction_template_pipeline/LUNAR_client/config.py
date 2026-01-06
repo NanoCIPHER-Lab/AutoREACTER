@@ -1,1 +1,0 @@
-LUNAR_ROOT_DIR = None  # to be set at runtime
