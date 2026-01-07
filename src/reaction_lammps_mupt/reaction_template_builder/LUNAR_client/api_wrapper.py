@@ -6,6 +6,7 @@ import os, sys
 import subprocess
 from pathlib import Path
 import re
+import time
 
 test_cache = r"C:\Users\Janitha\Documents\GitHub\reaction_lammps_mupt\cache\lunar"
 test_cache_atom_typing = f"{test_cache}\\atom_typing"
@@ -29,6 +30,29 @@ LUNAR_LOCATION = get_LUNAR_loc(use_gui=False)
 atom_typing_py = os.path.join(LUNAR_LOCATION, "atom_typing.py")
 all2lmp_py = os.path.join(LUNAR_LOCATION, "all2lmp.py")
 bond_react_merge_py = os.path.join(LUNAR_LOCATION, "bond_react_merge.py")
+
+def loading_screen(name="LUNAR") -> None:
+        """Show ASCII art banner with loading spinner."""
+        banner = r"""
+    █████       █████  █████ ██████   █████   █████████   ███████████  
+    ░░███       ░░███  ░░███ ░░██████ ░░███   ███░░░░░███ ░░███░░░░░███ 
+    ░███        ░███   ░███  ░███░███ ░███  ░███    ░███  ░███    ░███ 
+    ░███        ░███   ░███  ░███░░███░███  ░███████████  ░██████████  
+    ░███        ░███   ░███  ░███ ░░██████  ░███░░░░░███  ░███░░░░░███ 
+    ░███      █ ░███   ░███  ░███  ░░█████  ░███    ░███  ░███    ░███ 
+    ███████████ ░░████████   █████  ░░█████ █████   █████ █████   █████
+    ░░░░░░░░░░░   ░░░░░░░░   ░░░░░    ░░░░░ ░░░░░   ░░░░░ ░░░░░   ░░░░░ 
+        """
+        print(banner)
+        print(f"Loading {name} ", end="", flush=True)
+
+        animation = ["-", "\\", "|", "/"]
+        for i in range(10):
+            time.sleep(0.1)
+            sys.stdout.write("\b" + animation[i % len(animation)])
+            sys.stdout.flush()
+        print("\nReady!")
+
 
 def get_ending_integer(s):
     """
@@ -142,6 +166,9 @@ def run_bond_react_merge(merge_input_file_path: Path, molecule_files_all2lmp: di
     return molecule_files_bond_react_merge
 
 def lunar_workflow(molecule_files: dict[str, Path]) -> dict[str, Path]:
+    # Step 0: Show loading screen
+    loading_screen("LUNAR Workflow")
+    
     # Step 1: Run atom typing
     typed_files = run_LUNAR_atom_typing(molecule_files)
     
