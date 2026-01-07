@@ -62,6 +62,10 @@ def map_reactant_atoms(reactant1, reactant2, rxn, delete_atom=False):
         atom.SetAtomMapNum(atom.GetIdx() + 1001)
     for atom in reactant2.GetAtoms():
         atom.SetAtomMapNum(atom.GetIdx() + 2001)
+    from rdkit.Chem import Draw
+    from pathlib import Path
+    path = Path("C:\\Users\\Janitha\\Documents\\GitHub\\reaction_lammps_mupt\\cache\\lunar\\bond_react_merge")
+    Draw.MolsToGridImage([reactant1, reactant2], molsPerRow=2, subImgSize=(1800, 1800)).save(path / f"reaction.png")
 
     def smart_mapping(reactant, smarts_template, match_tuple):
         """
@@ -166,6 +170,10 @@ def map_product_atoms(combined_reactants, combined_products, byproduct_map_numbe
     byproduct_atom = []
     atom_count_reactants = 0
     atom_count_products = 0
+    from rdkit.Chem import Draw
+    from pathlib import Path
+    path = Path("C:\\Users\\Janitha\\Documents\\GitHub\\reaction_lammps_mupt\\cache\\lunar\\bond_react_merge")
+    Draw.MolsToGridImage([combined_reactants, combined_products], molsPerRow=2, subImgSize=(1800, 1800)).save(path / f"reaction2.png")
     # total product atom count outside loops
     for _ in combined_products.GetAtoms():
         atom_count_products += 1
