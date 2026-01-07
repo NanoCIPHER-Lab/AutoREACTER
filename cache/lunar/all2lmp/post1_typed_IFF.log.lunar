@@ -10,31 +10,31 @@ Resetting molecule-ids based on cluster analysis
 
 
 Using higher version of parameters for #equivalences N a version: 2.10 
-Using higher version of parameters for #bond_increments si si version: 2.20 
+Using higher version of parameters for #bond_increments c si version: 2.20 
 Using higher version of parameters for #bond_increments c_1 cp version: 2.10 
 Using higher version of parameters for #bond_increments cp si version: 2.20 
 Using higher version of parameters for #bond_increments h si version: 2.20 
-Using higher version of parameters for #bond_increments c si version: 2.20 
+Using higher version of parameters for #bond_increments si si version: 2.20 
+Using higher version of parameters for #quartic_bonds c_1 o_1 version: 2.10 
+Using higher version of parameters for #quartic_bonds cp h version: 2.10 
 Using higher version of parameters for #quartic_bonds c= c=1 version: 3.10 
 Using higher version of parameters for #quartic_bonds c c version: 2.10 
-Using higher version of parameters for #quartic_bonds c o_2 version: 2.20 
-Using higher version of parameters for #quartic_bonds cp h version: 2.10 
 Using higher version of parameters for #quartic_bonds cp cp version: 2.10 
-Using higher version of parameters for #quartic_bonds c_1 o_1 version: 2.10 
 Using higher version of parameters for #quartic_bonds c h version: 2.10 
-Using higher version of parameters for #torsion_3 c c c c version: 2.10 
-Using higher version of parameters for #torsion_3 c c c h version: 2.10 
+Using higher version of parameters for #quartic_bonds c o_2 version: 2.20 
 Using higher version of parameters for #torsion_3 h c c h version: 2.10 
+Using higher version of parameters for #torsion_3 c c c c version: 2.10 
 Using higher version of parameters for #torsion_3 h c cp cp version: 2.00 
+Using higher version of parameters for #torsion_3 c c c h version: 2.10 
 Using higher version of parameters for #wilson_out_of_plane cp cp cp h version: 3.10 
 Using higher version of parameters for #wilson_out_of_plane c cp cp cp version: 2.00 
-Using higher version of parameters for #pair_coeffs_9_6 c = version: 2.10 
-Using higher version of parameters for #pair_coeffs_9_6 o _ 1 version: 2.10 
-Using higher version of parameters for #pair_coeffs_9_6 s ' version: 2.10 
-Using higher version of parameters for #pair_coeffs_9_6 s i version: 2.20 
 Using higher version of parameters for #pair_coeffs_9_6 n = version: 3.10 
-Using higher version of parameters for #pair_coeffs_9_6 h o 2 version: 2.10 
+Using higher version of parameters for #pair_coeffs_9_6 c = version: 2.10 
 Using higher version of parameters for #pair_coeffs_9_6 n z version: 2.10 
+Using higher version of parameters for #pair_coeffs_9_6 s ' version: 2.10 
+Using higher version of parameters for #pair_coeffs_9_6 o _ 1 version: 2.10 
+Using higher version of parameters for #pair_coeffs_9_6 h o 2 version: 2.10 
+Using higher version of parameters for #pair_coeffs_9_6 s i version: 2.20 
 Using higher version of parameters for #bondbond13 cp cp cp cp version: 2.10 
 Using higher version of parameters for #middlebondtorsion o_1 c_1 o_2 c version: 2.10 
 
@@ -87,75 +87,75 @@ WARNING unable to find bondangle info for Bondangle Coeff 12 cp c=2 oh
 WARNING unable to find bondangle info for Bondangle Coeff 19 o_1 c=2 oh
 WARNING unable to find bondangle info for Bondangle Coeff 20 oc c_1 o_1
 
-WARNING unable to find angleangletorsion info for Angleangletorsion Coeff 7 oc c_1 c2 c2
-WARNING unable to find angleangletorsion info for Angleangletorsion Coeff 8 oc c_1 c2 hc
+WARNING unable to find angleangletorsion info for Angleangletorsion Coeff 7 oc c_1 c2 hc
+WARNING unable to find angleangletorsion info for Angleangletorsion Coeff 8 oc c_1 c2 c2
 WARNING unable to find angleangletorsion info for Angleangletorsion Coeff 11 cp c=2 oh ho
 WARNING unable to find angleangletorsion info for Angleangletorsion Coeff 12 c2 c_1 oc cp
 WARNING unable to find angleangletorsion info for Angleangletorsion Coeff 13 o_1 c=2 cp cp
 WARNING unable to find angleangletorsion info for Angleangletorsion Coeff 14 oh c=2 cp cp
 WARNING unable to find angleangletorsion info for Angleangletorsion Coeff 16 c=2 cp cp cp
 WARNING unable to find angleangletorsion info for Angleangletorsion Coeff 18 c=2 cp cp hc
-WARNING unable to find angleangletorsion info for Angleangletorsion Coeff 21 c=2 cp cp oc
+WARNING unable to find angleangletorsion info for Angleangletorsion Coeff 22 c=2 cp cp oc
 WARNING unable to find angleangletorsion info for Angleangletorsion Coeff 23 o_1 c_1 oc cp
 WARNING unable to find angleangletorsion info for Angleangletorsion Coeff 24 cp cp oc c_1
 WARNING unable to find angleangletorsion info for Angleangletorsion Coeff 25 o_1 c=2 oh ho
 
-WARNING unable to find endbondtorsion info for Endbondtorsion Coeff 7 oc c_1 c2 c2
-WARNING unable to find endbondtorsion info for Endbondtorsion Coeff 8 oc c_1 c2 hc
+WARNING unable to find endbondtorsion info for Endbondtorsion Coeff 7 oc c_1 c2 hc
+WARNING unable to find endbondtorsion info for Endbondtorsion Coeff 8 oc c_1 c2 c2
 WARNING unable to find endbondtorsion info for Endbondtorsion Coeff 11 cp c=2 oh ho
 WARNING unable to find endbondtorsion info for Endbondtorsion Coeff 12 c2 c_1 oc cp
 WARNING unable to find endbondtorsion info for Endbondtorsion Coeff 13 o_1 c=2 cp cp
 WARNING unable to find endbondtorsion info for Endbondtorsion Coeff 14 oh c=2 cp cp
 WARNING unable to find endbondtorsion info for Endbondtorsion Coeff 16 c=2 cp cp cp
 WARNING unable to find endbondtorsion info for Endbondtorsion Coeff 18 c=2 cp cp hc
-WARNING unable to find endbondtorsion info for Endbondtorsion Coeff 21 c=2 cp cp oc
+WARNING unable to find endbondtorsion info for Endbondtorsion Coeff 22 c=2 cp cp oc
 WARNING unable to find endbondtorsion info for Endbondtorsion Coeff 23 o_1 c_1 oc cp
 WARNING unable to find endbondtorsion info for Endbondtorsion Coeff 24 cp cp oc c_1
 WARNING unable to find endbondtorsion info for Endbondtorsion Coeff 25 o_1 c=2 oh ho
 
-WARNING unable to find middlebondtorsion info for Middlebondtorsion Coeff 7 oc c_1 c2 c2
-WARNING unable to find middlebondtorsion info for Middlebondtorsion Coeff 8 oc c_1 c2 hc
+WARNING unable to find middlebondtorsion info for Middlebondtorsion Coeff 7 oc c_1 c2 hc
+WARNING unable to find middlebondtorsion info for Middlebondtorsion Coeff 8 oc c_1 c2 c2
 WARNING unable to find middlebondtorsion info for Middlebondtorsion Coeff 11 cp c=2 oh ho
 WARNING unable to find middlebondtorsion info for Middlebondtorsion Coeff 12 c2 c_1 oc cp
 WARNING unable to find middlebondtorsion info for Middlebondtorsion Coeff 13 o_1 c=2 cp cp
 WARNING unable to find middlebondtorsion info for Middlebondtorsion Coeff 14 oh c=2 cp cp
 WARNING unable to find middlebondtorsion info for Middlebondtorsion Coeff 16 c=2 cp cp cp
 WARNING unable to find middlebondtorsion info for Middlebondtorsion Coeff 18 c=2 cp cp hc
-WARNING unable to find middlebondtorsion info for Middlebondtorsion Coeff 21 c=2 cp cp oc
+WARNING unable to find middlebondtorsion info for Middlebondtorsion Coeff 22 c=2 cp cp oc
 WARNING unable to find middlebondtorsion info for Middlebondtorsion Coeff 23 o_1 c_1 oc cp
 WARNING unable to find middlebondtorsion info for Middlebondtorsion Coeff 24 cp cp oc c_1
 WARNING unable to find middlebondtorsion info for Middlebondtorsion Coeff 25 o_1 c=2 oh ho
 
 WARNING unable to find bondbond13 info for Bondbond13 Coeff 1 c_1 c2 c2 hc
 WARNING unable to find bondbond13 info for Bondbond13 Coeff 2 hc c2 c2 hc
-WARNING unable to find bondbond13 info for Bondbond13 Coeff 3 hc c2 c2 oh
-WARNING unable to find bondbond13 info for Bondbond13 Coeff 4 c_1 c2 c2 oh
-WARNING unable to find bondbond13 info for Bondbond13 Coeff 5 c2 c2 c_1 o_1
-WARNING unable to find bondbond13 info for Bondbond13 Coeff 6 hc c2 c_1 o_1
-WARNING unable to find bondbond13 info for Bondbond13 Coeff 7 oc c_1 c2 c2
-WARNING unable to find bondbond13 info for Bondbond13 Coeff 8 oc c_1 c2 hc
-WARNING unable to find bondbond13 info for Bondbond13 Coeff 9 hc c2 oh ho
-WARNING unable to find bondbond13 info for Bondbond13 Coeff 10 c2 c2 oh ho
+WARNING unable to find bondbond13 info for Bondbond13 Coeff 3 c_1 c2 c2 oh
+WARNING unable to find bondbond13 info for Bondbond13 Coeff 4 hc c2 c2 oh
+WARNING unable to find bondbond13 info for Bondbond13 Coeff 5 hc c2 c_1 o_1
+WARNING unable to find bondbond13 info for Bondbond13 Coeff 6 c2 c2 c_1 o_1
+WARNING unable to find bondbond13 info for Bondbond13 Coeff 7 oc c_1 c2 hc
+WARNING unable to find bondbond13 info for Bondbond13 Coeff 8 oc c_1 c2 c2
+WARNING unable to find bondbond13 info for Bondbond13 Coeff 9 c2 c2 oh ho
+WARNING unable to find bondbond13 info for Bondbond13 Coeff 10 hc c2 oh ho
 WARNING unable to find bondbond13 info for Bondbond13 Coeff 11 cp c=2 oh ho
 WARNING unable to find bondbond13 info for Bondbond13 Coeff 12 c2 c_1 oc cp
 WARNING unable to find bondbond13 info for Bondbond13 Coeff 13 o_1 c=2 cp cp
 WARNING unable to find bondbond13 info for Bondbond13 Coeff 14 oh c=2 cp cp
 WARNING unable to find bondbond13 info for Bondbond13 Coeff 16 c=2 cp cp cp
 WARNING unable to find bondbond13 info for Bondbond13 Coeff 18 c=2 cp cp hc
-WARNING unable to find bondbond13 info for Bondbond13 Coeff 21 c=2 cp cp oc
+WARNING unable to find bondbond13 info for Bondbond13 Coeff 22 c=2 cp cp oc
 WARNING unable to find bondbond13 info for Bondbond13 Coeff 23 o_1 c_1 oc cp
 WARNING unable to find bondbond13 info for Bondbond13 Coeff 24 cp cp oc c_1
 WARNING unable to find bondbond13 info for Bondbond13 Coeff 25 o_1 c=2 oh ho
 
-WARNING unable to find angletorsion info for Angletorsion Coeff 7 oc c_1 c2 c2
-WARNING unable to find angletorsion info for Angletorsion Coeff 8 oc c_1 c2 hc
+WARNING unable to find angletorsion info for Angletorsion Coeff 7 oc c_1 c2 hc
+WARNING unable to find angletorsion info for Angletorsion Coeff 8 oc c_1 c2 c2
 WARNING unable to find angletorsion info for Angletorsion Coeff 11 cp c=2 oh ho
 WARNING unable to find angletorsion info for Angletorsion Coeff 12 c2 c_1 oc cp
 WARNING unable to find angletorsion info for Angletorsion Coeff 13 o_1 c=2 cp cp
 WARNING unable to find angletorsion info for Angletorsion Coeff 14 oh c=2 cp cp
 WARNING unable to find angletorsion info for Angletorsion Coeff 16 c=2 cp cp cp
 WARNING unable to find angletorsion info for Angletorsion Coeff 18 c=2 cp cp hc
-WARNING unable to find angletorsion info for Angletorsion Coeff 21 c=2 cp cp oc
+WARNING unable to find angletorsion info for Angletorsion Coeff 22 c=2 cp cp oc
 WARNING unable to find angletorsion info for Angletorsion Coeff 23 o_1 c_1 oc cp
 WARNING unable to find angletorsion info for Angletorsion Coeff 24 cp cp oc c_1
 WARNING unable to find angletorsion info for Angletorsion Coeff 25 o_1 c=2 oh ho
@@ -242,7 +242,7 @@ and ordering of the energy parameters.
 Normal program termination
 
 
-Execution time in seconds: 0.048406362533569336
+Execution time in seconds: 0.06031036376953125
 
 
 Number of WARNING(s) and ERROR(s)

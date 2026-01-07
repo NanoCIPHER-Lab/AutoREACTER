@@ -4,7 +4,7 @@
 # and the files are a path from LUNAR on your computer each file below must have that path 
 # specified in front of the filename) 
 
-path = f"C:\Users\Janitha\Documents\GitHub\reaction_lammps_mupt\cache\lunar\all2lmp" 
+path = "C:\Users\Janitha\Documents\GitHub\reaction_lammps_mupt\cache\lunar\all2lmp" 
 
 # file-tag     filename                                comment (required)  
 data1          data1_typed_IFF.data                    # This datafile will have all coeffs in it file
@@ -13,4 +13,4 @@ pre1           pre1_typed_IFF.data                     # for rxn1 file
 post1          post1_typed_IFF.data                    # for rxn1 file
  
 # Specify the parent_directory of where to write results (optional) 
-C:\Users\Janitha\Documents\GitHub\reaction_lammps_mupt\cache\lunar\bond_react_merge
+parent_directory = "C:\Users\Janitha\Documents\GitHub\reaction_lammps_mupt\cache\lunar\bond_react_merge"
