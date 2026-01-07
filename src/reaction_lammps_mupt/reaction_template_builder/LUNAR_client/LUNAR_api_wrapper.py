@@ -435,6 +435,57 @@ if __name__ == "__main__":
     """
     # Import Path here to avoid circular imports if this module is imported elsewhere
     from pathlib import Path
+    from molecule_3d_preparation import prepare_3d_molecule
+    from rdkit import Chem
+    from rdkit.Chem import AllChem
+    # Example usage: construct reactants, run a SMARTS-based reaction, prepare 3D structures,
+    # and write optimized .mol files to the cache directory.
+
+    # Use the local `cache` variable (TODO: replace with config/cache module)
+    cache = r"C:\Users\Janitha\Documents\GitHub\reaction_lammps_mupt\cache\lunar"
+
+    # Example SMILES for two reactants 
+    reactant_smiles1 = "C1=CC=C(C(=C1)C(=O)O)O"
+    reactant_smiles2 = "OCCC(O)=O"
+
+    # SMARTS describing esterification example
+    reaction_smarts = (
+        "[O;!$(OC=*):1]-[H:3].[CX3:2](=[O:5])[OX2H1:4]>>[OX2:1]-[CX3:2](=[O:5]).[O:4]-[H:3]"
+    )
+
+    # Load reactants from SMILES and add explicit hydrogens (recommended for 3D embedding)
+    reactant1 = Chem.MolFromSmiles(reactant_smiles1)
+    reactant1 = Chem.AddHs(reactant1)
+    reactant2 = Chem.MolFromSmiles(reactant_smiles2)
+    reactant2 = Chem.AddHs(reactant2)
+
+    # Create an RDKit reaction from SMARTS
+    rxn = AllChem.ReactionFromSmarts(reaction_smarts)
+
+    # Combine reactants into a single RDKit Mol for visualization/complex handling
+    combined_reactants = Chem.CombineMols(reactant1, reactant2)
+
+    # Run the reaction to produce product sets. RunReactants returns a tuple of tuples,
+    # where each outer tuple is one possible product set. We'll take the first generated set.
+    products = rxn.RunReactants((reactant1, reactant2))
+    if not products:
+        raise RuntimeError("Reaction produced no products for the provided reactants and SMARTS.")
+    products = products[0]  # Take the first product set
+
+    # Combine produced product fragments into a single RDKit Mol
+    combined_products = Chem.CombineMols(*products)
+
+    # Create a mapping of names -> RDKit Mol objects to be prepared (embedded/optimized)
+    molecule_dict = {
+        "data1": reactant1,
+        "data2": reactant2,
+        "pre1": combined_reactants,   # combined reactant complex
+        "post1": combined_products,   # combined product complex
+    }
+
+    print("Cache directory:", cache)
+    prepared_molecules = prepare_3d_molecule(cache_dir=cache, molecule_dict=molecule_dict)
+    print("Prepared molecules and saved paths:", prepared_molecules)
     
     # Define sample molecule files for testing
     # Note: These paths are specific to the original developer's system
@@ -455,3 +506,6 @@ if __name__ == "__main__":
     for name, path in final_files.items():
         print(f"  {name}: {path}")
     print("=" * 80)
+    import json
+    with open(Path(test_cache) / "lunar_workflow_summary.txt", "w") as summary_file:
+        summary_file.write(json.dumps(final_files, indent=4, default=str))
