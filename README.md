@@ -2,7 +2,7 @@
 
 A Python-based toolkit for managing and automating reaction modeling in LAMMPS, designed as a component of the **Multiscale Polymer Toolkit (MuPT)**.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Installation
 Clone the repository and install in editable mode:
