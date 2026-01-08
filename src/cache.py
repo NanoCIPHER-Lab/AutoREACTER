@@ -3,7 +3,7 @@ import os, datetime, shutil
 from pathlib import Path
 
 current_dir = Path(__file__).parent.parent.resolve()
-# should implemet this for now we will use the project directory
+# should implement this for now we will use the project directory
 # cache_dir = user_cache_dir("ReactionLammpsMuPT", "MUPT") 
 os.makedirs(current_dir / "lunar" / "cache", exist_ok=True)
 cache_dir = current_dir / "lunar" / "cache"
