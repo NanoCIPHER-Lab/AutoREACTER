@@ -1067,7 +1067,7 @@ def map_file_write(reactant_to_product, initator_atoms, edge_atoms, delete_ids):
     # If there are deleted IDs, include a commented line with the number of deleted IDs.
     # This is kept as a commented line (prefixed by '#') so parsers that skip comments will ignore it.
     if delete_ids:
-        map_file += f"\n#{len(delete_ids)} deletedIDs\n"
+        map_file += f"\n#{len(delete_ids)} deleteIDs\n"
 
     # InitiatorIDs section: include a blank line then the initiator IDs. The code expects
     # `initator_atoms` to contain exactly two elements. Convert to 1-based indexing here.
@@ -1092,7 +1092,7 @@ EdgeIDs
     # If deleted IDs were provided, append a #DeletedIDs block. Each deleted ID is
     # written as a commented line (prefixed with '#') and converted to 1-based indexing.
     if delete_ids:
-        map_file += f"\n#DeletedIDs\n"
+        map_file += f"\n#DeleteIDs\n\n"
         for atom in delete_ids:
             map_file += f"#{atom+1}\n"  # commented out deleted IDs, 1-based indexing
 
