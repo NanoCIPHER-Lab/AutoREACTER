@@ -1168,4 +1168,4 @@ if __name__ == "__main__":
     print(template_indexes_product)
     
     # Process all molecule files and generate templates
-    load_molecule_files(molecule_file_dict, reactant_to_product)
+    load_molecule_files(molecule_file_dict, reactant_to_product)    
