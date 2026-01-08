@@ -1103,6 +1103,11 @@ def load_molecule_files(file_dict, reactant_to_product):
         # Write processed molecule file to disk
         with open(os.path.join(save_path, f"template_{file_name}.molecule"), "w") as f:
             f.write(modified_molecule)
+            file_path = os.path.join(save_path, f"template_{file_name}.molecule")
+        
+        # Update the dictionary with the modified molecule template file path
+        molecule_file_dict[name] = file_path
+    return molecule_file_dict
 
 
 if __name__ == "__main__":
@@ -1130,42 +1135,34 @@ if __name__ == "__main__":
     # Used for tracking atoms through the chemical reaction
     # Keys/Values are 0-based indices (converted to 1-based in processing)
     reactant_to_product = {
-        1: 6,      # Reactant atom 1 becomes product atom 6
-        2: 4,      # Reactant atom 2 becomes product atom 4
-        3: 3,      # Reactant atom 3 remains as atom 3
-        4: 5,      # Reactant atom 4 becomes product atom 5
-        5: 8,      # Reactant atom 5 becomes product atom 8
-        6: 9,      # Reactant atom 6 becomes product atom 9
-        9: 0,      # Reactant atom 9 becomes product atom 0
-        12: 7,     # Reactant atom 12 becomes product atom 7
-        15: 26,    # Reactant atom 15 becomes product atom 26
-        16: 21,    # Reactant atom 16 becomes product atom 21
-        17: 18,    # Reactant atom 17 becomes product atom 18
-        18: 17,    # Reactant atom 18 becomes product atom 17
-        19: 1,     # Reactant atom 19 becomes product atom 1
-        20: 25,    # Reactant atom 20 becomes product atom 25
-        21: 2,     # Reactant atom 21 becomes product atom 2
-        23: 22,    # Reactant atom 23 becomes product atom 22
-        24: 23,    # Reactant atom 24 becomes product atom 23
-        25: 19,    # Reactant atom 25 becomes product atom 19
-        26: 20,    # Reactant atom 26 becomes product atom 20
-        27: 27,    # Reactant atom 27 remains as atom 27
+        1: 6,      
+        2: 4,      
+        3: 3,      
+        4: 5,      
+        5: 8,      
+        6: 9,      
+        9: 0,      
+        12: 7,     
+        15: 26,    
+        16: 21,    
+        17: 18,    
+        18: 17,    
+        19: 1,     
+        20: 25,    
+        21: 2, 
+        23: 22,    
+        24: 23,    
+        25: 19,    
+        26: 20,    
+        27: 27,    
     }
     
     # Initialize lists for storing converted 1-based indices
     template_indexes_reactant = []
     template_indexes_product = []
     
-    # Build 1-based index mappings from reactant_to_product dictionary
-    for key, value in reactant_to_product.items():
-        # Convert to 1-based indexing for LAMMPS files (mol files use 0-based)
-        template_indexes_reactant.append(int(key + 1))
-        # Convert to 1-based indexing for LAMMPS files
-        template_indexes_product.append(int(value + 1))
-    
-    # Display index mappings for verification
-    print(template_indexes_reactant)
-    print(template_indexes_product)
-    
     # Process all molecule files and generate templates
-    load_molecule_files(molecule_file_dict, reactant_to_product)    
+    molecule_file_dict = load_molecule_files(molecule_file_dict, reactant_to_product)    
+    print("Molecule files processed and templates generated.")
+    import json
+    print(json.dumps(molecule_file_dict, indent=4))
