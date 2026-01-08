@@ -10,12 +10,8 @@ cache_dir = current_dir / "lunar" / "cache"
 print(f"[cache] current_dir   = {current_dir}")
 print(f"[cache] cache_dir     = {cache_dir}")
 
-from platformdirs import user_cache_dir
-from pathlib import Path
-
 APP_NAME = "ReactionLammpsMuPT"
 APP_AUTHOR = "MUPT"  # fine
-
 cache_dir = Path(user_cache_dir(APP_NAME, APP_AUTHOR))
 lunar_cache_dir = cache_dir / "lunar"
 
