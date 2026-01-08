@@ -22,7 +22,17 @@ from rdkit.Chem.rdchem import Mol
 
 # TODO: Move this to a configuration module (cache.py) or an environment variable.
 # This is the directory where optimized .mol files will be written.
-cache = r"C:\Users\Janitha\Documents\GitHub\reaction_lammps_mupt\cache\lunar"
+# The cache directory can be configured via the LUNAR_CACHE_DIR environment variable.
+# If not set, it falls back to a repository-relative "cache/lunar" directory.
+CACHE_ENV_VAR = "LUNAR_CACHE_DIR"
+cache = os.environ.get(
+    CACHE_ENV_VAR,
+    os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+        "cache",
+        "lunar",
+    ),
+)
 
 
 def separate_fragments_3d(mol: Mol, shift: Tuple[float, float, float] = (8.0, 0.0, 0.0)) -> Mol:
