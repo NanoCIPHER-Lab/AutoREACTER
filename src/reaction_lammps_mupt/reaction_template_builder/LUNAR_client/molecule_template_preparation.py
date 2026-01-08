@@ -1012,8 +1012,95 @@ def molecule_file_preparation(test_molecule_file, template_indexes):
     
     return modified_molecule_file
 
+def map_file_write(reactant_to_product, initator_atoms, edge_atoms, delete_ids):
+    """
+    Construct a textual "map" file describing a superimposition mapping between
+    reactant and product atom indices, edge atom IDs, initiator atom IDs, and
+    optionally deleted atom IDs.
 
-def load_molecule_files(file_dict, reactant_to_product):
+    The returned string uses 1-based indexing (common in chemistry file formats),
+    while the input indices are expected to be 0-based integers.
+
+    File layout produced (approximate):
+      - A short header line
+      - Counts for EdgeIDs and Equivalences
+      - Optional deleted IDs count (commented)
+      - InitiatorIDs section (two lines with the two initiator atom IDs)
+      - EdgeIDs section (one ID per line)
+      - Equivalences section (pairs of reactantID productID, one pair per line)
+      - Optional #DeletedIDs section with each deleted ID commented out
+
+    Parameters
+    ----------
+    reactant_to_product : dict
+        Mapping from reactant atom index (int, 0-based) to product atom index (int, 0-based).
+        Each key/value pair will be written as "reactantID productID" using 1-based indexing.
+    initator_atoms : sequence of two ints
+        Two atom indices (0-based) identifying the initiator atoms. They will be written
+        on separate lines (1-based indexing) under the "InitiatorIDs" section.
+        Note: parameter name follows the original code spelling `initator_atoms`.
+    edge_atoms : iterable of ints
+        Sequence of atom indices (0-based) that form the "EdgeIDs" list. Each will be written
+        on its own line using 1-based indexing.
+    delete_ids : iterable of ints or falsy
+        Optional sequence of atom indices (0-based) that have been deleted. If provided and
+        non-empty, a commented count and a `#DeletedIDs` block will be appended. Each deleted
+        ID is written commented (prefixed with '#') and converted to 1-based indexing.
+
+    Returns
+    -------
+    str
+        The complete map file contents as a single multiline string.
+    """
+    # Start with a fixed header line and a blank line
+    map_file = "this is a nominal superimpose file\n\n"
+
+    # Add counts: number of edge IDs and number of equivalences (mappings)
+    map_file += f"""{len(edge_atoms)} edgeIDs
+{len(reactant_to_product)} equivalences"""
+
+    # If there are deleted IDs, include a commented line with the number of deleted IDs.
+    # This is kept as a commented line (prefixed by '#') so parsers that skip comments will ignore it.
+    if delete_ids:
+        map_file += f"\n#{len(delete_ids)} deletedIDs\n"
+
+    # InitiatorIDs section: include a blank line then the initiator IDs. The code expects
+    # `initator_atoms` to contain exactly two elements. Convert to 1-based indexing here.
+    map_file += f"""
+InitiatorIDs
+
+{initator_atoms[0]+1}
+{initator_atoms[1]+1}
+
+EdgeIDs
+
+"""
+    # EdgeIDs: write each edge atom on its own line, using 1-based indexing.
+    for atom in edge_atoms:
+        map_file += f"{atom+1}\n"  # 1-based indexing
+
+    # Equivalences section: blank line then each mapping as "reactantID productID"
+    map_file += "\nEquivalences\n\n"
+    for key, value in reactant_to_product.items():
+        map_file += f"{(key + 1):<5} {value + 1}\n"  # 1-based indexing
+
+    # If deleted IDs were provided, append a #DeletedIDs block. Each deleted ID is
+    # written as a commented line (prefixed with '#') and converted to 1-based indexing.
+    if delete_ids:
+        map_file += f"\n#DeletedIDs\n"
+        for atom in delete_ids:
+            map_file += f"#{atom+1}\n"  # commented out deleted IDs, 1-based indexing
+
+    # Return the assembled multi-line map file string
+    return map_file
+
+def build_bond_react_templates(
+    file_dict,
+    reactant_to_product,
+    initiator_atoms,
+    edge_atoms,
+    delete_ids,
+):
     """
     Process multiple molecule files for bond-react simulation setup.
     
@@ -1052,11 +1139,15 @@ def load_molecule_files(file_dict, reactant_to_product):
     - Support arbitrary file patterns
     - Process multiple reaction pathways
     - Validate file consistency before processing
+    - Modify map file generation for to loop through multiple reactions
     """
     # Initialize lists to store atom index mappings for reactants and products
     template_indexes_reactant = []
     template_indexes_product = []
-    
+
+    # Initialize dict to store output paths (template files + map file)
+    molecule_file_dict = {}
+
     # Build 1-based index lists from reactant_to_product mapping
     # LAMMPS uses 1-based indexing while dictionary uses 0-based
     for key, value in reactant_to_product.items():
@@ -1064,7 +1155,7 @@ def load_molecule_files(file_dict, reactant_to_product):
         template_indexes_reactant.append(int(key + 1))
         # Convert product indices to 1-based indexing
         template_indexes_product.append(int(value + 1))
-    
+
     # Iterate through all files in the file dictionary
     for name, filepath in file_dict.items():
         # Determine if file is pre-reaction or post-reaction and extract number
@@ -1079,35 +1170,44 @@ def load_molecule_files(file_dict, reactant_to_product):
             # Extract file number from name (e.g., 'post1' -> 1)
             num = get_ending_integer(name)
             # Retrieve molecule file path from dictionary
-            molecule_file = file_dict[f'post{num}']
+            molecule_file = file_dict.get(f'post{num}')
             # Store file identifier for output naming
             file_name = f'post{num}'
         else:
             # Skip files that don't match pre/post pattern
             continue
-        
+
         # Validate that molecule file path was found
         if molecule_file is None:
             raise ValueError(f"Data file for {name} not found.")
-        
+
         # Process molecule file with appropriate index mapping
         # Use reactant indices for 'pre' files, product indices for 'post' files
         modified_molecule = molecule_file_preparation(
             filepath,
             template_indexes_reactant if name.startswith('pre') else template_indexes_product
         )
-        
+
         # Get directory path from input file path
         save_path = os.path.dirname(filepath)
-        
+
         # Write processed molecule file to disk
-        with open(os.path.join(save_path, f"template_{file_name}.molecule"), "w") as f:
+        file_path = os.path.join(save_path, f"template_{file_name}.molecule")
+        with open(file_path, "w") as f:
             f.write(modified_molecule)
-            file_path = os.path.join(save_path, f"template_{file_name}.molecule")
-        
+
         # Update the dictionary with the modified molecule template file path
         molecule_file_dict[name] = file_path
+
+    # Write map file
+    map_file = map_file_write(reactant_to_product, initiator_atoms, edge_atoms, delete_ids) # Equivalences are section is wrong because it uses full molecule atom indices not the template ones
+    map_path = os.path.join(save_path, "RXN_1.map")
+    with open(map_path, "w") as f:
+        f.write(map_file)
+
+    molecule_file_dict["map_file"] = map_path  # this has to go throught a loop because each reaction need its own map file
     return molecule_file_dict
+
 
 
 if __name__ == "__main__":
@@ -1117,7 +1217,7 @@ if __name__ == "__main__":
     Sets up file paths and atom index mappings, then processes molecule files
     for a bond-react LAMMPS simulation.
     """
-    
+
     # Dictionary mapping file identifiers to their full file paths
     molecule_file_dict = {
         # Data files for system definition
@@ -1128,41 +1228,54 @@ if __name__ == "__main__":
         # Post-reaction template molecule file
         "post1": "C:\\Users\\Janitha\\Documents\\GitHub\\reaction_lammps_mupt\\cache\\lunar\\bond_react_merge\\post1_typed_IFF_merged.lmpmol",
         # Force field parameters
-        "force_field_data": "C:\\Users\\Janitha\\Documents\\GitHub\\reaction_lammps_mupt\\cache\\lunar\\bond_react_merge\\force_field.data"
+        "force_field_data": "C:\\Users\\Janitha\\Documents\\GitHub\\reaction_lammps_mupt\\cache\\lunar\\bond_react_merge\\force_field.data",
     }
+
+    # 0-based indices (converted to 1-based inside template/map writing where needed)
+    initiator_atoms = [9, 19]  # 0-based indices of initiator atoms
+    delete_ids = [15, 20, 27]  # 0-based indices of atoms to delete
+    edge_atoms = [1, 12, 5, 6, 16, 23, 24]  # 0-based indices of edge atoms
 
     # Mapping of reactant atom indices to product atom indices
     # Used for tracking atoms through the chemical reaction
     # Keys/Values are 0-based indices (converted to 1-based in processing)
     reactant_to_product = {
-        1: 6,      
-        2: 4,      
-        3: 3,      
-        4: 5,      
-        5: 8,      
-        6: 9,      
-        9: 0,      
-        12: 7,     
-        15: 26,    
-        16: 21,    
-        17: 18,    
-        18: 17,    
-        19: 1,     
-        20: 25,    
-        21: 2, 
-        23: 22,    
-        24: 23,    
-        25: 19,    
-        26: 20,    
-        27: 27,    
+        1: 6,
+        2: 4,
+        3: 3,
+        4: 5,
+        5: 8,
+        6: 9,
+        9: 0,
+        12: 7,
+        15: 26,
+        16: 21,
+        17: 18,
+        18: 17,
+        19: 1,
+        20: 25,
+        21: 2,
+        23: 22,
+        24: 23,
+        25: 19,
+        26: 20,
+        27: 27,
     }
-    
-    # Initialize lists for storing converted 1-based indices
-    template_indexes_reactant = []
-    template_indexes_product = []
-    
+
     # Process all molecule files and generate templates
-    molecule_file_dict = load_molecule_files(molecule_file_dict, reactant_to_product)    
+    molecule_file_dict = build_bond_react_templates(
+        molecule_file_dict,
+        reactant_to_product,
+        initiator_atoms,
+        edge_atoms,
+        delete_ids,
+    )
     print("Molecule files processed and templates generated.")
+
+    # Save the updated molecule file dictionary to a text file
+    path = r"C:\\Users\\Janitha\\Documents\\GitHub\\reaction_lammps_mupt\\cache\\lunar\\"
     import json
-    print(json.dumps(molecule_file_dict, indent=4))
+
+    with open(os.path.join(path, "molecule_file_dict.txt"), "w") as f:
+        f.write(json.dumps(molecule_file_dict, indent=4))
+    print(json.dumps(molecule_file_dict, indent=4)) # somehow some parts are not saved correctly so printing to verify
