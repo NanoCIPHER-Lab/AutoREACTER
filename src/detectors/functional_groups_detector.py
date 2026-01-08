@@ -13,7 +13,7 @@ monomer_types = {
         "group_name": "vinyl"
     },
     "cyclic_olefin_monomer": {
-        "functionality_type": "mono",
+        "functionality_type": "vinyl",
         "smarts_1": "[CX3;R:1]=[CX3;R:2]",
         "group_name": "cyclic_olefin"
     },
@@ -235,7 +235,7 @@ def functional_groups_detection(monomer_dictionary: dict) -> dict:
                     selected_monomers[indexm][functional_group_index] = {
                         "functionality_type": "vinyl",
                         "functional_group_name": functional_group["group_name"],
-                        "functional_hroup_smarts_1": functional_group["smarts_1"],  # Typo in original: 'hroup' instead of 'group'
+                        "functional_group_smarts_1": functional_group["smarts_1"],  
                         "functional_count_1": functional_count_1
                     } 
             # Handle 'mono' functionality (single match required)
@@ -249,7 +249,7 @@ def functional_groups_detection(monomer_dictionary: dict) -> dict:
                     selected_monomers[indexm][functional_group_index] = {
                         "functionality_type": "mono",
                         "functional_group_name": functional_group["group_name"],
-                        "functional_hroup_smarts_1": functional_group["smarts_1"],  # Typo in original: 'hroup' instead of 'group'
+                        "functional_group_smarts_1": functional_group["smarts_1"],  
                         "functional_count_1": functional_count_1
                     }
             # Handle 'di_different' functionality (matches for both smarts_1 and smarts_2 required)
@@ -263,9 +263,9 @@ def functional_groups_detection(monomer_dictionary: dict) -> dict:
                     selected_monomers[indexm][functional_group_index] = {
                         "functionality_type": "di_different",
                         "functional_group_name": functional_group["group_name"],
-                        "functional_hroup_smarts_1": functional_group["smarts_1"],  # Typo in original: 'hroup' instead of 'group'
+                        "functional_group_smarts_1": functional_group["smarts_1"],  
                         "functional_count_1": functional_count_1,
-                        "functional_hroup_smarts_2": functional_group["smarts_2"],  # Typo in original: 'hroup' instead of 'group'
+                        "functional_group_smarts_2": functional_group["smarts_2"], 
                         "functional_count_2": functional_count_2
                     }
             # Handle 'di_identical' functionality (at least 2 matches of smarts_1 required)
@@ -279,11 +279,11 @@ def functional_groups_detection(monomer_dictionary: dict) -> dict:
                     selected_monomers[indexm][functional_group_index] = {
                         "functionality_type": "di_identical",
                         "functional_group_name": functional_group["group_name"],
-                        "functional_hroup_smarts_1": functional_group["smarts_1"],  # Typo in original: 'hroup' instead of 'group'
+                        "functional_group_smarts_1": functional_group["smarts_1"],  
                         "functional_count_1": functional_count_1,
                     }
     # for debugging purposes
-    # print(json.dumps(selected_monomers, indent=4))
+    print(json.dumps(selected_monomers, indent=4))
     return selected_monomers
 
 
