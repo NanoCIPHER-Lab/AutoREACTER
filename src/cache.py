@@ -25,7 +25,7 @@ print(f"[cache] lunar_cache_dir= {lunar_cache_dir}")
 TODO:
 # from here needs to be added to the functions
 # in later steps we will handle the lammps scripts also
-# becasue that part havent fininshed yet these functions will no be called anywhere yet
+# becasue that part havent finished yet these functions will no be called anywhere yet
 # if user did not specifically mention the their desired location we will use this location to give them inputs 
 # cache_dir = user_cache_dir(f"{app_name}", app_author)
 # if this location is the working location we will clean the folder before run
