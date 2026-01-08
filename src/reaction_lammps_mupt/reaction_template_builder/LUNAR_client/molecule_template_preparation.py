@@ -211,8 +211,13 @@ def modify_types(lines, template_indexes, type_start_index):
     
     # Calculate the total number of atom types
     number_of_types = len(df)
+
+    index_change_dict = {}
+    for i, row in df.iterrows():
+        if row['new_atom_index']:
+            index_change_dict[row['atom_index']] = row['new_atom_index']
     
-    return df, types_section, number_of_types
+    return df, types_section, number_of_types, index_change_dict
 
 
 
@@ -985,7 +990,7 @@ def molecule_file_preparation(test_molecule_file, template_indexes):
     lines, type_start_index, charge_start_index, coord_start_index, bond_start_index, angle_start_index, dihedral_start_index, improper_start_index = load_molecule_file(test_molecule_file)
     
     # Process types section - returns DataFrame for mapping and formatted string
-    df_types, types_section, number_of_types = modify_types(lines, template_indexes, type_start_index)
+    df_types, types_section, number_of_types, index_change_dict = modify_types(lines, template_indexes, type_start_index)
     
     # Process charges section using atom mapping from types
     charge_section = modify_charges(lines, df_types, charge_start_index)
@@ -1010,7 +1015,7 @@ def molecule_file_preparation(test_molecule_file, template_indexes):
                                                  number_of_dihedrals, number_of_impropers, types_section, charge_section, coord_section, 
                                                  bond_section, angle_section, dihedral_section, improper_section)
     
-    return modified_molecule_file
+    return modified_molecule_file, index_change_dict
 
 def map_file_write(reactant_to_product, initator_atoms, edge_atoms, delete_ids):
     """
@@ -1156,58 +1161,87 @@ def build_bond_react_templates(
         # Convert product indices to 1-based indexing
         template_indexes_product.append(int(value + 1))
 
-    # Iterate through all files in the file dictionary
-    for name, filepath in file_dict.items():
-        # Determine if file is pre-reaction or post-reaction and extract number
-        if name.startswith('pre'):
-            # Extract file number from name (e.g., 'pre1' -> 1)
-            num = get_ending_integer(name)
-            # Retrieve molecule file path from dictionary
-            molecule_file = file_dict.get(f'pre{num}')
-            # Store file identifier for output naming
-            file_name = f'pre{num}'
-        elif name.startswith('post'):
-            # Extract file number from name (e.g., 'post1' -> 1)
-            num = get_ending_integer(name)
-            # Retrieve molecule file path from dictionary
-            molecule_file = file_dict.get(f'post{num}')
-            # Store file identifier for output naming
-            file_name = f'post{num}'
-        else:
-            # Skip files that don't match pre/post pattern
+    # Only drive off "pre" keys, and process as (preN, postN) pairs
+    for name, pre_path in file_dict.items():
+        if not name.startswith("pre"):
             continue
 
-        # Validate that molecule file path was found
-        if molecule_file is None:
-            raise ValueError(f"Data file for {name} not found.")
+        # Extract file number from name (e.g., 'pre1' -> 1)
+        num = get_ending_integer(name)
 
-        # Process molecule file with appropriate index mapping
-        # Use reactant indices for 'pre' files, product indices for 'post' files
-        modified_molecule = molecule_file_preparation(
-            filepath,
-            template_indexes_reactant if name.startswith('pre') else template_indexes_product
+        # Get paired post path
+        post_key = f"post{num}"
+        post_path = file_dict.get(post_key)
+        if post_path is None:
+            raise ValueError(f"Corresponding post-reaction file for pre{num} not found.")
+
+        # Process pre molecule file with reactant template indices
+        pre_modified, index_change_dict_reactant = molecule_file_preparation(
+            pre_path,
+            template_indexes_reactant
         )
 
-        # Get directory path from input file path
-        save_path = os.path.dirname(filepath)
+        # Process post molecule file with product template indices
+        post_modified, index_change_dict_product = molecule_file_preparation(
+            post_path,
+            template_indexes_product
+        )
 
-        # Write processed molecule file to disk
-        file_path = os.path.join(save_path, f"template_{file_name}.molecule")
-        with open(file_path, "w") as f:
-            f.write(modified_molecule)
+        # Get directory path from input file path (assume same folder for pair)
+        save_path = os.path.dirname(pre_path)
 
-        # Update the dictionary with the modified molecule template file path
-        molecule_file_dict[name] = file_path
+        # Write processed pre molecule file to disk
+        pre_out = os.path.join(save_path, f"template_pre{num}.molecule")
+        with open(pre_out, "w") as f:
+            f.write(pre_modified)
 
-    # Write map file
-    map_file = map_file_write(reactant_to_product, initiator_atoms, edge_atoms, delete_ids) # Equivalences are section is wrong because it uses full molecule atom indices not the template ones
-    map_path = os.path.join(save_path, "RXN_1.map")
-    with open(map_path, "w") as f:
-        f.write(map_file)
+        # Write processed post molecule file to disk
+        post_out = os.path.join(save_path, f"template_post{num}.molecule")
+        with open(post_out, "w") as f:
+            f.write(post_modified)
 
-    molecule_file_dict["map_file"] = map_path  # this has to go throught a loop because each reaction need its own map file
+        # Update the dictionary with the modified molecule template file paths
+        molecule_file_dict[f"pre{num}"] = pre_out
+        molecule_file_dict[f"post{num}"] = post_out
+
+        # Build equivalence mapping in TEMPLATE INDEX SPACE (0-based)
+        # reactant_to_product is full-molecule indices (0-based)
+        # index_change_dict_* are expected to be full_index(1-based?) -> template_index(1-based?) OR similar
+        # We normalize both sides into 0-based template indices below.
+        template_reactant_to_template_product = {}
+
+        for r_full0, p_full0 in reactant_to_product.items():
+            # Convert full-molecule 0-based -> 1-based if your index_change_dict uses 1-based keys
+            r_full1 = r_full0 + 1
+            p_full1 = p_full0 + 1
+
+            # Map full index -> template index (whatever molecule_file_preparation returns)
+            r_tmp = index_change_dict_reactant[r_full1]
+            p_tmp = index_change_dict_product[p_full1]
+
+            # Convert to 0-based template indices for internal dict consistency
+            template_reactant_to_template_product[r_tmp - 1] = p_tmp - 1
+
+        # Convert special atom lists into TEMPLATE INDEX SPACE (0-based)
+        initiator_atoms_t = [(index_change_dict_reactant[i + 1] - 1) for i in initiator_atoms]
+        delete_ids_t = [(index_change_dict_reactant[i + 1] - 1) for i in delete_ids]
+        edge_atoms_t = [(index_change_dict_reactant[i + 1] - 1) for i in edge_atoms]
+
+        # Write map file (now equivalences refer to template indices, not full molecule)
+        map_file = map_file_write(
+            template_reactant_to_template_product,
+            initiator_atoms_t,
+            edge_atoms_t,
+            delete_ids_t
+        )  # Equivalences are section is wrong because it uses full molecule atom indices not the template ones
+
+        map_path = os.path.join(save_path, f"RXN_{num}.map")
+        with open(map_path, "w") as f:
+            f.write(map_file)
+
+        molecule_file_dict[f"map_file_{num}"] = map_path  # this has to go throught a loop because each reaction need its own map file
+
     return molecule_file_dict
-
 
 
 if __name__ == "__main__":
