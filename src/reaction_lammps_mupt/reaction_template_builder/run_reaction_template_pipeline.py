@@ -65,6 +65,7 @@ def reaction_selector(selected_reactions_dict):
         print("Delete Atom Map Numbers:", byproduct_map_numbers)
 
         if not same_reactants:
+            continue
             print("Processing second reaction case:")
             combined_reactants, combined_products, byproduct_map_numbers = map_reactant_atoms(reactant2, reactant1, rxn, delete_atom)
             combined_reactants_with_map_nums, combined_products_with_map_nums = combined_reactants, combined_products # Keep copies with map numbers for debugging

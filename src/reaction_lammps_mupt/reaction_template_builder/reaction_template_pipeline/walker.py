@@ -63,14 +63,14 @@ def reactant_atom_walker(reactant_molecule_object, start_atom_indexs, max_bonds=
     
     # Initialize the shell dictionary. 
     # Key 1 contains starting atoms, keys 2 to max_bonds+1 will contain subsequent shells.
-    template_indexes = {i: [] for i in range(1, max_bonds + 2)}
+    template_indexes = {i: [] for i in range(1, max_bonds + 1)}
     template_indexes[1] = start_atom_indexs
     processed_indexes = []
 
     # Expand the search shell by shell
-    while neighbor_index < max_bonds:
-        neighbor_index += 1
-        
+    while neighbor_index < max_bonds - 1: # Loop until reaching max_bonds
+        neighbor_index += 1 
+
         # Iterate through atoms found in the current shell to find their neighbors
         for atom_idx in template_indexes[neighbor_index]:
             # Get neighbors not present in any previous shell
@@ -83,13 +83,12 @@ def reactant_atom_walker(reactant_molecule_object, start_atom_indexs, max_bonds=
                     template_indexes[neighbor_index + 1].append(n)
             
             processed_indexes.append(atom_idx)
-            
+    print(f"template_indexes: {template_indexes}")
     # Atoms at the furthest distance reached to create the edge atom section in the map file
     edge_atoms = template_indexes[max_bonds]
-    
+    print("Edge atoms at max distance shell:", edge_atoms)
     # Flatten all shells into a single list of indices representing the local environment
     reactant_template_indexes = [x for v in template_indexes.values() for x in v]
-    
     return reactant_template_indexes, edge_atoms
 
 def product_atom_walker(template_indexes, MAP_dict):
@@ -106,6 +105,7 @@ def product_atom_walker(template_indexes, MAP_dict):
     """
     template_mapped_dict = {}
     for i in template_indexes:
+        print(f"Mapping reactant atom index {i}")
         # Check if the reactant atom index exists in our mapping dictionary
         atom = MAP_dict.get(i)
         if atom is not None:
@@ -144,8 +144,36 @@ if __name__ == "__main__":
     # This mapping was manually derived for this specific salicylic acid esterification
     # example by inspecting the atom indices in the combined reactant and product
     # RDKit molecules; it encodes the correspondence used in this demo workflow.
-    mapped_atoms = {9: 0, 19: 1, 3: 3, 15: 26, 18: 17, 20: 25, 21: 2, 2: 4, 4: 5, 17: 18, 25: 19, 26: 20, 27: 27, 1: 6, 12: 7, 5: 8, 6: 9, 16: 21, 23: 22, 24: 23}
-    
+    mapped_atoms = {
+        0: 10,
+        1: 6,
+        2: 4,
+        3: 3,
+        4: 5,
+        5: 8,
+        6: 9,
+        7: 13,
+        8: 14,
+        9: 0,
+        10: 15,
+        11: 11,
+        12: 7,
+        13: 12,
+        14: 16,
+        15: 26,
+        16: 21,
+        17: 18,
+        18: 17,
+        19: 1,
+        20: 25,
+        21: 2,
+        22: 24,
+        23: 22,
+        24: 23,
+        25: 19,
+        26: 20,
+        27: 27,
+    }
     # Load and add hydrogens to reactants to ensure full graph connectivity
     reactant1 = Chem.MolFromSmiles(reactant_smiles1)
     reactant1 = Chem.AddHs(reactant1)

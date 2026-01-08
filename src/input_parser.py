@@ -95,7 +95,7 @@ inputs = {
         1: 1,
         2: 1,
     },
-    "Number of total atoms": [10000, 100000, 1000000],
+    "Number of total atoms": [10000, 100000],
 }
 
 def input(inputs):
