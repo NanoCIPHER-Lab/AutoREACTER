@@ -21,10 +21,16 @@ TODO:
 # At the end the files needs to be moved to the desired location
 """
 # Define cache directories for LUNAR steps
-test_cache = r"C:\Users\Janitha\Documents\GitHub\reaction_lammps_mupt\cache\lunar"
-test_cache_atom_typing = f"{test_cache}\\atom_typing"
-test_cache_all2lmp = f"{test_cache}\\all2lmp"
-test_cache_bond_react_merge = f"{test_cache}\\bond_react_merge"
+# Base cache directory can be configured via the LUNAR_CACHE_DIR environment variable.
+# If not set, it falls back to the original hardcoded path to preserve existing behavior.
+LUNAR_CACHE_DIR = os.environ.get(
+    "LUNAR_CACHE_DIR",
+    r"C:\Users\Janitha\Documents\GitHub\reaction_lammps_mupt\cache\lunar",
+)
+test_cache = LUNAR_CACHE_DIR
+test_cache_atom_typing = os.path.join(test_cache, "atom_typing")
+test_cache_all2lmp = os.path.join(test_cache, "all2lmp")
+test_cache_bond_react_merge = os.path.join(test_cache, "bond_react_merge")
 
 for p in (test_cache, test_cache_atom_typing, test_cache_all2lmp, test_cache_bond_react_merge):
     os.makedirs(p, exist_ok=True)
