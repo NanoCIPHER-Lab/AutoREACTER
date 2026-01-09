@@ -14,7 +14,7 @@ conda activate mupt313
 ## 2. Install the Project (Editable Mode)
 
 ```bash
-cd /mnt/c/Users/Janitha/Documents/GitHub/reaction_lammps_mupt
+cd /mnt/c/Users/<USER>/Documents/GitHub/reaction_lammps_mupt
 python -m pip install -U pip
 python -m pip install -e .
 ```
@@ -28,7 +28,7 @@ python -m ipykernel install --user --name mupt313 --display-name "Python (mupt31
 ## 4. Open the Project in VS Code
 
 ```bash
-cd /mnt/c/Users/Janitha/Documents/GitHub/reaction_lammps_mupt
+cd /mnt/c/Users/<USER>/Documents/GitHub/reaction_lammps_mupt
 code .
 ```
 
