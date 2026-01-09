@@ -6,6 +6,25 @@ import json
 # Additional functional groups can be added based on references like "J. Chem. Inf. Model. 2023, 63, 5539−5548".
 # Note: Potential for monomers with mixed groups like COCl and COOH is unaddressed.
 # Can be many more functional groups added here
+
+"""
+Monomer Functionality Detection Module
+--------------------------------------
+This module identifies and categorizes polymer monomers based on their chemical 
+functionality using SMARTS pattern matching. 
+
+Functionality Elaboration Logic:
+1. Vinyl/Mono: Requires at least one reactive site ([C]=[C] or ring structure).
+2. Di_Identical: Strictly requires >= 2 occurrences of the SAME functional group 
+   (e.g., two -OH groups for a diol). If only one is found, it is treated as 
+   non-functional for step-growth to prevent chain termination errors.
+3. Di_Different: Requires at least one occurrence of two DISTINCT functional 
+   groups (e.g., one -NH2 and one -COOH for an amino acid).
+
+This categorization ensures that only monomers capable of propagation are 
+passed to the polymerization reaction engine.
+"""
+
 monomer_types = {
     "vinyl_monomer": {
         "functionality_type": "vinyl",
@@ -115,87 +134,38 @@ def detect_monomer_functionality(smiles: str, functionality_type: str, smarts_1:
     """
     # Convert SMILES to RDKit molecule object
     mol = Chem.MolFromSmiles(smiles)
+    if mol is None:
+        return 0, None, None
+        
     # Create pattern from primary SMARTS and check for initial match
     patt1 = Chem.MolFromSmarts(smarts_1)
-    match1 = mol.GetSubstructMatch(patt1)
+    matches1 = mol.GetSubstructMatches(patt1)
+    count1 = len(matches1)
+    
     # has to fix di identical case
     if smarts_2:
         # Handle 'di_different' types with two distinct patterns
         patt2 = Chem.MolFromSmarts(smarts_2)
-        match2 = mol.GetSubstructMatch(patt2)
-        if match1 and match2:
+        matches2 = mol.GetSubstructMatches(patt2)
+        count2 = len(matches2)
+        if count1 >= 1 and count2 >= 1:
             # Count all occurrences of each pattern
-            functional_count_1 = len(mol.GetSubstructMatches(patt1))
-            functional_count_2 = len(mol.GetSubstructMatches(patt2))
-            return 2, functional_count_1, functional_count_2
+            return 2, count1, count2
         else:
             return 0, None, None
     else:
-        if match1:
+        if count1 >= 1:
             # Count occurrences of primary pattern
-            functional_count_1 = len(mol.GetSubstructMatches(patt1))
             if functionality_type == "di_identical":
                 # Check if the match occurs more than once for di_identical functionality
-                if functional_count_1 >= 2:
-                    return 2, functional_count_1, None
+                if count1 >= 2:
+                    return 2, count1, None
                 else:
-                    return 0, functional_count_1, None
-            return 1, functional_count_1, None
+                    return 0, count1, None
+            # Vinyl and mono types return 1 if at least one match is found
+            return 1, count1, None
         else:
             return 0, None, None
-
-
-def detect_monomer_functionality(smiles: str, functionality_type: str, smarts_1: str, smarts_2: str = None) -> tuple:
-    """
-    Detect the functionality type of a monomer based on its SMILES string using RDKit substructure matching with SMARTS patterns.
-    
-    Args:
-        smiles (str): SMILES representation of the monomer.
-        functionality_type (str): Type of functionality (e.g., 'mono', 'di_identical', 'di_different', 'vinyl').
-        smarts_1 (str): Primary SMARTS pattern for matching.
-        smarts_2 (str, optional): Secondary SMARTS pattern for 'di_different' types. Defaults to None.
-    
-    Returns:
-        tuple: (functionality_count: int, count_1: int or None, count_2: int or None)
-            - functionality_count: 0 (no match), 1 (single match), or 2 (dual matches).
-            - count_1: Number of matches for smarts_1.
-            - count_2: Number of matches for smarts_2 (if applicable).
-    
-    Notes:
-        For 'di_identical', requires at least 2 matches of smarts_1.
-        Duplicate definition present in original code; this is the second instance.
-    """
-    # Convert SMILES to RDKit molecule object
-    mol = Chem.MolFromSmiles(smiles)
-    # Create pattern from primary SMARTS and check for initial match
-    patt1 = Chem.MolFromSmarts(smarts_1)
-    match1 = mol.GetSubstructMatch(patt1)
-    # has to fix di identical case
-    if smarts_2:
-        # Handle 'di_different' types with two distinct patterns
-        patt2 = Chem.MolFromSmarts(smarts_2)
-        match2 = mol.GetSubstructMatch(patt2)
-        if match1 and match2:
-            # Count all occurrences of each pattern
-            functional_count_1 = len(mol.GetSubstructMatches(patt1))
-            functional_count_2 = len(mol.GetSubstructMatches(patt2))
-            return 2, functional_count_1, functional_count_2
-        else:
-            return 0, None, None
-    else:
-        if match1:
-            # Count occurrences of primary pattern
-            functional_count_1 = len(mol.GetSubstructMatches(patt1))
-            if functionality_type == "di_identical":
-                # Check if the match occurs more than once for di_identical functionality
-                if functional_count_1 >= 2:
-                    return 2, functional_count_1, None
-                else:
-                    return 0, functional_count_1, None
-            return 1, functional_count_1, None
-        else:
-            return 0, None, None
-
 
 def functional_groups_detection(monomer_dictionary: dict) -> dict:
     """
@@ -224,64 +194,41 @@ def functional_groups_detection(monomer_dictionary: dict) -> dict:
         functional_group_index = 0
         # Iterate over each predefined functional group type
         for functional_group in monomer_types.values():
-            # Handle 'vinyl' functionality (single match required)
-            if functional_group["functionality_type"] == "vinyl":
-                functionality, functional_count_1, functional_count_2 = detect_monomer_functionality(smiles, functional_group["functionality_type"], functional_group["smarts_1"])
-                if functionality == 1:
-                    functional_group_index += 1
-                    print(f"Monomer {indexm} ({smiles}) has functionality: {functional_group['group_name']}")
-                    if indexm not in selected_monomers:
-                        selected_monomers[indexm] = {"smiles": smiles}
-                    selected_monomers[indexm][functional_group_index] = {
-                        "functionality_type": "vinyl",
-                        "functional_group_name": functional_group["group_name"],
-                        "functional_group_smarts_1": functional_group["smarts_1"],  
-                        "functional_count_1": functional_count_1
-                    } 
-            # Handle 'mono' functionality (single match required)
-            if functional_group["functionality_type"] == "mono":
-                functionality, functional_count_1, functional_count_2 = detect_monomer_functionality(smiles, functional_group["functionality_type"], functional_group["smarts_1"])
-                if functionality == 1:
-                    functional_group_index += 1
-                    print(f"Monomer {indexm} ({smiles}) has functionality: {functional_group['group_name']}")
-                    if indexm not in selected_monomers:
-                        selected_monomers[indexm] = {"smiles": smiles}
-                    selected_monomers[indexm][functional_group_index] = {
-                        "functionality_type": "mono",
-                        "functional_group_name": functional_group["group_name"],
-                        "functional_group_smarts_1": functional_group["smarts_1"],  
-                        "functional_count_1": functional_count_1
-                    }
-            # Handle 'di_different' functionality (matches for both smarts_1 and smarts_2 required)
-            if functional_group["functionality_type"] == "di_different":    
-                functionality, functional_count_1, functional_count_2 = detect_monomer_functionality(smiles, functional_group["functionality_type"], functional_group["smarts_1"], functional_group["smarts_2"])
-                if functionality == 2:
-                    functional_group_index += 1
-                    print(f"Monomer {indexm} ({smiles}) has functionality: {functional_group['group_name']}")
-                    if indexm not in selected_monomers:
-                        selected_monomers[indexm] = {"smiles": smiles}
-                    selected_monomers[indexm][functional_group_index] = {
-                        "functionality_type": "di_different",
-                        "functional_group_name": functional_group["group_name"],
-                        "functional_group_smarts_1": functional_group["smarts_1"],  
-                        "functional_count_1": functional_count_1,
-                        "functional_group_smarts_2": functional_group["smarts_2"], 
-                        "functional_count_2": functional_count_2
-                    }
-            # Handle 'di_identical' functionality (at least 2 matches of smarts_1 required)
-            if functional_group["functionality_type"] == "di_identical":
-                functionality, functional_count_1, functional_count_2 = detect_monomer_functionality(smiles, functional_group["functionality_type"], functional_group["smarts_1"])
-                if functionality == 2:
-                    functional_group_index += 1
-                    print(f"Monomer {indexm} ({smiles}) has functionality: {functional_group['group_name']}")
-                    if indexm not in selected_monomers:
-                        selected_monomers[indexm] = {"smiles": smiles}
-                    selected_monomers[indexm][functional_group_index] = {
-                        "functionality_type": "di_identical",
-                        "functional_group_name": functional_group["group_name"],
-                        "functional_group_smarts_1": functional_group["smarts_1"],  
-                        "functional_count_1": functional_count_1,
-                    }
+            f_type = functional_group["functionality_type"]
+            s1 = functional_group["smarts_1"]
+            s2 = functional_group.get("smarts_2") # Get smarts_2 if it exists
+            
+            # Use the core detection logic for all types
+            functionality, count1, count2 = detect_monomer_functionality(smiles, f_type, s1, s2)
+            
+            # Check for matches based on functionality requirements
+            is_match = False
+            if f_type in ["vinyl", "mono"] and functionality == 1:
+                is_match = True
+            elif f_type in ["di_different", "di_identical"] and functionality == 2:
+                is_match = True
+                
+            if is_match:
+                functional_group_index += 1
+                print(f"Monomer {indexm} ({smiles}) has functionality: {functional_group['group_name']}")
+                
+                if indexm not in selected_monomers:
+                    selected_monomers[indexm] = {"smiles": smiles}
+                
+                # Construct result entry
+                res_entry = {
+                    "functionality_type": f_type,
+                    "functional_group_name": functional_group["group_name"],
+                    "functional_group_smarts_1": s1,
+                    "functional_count_1": count1
+                }
+                
+                if s2:
+                    res_entry["functional_group_smarts_2"] = s2
+                    res_entry["functional_count_2"] = count2
+                    
+                selected_monomers[indexm][functional_group_index] = res_entry
+
     # for debugging purposes
     print(json.dumps(selected_monomers, indent=4))
     return selected_monomers
@@ -318,6 +265,8 @@ if __name__ == "__main__":
         19: "O=C=N-C-N=C=O",                # di-isocyanate (simplified; represents TDI core)
         20: "C1=CC(=CC=C1C(C2=CC=CC=C2)(O)CC3CO3)CC4CO4" # di-epoxide (bisphenol A diglycidyl ether)
     }
+    monomer_dictionary = {1: "OC(F)c1cc(C(O)Cl)cc(C(O)Br)c1",
+                          2: "O=C(O)c1c(F)c(C(=O)O)c(Br)c(C(=O)O)c1Cl"}
     # Run functional groups detection
     print(json.dumps(functional_groups_detection(monomer_dictionary), indent=4))
 
