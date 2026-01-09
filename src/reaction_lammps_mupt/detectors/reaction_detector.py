@@ -3,75 +3,95 @@ import json
 # Each reaction includes metadata such as whether reactants are the same,
 # the types of reactants, the product type, whether to delete atoms,
 # and the SMARTS string for the reaction pattern using RDKit syntax.
+"""
+TODO:
+
+If no reaction-capable molecules are detected among the provided monomers, but the reaction database indicates that reactions are theoretically possible, prompt the user to decide whether non-monomer molecules should be retained.
+
+- If the user chooses to keep non-monomer molecules:
+  - Generate the simulation scripts without automatic reaction handling.
+  - Require the user to manually provide reaction templates and the corresponding LUNAR map files and input scripts.
+
+Additionally, handle the case where reactions are theoretically possible, but none are detected for the specific set of provided monomers.
+
+In this situation:
+- First, ask the user whether to proceed with:
+  1) monomers only, or  
+  2) a mixture of monomers and non-monomer molecules.
+- If the user selects monomers only:
+  - Generate scripts without automatic reaction handling.
+  - Request manual reaction templates and map files from the user.
+"""
+
 reactions = {
-    "Vinyl Addition Polymerization": {
-        "same_reactants": True,
-        "reactant_1": "vinyl",
-        "product": "polyvinyl_chain",
-        "delete_atom": False,
-        "reaction" : "[CH2:1]=[CH;H1,H0;!R:2].[CH2:3]=[CH;H1,H0;!R:4]>>[CH2:1]-[CH:2]-[CH2:3]-[CH:4]" 
-    },
-    "Cyclic Olefin Addition Polymerization": {
-        "same_reactants": True,
-        "reactant_1": "cyclic_olefin",   
-        "product": "polycyclic_chain",
-        "delete_atom": False,
-        "reaction": "[CX3;R:1]=[CX3;R:2].[CX3;R:3]=[CX3;R:4]>>[CX4:1]-[CX4:2]-[CX4:3]-[CX4:4]"
-    },
-    "Vinyl Copolymerization": {
-        "same_reactants": False,
-        "reactant_1": "vinyl",
-        "reactant_2": "vinyl",
-        "product": "copolyvinyl_chain",
-        "delete_atom": False,
-        "reaction" : "[CH2:1]=[CH;H1,H0;!R:2].[CH2:3]=[CH;H1,H0;!R:4]>>[CH2:1]-[CH:2]-[CH2:3]-[CH:4]"
-    },
-    "Cyclic Olefin and Vinyl Copolymerization": {
-        "same_reactants": False,
-        "reactant_1": "vinyl",
-        "reactant_2": "cyclic_olefin",
-        "product": "copolycyclicvinyl_chain",
-        "delete_atom": False,
-        "reaction": "[CH2:1]=[CH;H1,H0;!R:2].[CX3;R:3]=[CX3;R:4]>>[CX4:1]-[CX4:2]-[CH2:3]-[CH:4]" # has to give reactants as in the order 
-    },
-    "Cyclic Olefin Copolymerization": {
-        "same_reactants": False,
-        "reactant_1": "cyclic_olefin",
-        "reactant_2": "cyclic_olefin",
-        "product": "copolycyclic_chain",
-        "delete_atom": False,
-        "reaction": "[CX3;R:1]=[CX3;R:2].[CX3;R:3]=[CX3;R:4]>>[CX4:1]-[CX4:2]-[CX4:3]-[CX4:4]"
-    },
+    # "Vinyl Addition Polymerization": {
+    #     "same_reactants": True,
+    #     "reactant_1": "vinyl",
+    #     "product": "polyvinyl_chain",
+    #     "delete_atom": False,
+    #     "reaction" : "[CH2:1]=[CH;H1,H0;!R:2].[CH2:3]=[CH;H1,H0;!R:4]>>[CH2:1]-[CH:2]-[CH2:3]-[CH:4]" 
+    # },
+    # "Cyclic Olefin Addition Polymerization": {
+    #     "same_reactants": True,
+    #     "reactant_1": "cyclic_olefin",   
+    #     "product": "polycyclic_chain",
+    #     "delete_atom": False,
+    #     "reaction": "[CX3;R:1]=[CX3;R:2].[CX3;R:3]=[CX3;R:4]>>[CX4:1]-[CX4:2]-[CX4:3]-[CX4:4]"
+    # },
+    # "Vinyl Copolymerization": {
+    #     "same_reactants": False,
+    #     "reactant_1": "vinyl",
+    #     "reactant_2": "vinyl",
+    #     "product": "copolyvinyl_chain",
+    #     "delete_atom": False,
+    #     "reaction" : "[CH2:1]=[CH;H1,H0;!R:2].[CH2:3]=[CH;H1,H0;!R:4]>>[CH2:1]-[CH:2]-[CH2:3]-[CH:4]"
+    # },
+    # "Cyclic Olefin and Vinyl Copolymerization": {
+    #     "same_reactants": False,
+    #     "reactant_1": "vinyl",
+    #     "reactant_2": "cyclic_olefin",
+    #     "product": "copolycyclicvinyl_chain",
+    #     "delete_atom": False,
+    #     "reaction": "[CH2:1]=[CH;H1,H0;!R:2].[CX3;R:3]=[CX3;R:4]>>[CX4:1]-[CX4:2]-[CH2:3]-[CH:4]" # has to give reactants as in the order 
+    # },
+    # "Cyclic Olefin Copolymerization": {
+    #     "same_reactants": False,
+    #     "reactant_1": "cyclic_olefin",
+    #     "reactant_2": "cyclic_olefin",
+    #     "product": "copolycyclic_chain",
+    #     "delete_atom": False,
+    #     "reaction": "[CX3;R:1]=[CX3;R:2].[CX3;R:3]=[CX3;R:4]>>[CX4:1]-[CX4:2]-[CX4:3]-[CX4:4]"
+    # },
     # "Lactone Ring-Opening Polyesterification": { # does not work yet
     #     "reactant_1": "lactone",
     #     "reactant_2": "initiator",
     #     "product": "polyester_chain"
     # },
-    "Hydroxy Carboxylic Acid Polycondensation(Polyesterification)": {
-        "same_reactants": True,
-        "reactant_1": "hydroxy_carboxylic_acid",
-        "product": "polyester_chain",
-        "delete_atom": True,
-        "reaction": "[OX2H1;!$(OC=*):1].[CX3:2](=[O])[OX2H1]>>[OX2:1]-[CX3:2](=[O]).O"
-    },
-    "Hydroxy Carboxylic and Hydroxy Carboxylic Polycondensation(Polyesterification)": {
-        "same_reactants": False,
-        "reactant_1": "hydroxy_carboxylic_acid",
-        "reactant_2": "hydroxy_carboxylic_acid",
-        "product": "polyester_chain",
-        "delete_atom": True,
-        "reaction": "[OX2H1;!$(OC=*):1].[CX3:2](=[O])[OX2H1]>>[OX2:1]-[CX3:2](=[O]).O"
-    },
-    "Diol and Di-Carboxylic Acid Polycondensation(Polyesterification)": {
-        "same_reactants": False,
-        "reactant_1": "diol",
-        "reactant_2": "di_carboxylic_acid",
-        "product": "polyester_chain",   
-        "delete_atom": True,
-        "reaction": "[CX3:2](=[O])[OX2H1,Cl,Br].[O,S;X2;H1;!$([O,S]C=*):3]>>[CX3:2](=[O])-[O,S;X2;!$([O,S]C=*):3]"
-        # "[CX3:2](=[O])[OX2H1,Cl,Br:1].[O,S;X2;H1;!$([O,S]C=*):3]>>[CX3:2](=[O])-[O,S;X2;!$([O,S]C=*):3].[OX2H1,Cl,Br:1]"
-        # by product not working properly for now 
-    },
+    # "Hydroxy Carboxylic Acid Polycondensation(Polyesterification)": {
+    #     "same_reactants": True,
+    #     "reactant_1": "hydroxy_carboxylic_acid",
+    #     "product": "polyester_chain",
+    #     "delete_atom": True,
+    #     "reaction": "[OX2H1;!$(OC=*):1].[CX3:2](=[O])[OX2H1]>>[OX2:1]-[CX3:2](=[O]).O"
+    # },
+    # "Hydroxy Carboxylic and Hydroxy Carboxylic Polycondensation(Polyesterification)": {
+    #     "same_reactants": False,
+    #     "reactant_1": "hydroxy_carboxylic_acid",
+    #     "reactant_2": "hydroxy_carboxylic_acid",
+    #     "product": "polyester_chain",
+    #     "delete_atom": True,
+    #     "reaction": "[OX2H1;!$(OC=*):1].[CX3:2](=[O])[OX2H1]>>[OX2:1]-[CX3:2](=[O]).O"
+    # },
+    # "Diol and Di-Carboxylic Acid Polycondensation(Polyesterification)": {
+    #     "same_reactants": False,
+    #     "reactant_1": "diol",
+    #     "reactant_2": "di_carboxylic_acid",
+    #     "product": "polyester_chain",   
+    #     "delete_atom": True,
+    #     "reaction": "[CX3:2](=[O])[OX2H1,Cl,Br].[O,S;X2;H1;!$([O,S]C=*):3]>>[CX3:2](=[O])-[O,S;X2;!$([O,S]C=*):3]"
+    #     # "[CX3:2](=[O])[OX2H1,Cl,Br:1].[O,S;X2;H1;!$([O,S]C=*):3]>>[CX3:2](=[O])-[O,S;X2;!$([O,S]C=*):3].[OX2H1,Cl,Br:1]"
+    #     # by product not working properly for now 
+    # },
     # "Cyclic Anhydride and Epoxide Polyesterification": {
     #     "same_reactants": False,
     #     "reactant_1": "cyclic_anhydride",
@@ -133,29 +153,29 @@ reactions = {
     #     "product": "polyamide_chain",
     #     "delete_atom": False
     # },
-    "Amino Acid Polycondensation (Polyamidation)": {
-        "same_reactants": True,
-        "reactant_1": "amino_acid",
-        "product": "polyamide_chain",
-        "delete_atom": True,
-        "reaction": "[NX3;H2,H1;!$(OC=*):1].[CX3:2](=[O])[OX2H1]>>[NX3:1]-[CX3:2](=[O]).O"
-    },
-    "Amino Acid and Amino Acid Polycondensation (Polyamidation)": {
-        "same_reactants": False,
-        "reactant_1": "amino_acid",
-        "reactant_2": "amino_acid",
-        "product": "polyamide_chain",
-        "delete_atom": True,
-        "reaction": "[NX3;H2,H1;!$(OC=*):1].[CX3:2](=[O])[OX2H1]>>[NX3:1]-[CX3:2](=[O]).O"
-    },
-    "Di-Amine and Di-Carboxylic Acid Polycondensation (Polyamidation)": {
-        "same_reactants": False,
-        "reactant_1": "di_amine",
-        "reactant_2": "di_carboxylic_acid",
-        "product": "polyamide_chain",
-        "delete_atom": True,
-        "reaction": "[CX3:2](=[O])[OX2H1,Cl,Br:1].[N&X3;H2,H1;!$(NC=*):3]>>[CX3:2](=[O])-[NX3;!$(NC=*):3].[OX2H1,Cl,Br:1]" # same product issue as above in polyesterification
-    },
+    # "Amino Acid Polycondensation (Polyamidation)": {
+    #     "same_reactants": True,
+    #     "reactant_1": "amino_acid",
+    #     "product": "polyamide_chain",
+    #     "delete_atom": True,
+    #     "reaction": "[NX3;H2,H1;!$(OC=*):1].[CX3:2](=[O])[OX2H1]>>[NX3:1]-[CX3:2](=[O]).O"
+    # },
+    # "Amino Acid and Amino Acid Polycondensation (Polyamidation)": {
+    #     "same_reactants": False,
+    #     "reactant_1": "amino_acid",
+    #     "reactant_2": "amino_acid",
+    #     "product": "polyamide_chain",
+    #     "delete_atom": True,
+    #     "reaction": "[NX3;H2,H1;!$(OC=*):1].[CX3:2](=[O])[OX2H1]>>[NX3:1]-[CX3:2](=[O]).O"
+    # },
+    # "Di-Amine and Di-Carboxylic Acid Polycondensation (Polyamidation)": {
+    #     "same_reactants": False,
+    #     "reactant_1": "di_amine",
+    #     "reactant_2": "di_carboxylic_acid",
+    #     "product": "polyamide_chain",
+    #     "delete_atom": True,
+    #     "reaction": "[CX3:2](=[O])[OX2H1,Cl,Br:1].[N&X3;H2,H1;!$(NC=*):3]>>[CX3:2](=[O])-[NX3;!$(NC=*):3].[OX2H1,Cl,Br:1]" # same product issue as above in polyesterification
+    # },
     # "Di-cyclic Anhydride and Di-Primery ammine Polycondensation (Polyimidation)": { # Do not have a clear idea about this reaction yet
     #     "same_reactants": False,
     #     "reactant_1": "di_cyclic_anhydride",
@@ -163,24 +183,24 @@ reactions = {
     #     "product": "polyurethane_chain",
     #     "delete_atom": True
     # },
-    "Di-Isocyanate and Diol Polyurethane Formation": {
-        "same_reactants": False,
-        "reactant_1": "di_isocyanate",
-        "reactant_2": "diol",
-        "product": "polyurethane_chain",
-        "delete_atom": True,
-        "reaction": "[NX3;H1,H0;!$(N[C,S]=*):1].[CX4;H2,H1;!$([CX4](=O)):2]>>[NX3:1]-[CX4:2](=O)"
-    },
-    "Di-Epoxide and Di-Isocyanate Polyamination": {
-        "same_reactants": False,
-        "reactant_1": "di_epoxide",
-        "reactant_2": "di_isocyanate",
-        "product": "polyamine_chain",
-        "delete_atom": False,
-        "reaction": "[NX2:3]=[CX2:4]=[OX1,SX1:5].[OX2,SX2;H1;!$([O,S]C=*):6]>>[NX3:3][CX3:4](=[OX1,SX1:5])[OX2,SX2;!$([O,S]C=*):6]"
-    }
+#     "Di-Isocyanate and Diol Polyurethane Formation": {
+#         "same_reactants": False,
+#         "reactant_1": "di_isocyanate",
+#         "reactant_2": "diol",
+#         "product": "polyurethane_chain",
+#         "delete_atom": True,
+#         "reaction": "[NX3;H1,H0;!$(N[C,S]=*):1].[CX4;H2,H1;!$([CX4](=O)):2]>>[NX3:1]-[CX4:2](=O)"
+#     },
+#     "Di-Epoxide and Di-Isocyanate Polyamination": {
+#         "same_reactants": False,
+#         "reactant_1": "di_epoxide",
+#         "reactant_2": "di_isocyanate",
+#         "product": "polyamine_chain",
+#         "delete_atom": False,
+#         "reaction": "[NX2:3]=[CX2:4]=[OX1,SX1:5].[OX2,SX2;H1;!$([O,S]C=*):6]>>[NX3:3][CX3:4](=[OX1,SX1:5])[OX2,SX2;!$([O,S]C=*):6]"
+#     }
+# }
 }
-
 
 
 def reaction_detector(monomer_dictionary: dict) -> dict:
@@ -198,88 +218,113 @@ def reaction_detector(monomer_dictionary: dict) -> dict:
 
     Returns:
         dict: A dictionary of detected reactions, structured as:
-              {reaction_name: {rx_index: {monomer_1: {...}, monomer_2: {... (if applicable)}, ...}, ...}}
+              {reaction_name: {<reaction metadata keys>, rx_index: {monomer_1: {...}, monomer_2: {... (if applicable)}}}}
 
     Note:
-        This is a placeholder implementation. The actual logic checks functional group names
-        against reaction reactant types but does not perform structural validation with RDKit.
+        This logic matches functional_group_name against reaction reactant types.
+        It does not validate the reaction SMARTS against the exact monomer structures (RDKit reaction execution is later).
     """
-    # Initialize an empty dictionary to store detected reactions
     detected_reactions = {}
+
+    # Helper: get all functional-group indices in a monomer that match a target functional_group_name
+    def _matching_fg_indices(monomer_entry: dict, target_group_name: str) -> list:
+        fg_hits = []
+        for fg_index in monomer_entry:
+            if isinstance(fg_index, int):
+                if monomer_entry[fg_index].get("functional_group_name") == target_group_name:
+                    fg_hits.append(fg_index)
+        return fg_hits
+
     # Iterate over each predefined reaction
     for reaction_name, reaction_info in reactions.items():
-        rx_index = 0  # Counter for reaction instances
-        # Case 1: Homopolymerization with same reactants (no reactant_2 specified)
-        if reaction_info["same_reactants"] and not reaction_info.get("reactant_2"):
+        rx_index = 0  # Counter for reaction instances for this reaction_name
+        seen_pairs = set()  # Used to avoid duplicates for symmetric cases
+
+        # Always prepare a clean metadata dict per reaction_name (prevents mutating global "reactions")
+        if reaction_name not in detected_reactions:
+            detected_reactions[reaction_name] = {}
+            for k, v in reaction_info.items():
+                detected_reactions[reaction_name][k] = v  # copy metadata only (same_reactants/reactants/product/delete_atom/reaction)
+
+        reactant_1_name = reaction_info.get("reactant_1")
+        reactant_2_name = reaction_info.get("reactant_2")  # may be None
+        same_reactants = reaction_info.get("same_reactants", False)
+
+        # Case 1: True homopolymerization definition (single reactant only; no reactant_2)
+        if same_reactants and reactant_2_name is None:
             for i in monomer_dictionary:
-                for fg_index in monomer_dictionary[i]:
-                    if isinstance(fg_index, int):
-                        func_name = monomer_dictionary[i][fg_index]["functional_group_name"]
-                        if reaction_info["reactant_1"] == func_name:
-                            rx_index += 1
-                            if not reaction_name in detected_reactions:
-                                detected_reactions[reaction_name] = reaction_info
-                            detected_reactions[reaction_name][rx_index] = {}
-                            detected_reactions[reaction_name][rx_index]["monomer_1"] = {}
-                            detected_reactions[reaction_name][rx_index]["monomer_1"]["smiles"] = monomer_dictionary[i]["smiles"]
-                            # Update with functional group details
-                            detected_reactions[reaction_name][rx_index]["monomer_1"].update(monomer_dictionary[i][fg_index])
-        # Case 2: Homopolymerization but with two identical reactant types (same_reactants=True, but reactant_2 exists)
-        elif reaction_info.get("reactant_2") is not None and reaction_info["same_reactants"]:
+                fg_hits_i = _matching_fg_indices(monomer_dictionary[i], reactant_1_name)
+                for fg_index_i in fg_hits_i:
+                    # Each functional group hit is a valid candidate "instance"
+                    rx_index += 1
+                    detected_reactions[reaction_name][rx_index] = {}
+                    detected_reactions[reaction_name][rx_index]["monomer_1"] = {}
+                    detected_reactions[reaction_name][rx_index]["monomer_1"]["smiles"] = monomer_dictionary[i]["smiles"]
+                    detected_reactions[reaction_name][rx_index]["monomer_1"].update(monomer_dictionary[i][fg_index_i])  # attach fg metadata
+
+        # Case 2: Two-reactant reaction definition (reactant_2 exists)
+        else:
+            # Build candidate lists for reactant_1 and reactant_2 across all monomers
+            reactant_1_candidates = []  # list of tuples: (monomer_id, fg_index)
+            reactant_2_candidates = []  # list of tuples: (monomer_id, fg_index)
+
             for i in monomer_dictionary:
-                for fg_index_i in monomer_dictionary[i]:
-                    if isinstance(fg_index_i, int):
-                        func_name_1 = monomer_dictionary[i][fg_index_i]["functional_group_name"]
-                        if reaction_info["reactant_1"] == func_name_1:
-                            for j in monomer_dictionary:
-                                if i != j:
-                                    for fg_index_j in monomer_dictionary[j]:
-                                        if isinstance(fg_index_j, int):
-                                            func_name_2 = monomer_dictionary[j][fg_index_j]["functional_group_name"]
-                                            if reaction_info["reactant_2"] == func_name_2:
-                                                rx_index += 1
-                                                if not reaction_name in detected_reactions:
-                                                    detected_reactions[reaction_name] = reaction_info
-                                                # Skip if this combination was already detected (to avoid duplicates)
-                                                for k in detected_reactions[reaction_name]:
-                                                    if isinstance(k, int) and rx_index == k:
-                                                        if (detected_reactions[reaction_name][k].get("monomer_1", {}).get("smiles") == monomer_dictionary[j]["smiles"] or
-                                                            detected_reactions[reaction_name][k].get("monomer_2", {}).get("smiles") == monomer_dictionary[i]["smiles"]):
-                                                            continue
-                                                detected_reactions[reaction_name][rx_index] = {}
-                                                detected_reactions[reaction_name][rx_index]["monomer_1"] = {}
-                                                detected_reactions[reaction_name][rx_index]["monomer_1"]["smiles"] = monomer_dictionary[i]["smiles"]
-                                                detected_reactions[reaction_name][rx_index]["monomer_1"].update(monomer_dictionary[i][fg_index_i])
-                                                detected_reactions[reaction_name][rx_index]["monomer_2"] = {}
-                                                detected_reactions[reaction_name][rx_index]["monomer_2"]["smiles"] = monomer_dictionary[j]["smiles"]
-                                                detected_reactions[reaction_name][rx_index]["monomer_2"].update(monomer_dictionary[j][fg_index_j])
-        # Case 3: Copolymerization with different reactants (same_reactants=False)
-        elif not reaction_info["same_reactants"]:
-            for i in monomer_dictionary:
-                for fg_index_i in monomer_dictionary[i]:
-                    if isinstance(fg_index_i, int):
-                        func_name_1 = monomer_dictionary[i][fg_index_i]["functional_group_name"]
-                        if reaction_info["reactant_1"] == func_name_1:
-                            for j in monomer_dictionary:
-                                if i != j:
-                                    for fg_index_j in monomer_dictionary[j]:
-                                        if isinstance(fg_index_j, int):
-                                            func_name_2 = monomer_dictionary[j][fg_index_j]["functional_group_name"]
-                                            if reaction_info.get("reactant_2") is not None:
-                                                if reaction_info["reactant_2"] == func_name_2:
-                                                    rx_index += 1
-                                                    if not reaction_name in detected_reactions:
-                                                        detected_reactions[reaction_name] = reaction_info
-                                                    detected_reactions[reaction_name][rx_index] = {}
-                                                    detected_reactions[reaction_name][rx_index]["monomer_1"] = {}
-                                                    detected_reactions[reaction_name][rx_index]["monomer_1"]["smiles"] = monomer_dictionary[i]["smiles"]
-                                                    detected_reactions[reaction_name][rx_index]["monomer_1"].update(monomer_dictionary[i][fg_index_i])
-                                                    detected_reactions[reaction_name][rx_index]["monomer_2"] = {}
-                                                    detected_reactions[reaction_name][rx_index]["monomer_2"]["smiles"] = monomer_dictionary[j]["smiles"]
-                                                    detected_reactions[reaction_name][rx_index]["monomer_2"].update(monomer_dictionary[j][fg_index_j])
-    # For debugging purposes (commented out)
-    # print(json.dumps(detected_reactions, indent=4))
-    return detected_reactions
+                fg_hits_i_r1 = _matching_fg_indices(monomer_dictionary[i], reactant_1_name)
+                for fg_index_i in fg_hits_i_r1:
+                    reactant_1_candidates.append((i, fg_index_i))
+
+                if reactant_2_name is not None:
+                    fg_hits_i_r2 = _matching_fg_indices(monomer_dictionary[i], reactant_2_name)
+                    for fg_index_i in fg_hits_i_r2:
+                        reactant_2_candidates.append((i, fg_index_i))
+
+            # If reactant_2 is missing for some reason, nothing to pair
+            if reactant_2_name is None:
+                continue
+
+            # Pair candidates (cartesian product) so we don't miss any valid combinations
+            for (i, fg_index_i) in reactant_1_candidates:
+                for (j, fg_index_j) in reactant_2_candidates:
+                    # Do not pair the same monomer with itself (keeps your current behavior)
+                    if i == j:
+                        continue
+
+                    # Duplicate control:
+                    # If reactant_1 and reactant_2 are the SAME type, reaction is symmetric in practice.
+                    # So we treat (i,fg_i,j,fg_j) same as (j,fg_j,i,fg_i) and store only one.
+                    if reactant_1_name == reactant_2_name:
+                        ordered = tuple(sorted([(i, fg_index_i), (j, fg_index_j)]))
+                        pair_key = (reaction_name, ordered[0], ordered[1])
+                    else:
+                        # If types differ, keep directionality (reactant_1 -> monomer_1, reactant_2 -> monomer_2)
+                        pair_key = (reaction_name, (i, fg_index_i), (j, fg_index_j))
+
+                    if pair_key in seen_pairs:
+                        continue
+                    seen_pairs.add(pair_key)
+
+                    rx_index += 1
+                    detected_reactions[reaction_name][rx_index] = {}
+                    detected_reactions[reaction_name][rx_index]["monomer_1"] = {}
+                    detected_reactions[reaction_name][rx_index]["monomer_1"]["smiles"] = monomer_dictionary[i]["smiles"]
+                    detected_reactions[reaction_name][rx_index]["monomer_1"].update(monomer_dictionary[i][fg_index_i])
+
+                    detected_reactions[reaction_name][rx_index]["monomer_2"] = {}
+                    detected_reactions[reaction_name][rx_index]["monomer_2"]["smiles"] = monomer_dictionary[j]["smiles"]
+                    detected_reactions[reaction_name][rx_index]["monomer_2"].update(monomer_dictionary[j][fg_index_j])
+
+    # Clean up: remove reaction_name entries with no detected instances
+    cleaned_detected_reactions = {}
+    for reaction_name, rx_block in detected_reactions.items():
+        has_any_instance = False
+        for k in rx_block:
+            if isinstance(k, int):
+                has_any_instance = True
+                break
+        if has_any_instance:
+            cleaned_detected_reactions[reaction_name] = rx_block
+
+    return cleaned_detected_reactions
 
 
 def reaction_arranger(monomer_dictionary: dict) -> dict:
@@ -296,93 +341,125 @@ def reaction_arranger(monomer_dictionary: dict) -> dict:
     Returns:
         dict: An arranged dictionary of reactions, structured as:
               {reaction_name_index: {reaction_name: str, monomer_1: {...}, monomer_2: {... (if applicable)}, ...}}
-
-    Note:
-        This function calls reaction_detector internally and uses print statements for user feedback.
     """
-    # Detect reactions using the detector function
     detected_reactions = reaction_detector(monomer_dictionary)
-    # Initialize arranged reactions dictionary
     arrenged_reactions = {}
-    reaction_name_index = 0  # Sequential index for arranged reactions
-    # Iterate over detected reactions
+    reaction_name_index = 0
+
     for reaction_name, reaction_info in detected_reactions.items():
         for rx_index in reaction_info:
             if isinstance(rx_index, int):
-                # Get monomer_1 details (always present)
                 monomer_1 = reaction_info[rx_index]["monomer_1"]
-                # Try to get monomer_2 (may not exist for homopolymerization)
+
                 try:
                     monomer_2 = reaction_info[rx_index]["monomer_2"]
                 except KeyError:
                     monomer_2 = None
-                # Handle homomonomer case (no monomer_2)
+
+                # Homomonomer case (single monomer in entry)
                 if monomer_2 is None:
                     reaction_name_index += 1
-                    monomer_1_smiles = monomer_1['smiles']
-                    # Print identification message
+                    monomer_1_smiles = monomer_1["smiles"]
                     print(f"{reaction_name_index}. {reaction_name} homomonomer identified: {monomer_1_smiles}")
+
                     arrenged_reactions[reaction_name_index] = {}
                     arrenged_reactions[reaction_name_index]["reaction_name"] = reaction_name
-                    # Copy non-integer (metadata) keys from reaction_info
+
+                    # Copy metadata keys (non-int keys only)
                     for rx_index_meta, rx_info in reaction_info.items():
                         if not isinstance(rx_index_meta, int):
                             arrenged_reactions[reaction_name_index][rx_index_meta] = rx_info
+
                     arrenged_reactions[reaction_name_index]["monomer_1"] = monomer_1
-                # Handle comonomer case (monomer_2 exists)
+
+                # Comonomer / two-monomer case
                 else:
                     reaction_name_index += 1
-                    monomer_1_smiles = monomer_1['smiles']
-                    monomer_2_smiles = monomer_2['smiles']
-                    # Print identification message
+                    monomer_1_smiles = monomer_1["smiles"]
+                    monomer_2_smiles = monomer_2["smiles"]
                     print(f"{reaction_name_index}. {reaction_name} comonomers identified: {monomer_1_smiles} and {monomer_2_smiles}.")
+
                     arrenged_reactions[reaction_name_index] = {}
                     arrenged_reactions[reaction_name_index]["reaction_name"] = reaction_name
-                    # Copy non-integer (metadata) keys from reaction_info
+
+                    # Copy metadata keys (non-int keys only)
                     for rx_index_meta, rx_info in reaction_info.items():
                         if not isinstance(rx_index_meta, int):
                             arrenged_reactions[reaction_name_index][rx_index_meta] = rx_info
+
                     arrenged_reactions[reaction_name_index]["monomer_1"] = monomer_1
                     arrenged_reactions[reaction_name_index]["monomer_2"] = monomer_2
-    # For debugging purposes (commented out)
-    # print(json.dumps(arrenged_reactions, indent=4))
+
     return arrenged_reactions
 
-def reaction_selector(monomer_dictionary: dict) -> dict:
+
+from typing import Dict, Any
+
+
+def reaction_selector(monomer_dictionary: Dict[str, Any]) -> Dict[int, Any]:
     """
     Allows the user to select specific reactions from the arranged list.
 
     This function uses reaction_arranger to get the list of detected and arranged reactions,
     then prompts the user for indices to select via input. It filters and returns only the selected reactions.
 
+    Rules:
+    - Re-asks if any token is not a positive integer.
+    - Re-asks if any index is not present in arranged_reactions.
+    - Re-asks if the input is empty.
+
     Args:
-        monomer_dictionary (dict): The same dictionary as input to previous functions.
+        monomer_dictionary: Input dictionary containing monomers + metadata.
 
     Returns:
-        dict: A dictionary containing only the user-selected reactions, keyed by their indices.
-
-    Raises:
-        ValueError: If provided indices are not integers or out of range (handled implicitly by checking existence).
-
-    Note:
-        This is interactive and relies on user input. For non-interactive use, consider modifying to accept indices as a parameter.
+        A dictionary containing only the user-selected reactions, keyed by their indices.
+        If no reactions are detected, raises a ValueError.
     """
-    # Placeholder implementation (as noted in original, but functional)
-    # Arrange reactions using the arranger function
-    arrenged_reactions = reaction_arranger(monomer_dictionary)
-    # Initialize selected reactions dictionary
-    selected_reactions = {}
-    # Prompt user for reaction indices
-    input_reaction_indices = input("Enter the reaction indices you want to select (comma-separated): ")
-    # Parse indices, filtering valid integers
-    selected_indices = [int(idx.strip()) for idx in input_reaction_indices.split(",") if idx.strip().isdigit()]
-    # Add selected reactions to the output dictionary
-    for idx in selected_indices:
-        if idx in arrenged_reactions:
-            selected_reactions[idx] = arrenged_reactions[idx]
-    # For debugging purposes (commented out)
-    # print(json.dumps(selected_reactions, indent=4))
-    return selected_reactions
+    arranged_reactions = reaction_arranger(monomer_dictionary)
+    
+    if not arranged_reactions:
+        raise ValueError("There is no possble reactions detected from the given monomers. Terminating program.")
+
+    valid_indices = sorted(arranged_reactions.keys())
+
+    while True:
+        raw = input(
+            f"Enter reaction indices (comma-separated). Valid options: {valid_indices}\n> "
+        ).strip()
+
+        if not raw:
+            print("Empty input. Please enter at least one index.")
+            continue
+
+        parts = [p.strip() for p in raw.split(",") if p.strip()]
+        bad_tokens = [p for p in parts if not p.isdigit()]
+
+        if bad_tokens:
+            print(f"Invalid token(s): {bad_tokens}. Use only integers like: 1,2,3")
+            continue
+
+        selected_indices: list[int] = []
+        for p in parts:
+            # safe because since checked isdigit()
+            selected_indices.append(int(p))
+
+        out_of_range: list[int] = []
+        for idx in selected_indices:
+            if idx not in arranged_reactions:
+                out_of_range.append(idx)
+
+        if out_of_range:
+            print(f"Out of range / not available: {out_of_range}. Valid: {valid_indices}")
+            continue
+
+        # If we got here, everything is valid
+        selected_reactions: Dict[int, Any] = {}
+        for idx in selected_indices:
+            selected_reactions[idx] = arranged_reactions[idx]
+
+        return selected_reactions
+
+
 
 
 if __name__ == "__main__":
