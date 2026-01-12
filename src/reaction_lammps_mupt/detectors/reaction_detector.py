@@ -3,25 +3,6 @@ import json
 # Each reaction includes metadata such as whether reactants are the same,
 # the types of reactants, the product type, whether to delete atoms,
 # and the SMARTS string for the reaction pattern using RDKit syntax.
-"""
-TODO:
-
-If no reaction-capable molecules are detected among the provided monomers, but the reaction database indicates that reactions are theoretically possible, prompt the user to decide whether non-monomer molecules should be retained.
-
-- If the user chooses to keep non-monomer molecules:
-  - Generate the simulation scripts without automatic reaction handling.
-  - Require the user to manually provide reaction templates and the corresponding LUNAR map files and input scripts.
-
-Additionally, handle the case where reactions are theoretically possible, but none are detected for the specific set of provided monomers.
-
-In this situation:
-- First, ask the user whether to proceed with:
-  1) monomers only, or  
-  2) a mixture of monomers and non-monomer molecules.
-- If the user selects monomers only:
-  - Generate scripts without automatic reaction handling.
-  - Request manual reaction templates and map files from the user.
-"""
 
 reactions = {
     # "Vinyl Addition Polymerization": {

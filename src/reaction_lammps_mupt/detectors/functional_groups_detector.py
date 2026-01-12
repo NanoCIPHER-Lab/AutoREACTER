@@ -252,7 +252,7 @@ def detect_monomer_functionality(smiles: str, functionality_type: str, smarts_1:
             return 0, 0, None
 
 
-def functional_groups_detection(monomer_dictionary: dict) -> dict:
+def functional_groups_detector(monomer_dictionary: dict) -> dict:
     """
     Detect functional groups in a dictionary of monomers and categorize them based on predefined types.
     
@@ -394,6 +394,6 @@ if __name__ == "__main__":
         20: "C1=CC(=CC=C1C(C2=CC=CC=C2)(O)CC3CO3)CC4CO4" # di-epoxide (bisphenol A diglycidyl ether)
     }
     # Run functional groups detection
-    print(json.dumps(functional_groups_detection(monomer_dictionary), indent=4))
+    print(json.dumps(functional_groups_detector(monomer_dictionary), indent=4))
 
         

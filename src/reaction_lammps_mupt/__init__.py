@@ -1,1 +1,1 @@
-from .detectors.functional_groups_detector import functional_groups_detection
+
