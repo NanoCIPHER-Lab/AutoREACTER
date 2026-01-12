@@ -1,10 +1,9 @@
 import importlib
 import sys
 from initializaion import initialize
+initialize()
+from cache import get_default_cache_dir, retention_cleanup, copy_to_date_folder
 from input_parser import InputParser
-
-
-
 
 
 if __name__ == "__main__":
@@ -61,6 +60,8 @@ if __name__ == "__main__":
     initialize()
     inputs = InputParser(inputs)
     print(inputs.validated_inputs)
+    default_cache_dir = get_default_cache_dir()
+    print(f"Default cache directory: {default_cache_dir}")
 
 
 # first Check RDKit is imported correctly
