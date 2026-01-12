@@ -48,21 +48,27 @@ reactions = {
     #     "reactant_2": "initiator",
     #     "product": "polyester_chain"
     # },
-    # "Hydroxy Carboxylic Acid Polycondensation(Polyesterification)": {
-    #     "same_reactants": True,
-    #     "reactant_1": "hydroxy_carboxylic_acid",
-    #     "product": "polyester_chain",
-    #     "delete_atom": True,
-    #     "reaction": "[OX2H1;!$(OC=*):1].[CX3:2](=[O])[OX2H1]>>[OX2:1]-[CX3:2](=[O]).O"
-    # },
-    # "Hydroxy Carboxylic and Hydroxy Carboxylic Polycondensation(Polyesterification)": {
-    #     "same_reactants": False,
-    #     "reactant_1": "hydroxy_carboxylic_acid",
-    #     "reactant_2": "hydroxy_carboxylic_acid",
-    #     "product": "polyester_chain",
-    #     "delete_atom": True,
-    #     "reaction": "[OX2H1;!$(OC=*):1].[CX3:2](=[O])[OX2H1]>>[OX2:1]-[CX3:2](=[O]).O"
-    # },
+    "Hydroxy Carboxylic Acid Polycondensation(Polyesterification)": {
+        "same_reactants": True,
+        "reactant_1": "hydroxy_carboxylic_acid",
+        "product": "polyester_chain",
+        "delete_atom": True,
+        "reaction": "[O;!$(OC=*):1]-[H:3].[CX3:2](=[O:5])[OX2H1:4]>>[OX2:1]-[CX3:2](=[O:5]).[O:4]-[H:3]",
+        "reference": {"smarts": "https://pubs.acs.org/doi/10.1021/acs.jcim.3c00329",
+                      "reaction_and_mechanism": ["https://pubs.acs.org/doi/10.1021/ed048pA734.1", 
+                                                 "https://pubs.acs.org/doi/10.1021/ed073pA312"]}
+    },
+    "Hydroxy Carboxylic and Hydroxy Carboxylic Polycondensation(Polyesterification)": {
+        "same_reactants": False,
+        "reactant_1": "hydroxy_carboxylic_acid",
+        "reactant_2": "hydroxy_carboxylic_acid",
+        "product": "polyester_chain",
+        "delete_atom": True,
+        "reaction": "[O;!$(OC=*):1]-[H:3].[CX3:2](=[O:5])[OX2H1:4]>>[OX2:1]-[CX3:2](=[O:5]).[O:4]-[H:3]",
+        "reference": {"smarts": "https://pubs.acs.org/doi/10.1021/acs.jcim.3c00329",
+                      "reaction_and_mechanism": ["https://pubs.acs.org/doi/10.1021/ed048pA734.1", 
+                                                 "https://pubs.acs.org/doi/10.1021/ed073pA312"]}
+    },
     # "Diol and Di-Carboxylic Acid Polycondensation(Polyesterification)": {
     #     "same_reactants": False,
     #     "reactant_1": "diol",
