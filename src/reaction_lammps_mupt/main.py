@@ -1,13 +1,17 @@
 import importlib
 import sys
 from initializaion import initialize
-initialize()
-from cache import get_default_cache_dir, retention_cleanup, copy_to_date_folder
 from input_parser import InputParser
+from cache import get_default_cache_dir, retention_cleanup, get_current_cache_dir
+from cache import delete_default_cache_files as delete_cache_dir
+from cache import copy_to_date_folder as Copy
+initialize()
+cache_dir = get_default_cache_dir()
+final_cache_dir = get_current_cache_dir()
 
 
 if __name__ == "__main__":
-    inputs =  inputs = {
+    inputs =  {
     "simulation_name": "MySimulation",
     "temperature": [300, 400, 500],
     "density": 0.8,
@@ -57,16 +61,9 @@ if __name__ == "__main__":
         },
     }
 
-    initialize()
     inputs = InputParser(inputs)
     print(inputs.validated_inputs)
-    default_cache_dir = get_default_cache_dir()
-    print(f"Default cache directory: {default_cache_dir}")
 
-
-# first Check RDKit is imported correctly
-# Then Check LUNAR is imported correctly
-# There parts a will very strict - will close the program if not imported correctly
 
 # run User Input Parser
 # will have class InputParser

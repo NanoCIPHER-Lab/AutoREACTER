@@ -1,5 +1,10 @@
 import importlib
 import sys
+try: # for running as a package
+    from cache import delete_default_cache_files as delete_cache_dir
+except ImportError: # for running as a script
+    from reaction_lammps_mupt.cache import delete_default_cache_files as delete_cache_dir
+
 
 def ASCII_Mupt_reaction_LAMMPS():
     ascii_art = r"""
@@ -26,24 +31,8 @@ def initialize():
             "Exiting program..."
         )
         sys.exit(message)  
+    
+    delete_cache_dir()
 
 if __name__ == "__main__":
-    inputs = {
-        "simulation_name": "MySimulation",
-        "temperature": [300, 400, 500],
-        "density": 0.8,
-        "monomers": {
-            1: "CCO",
-            2: "CCC",
-        },
-        "Number_of_monomers": {
-            1: 1000,
-            2: 1000,
-        }, # or
-        "stoichiometric_ratio": {
-            1: 1,
-            2: 1,
-        },
-        "Number of total atoms": [10000, 100000],
-    }
     initialize()
