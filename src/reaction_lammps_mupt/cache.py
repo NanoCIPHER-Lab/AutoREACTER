@@ -8,10 +8,6 @@ from pathlib import Path
 from typing import Literal
 
 
-# ----------------------------
-# Git / cache path helpers
-# ----------------------------
-
 def get_git_root() -> Path:
     """
     Return the root directory of the current git repo.
@@ -40,11 +36,6 @@ def get_default_cache_dir() -> Path:
     default_dir.mkdir(parents=True, exist_ok=True)
     return default_dir
 
-
-# ----------------------------
-# Basic filesystem utilities
-# ----------------------------
-
 def delete_files_in_directory(directory_path: Path) -> None:
     """
     Delete only files/symlinks directly inside directory_path.
@@ -56,13 +47,11 @@ def delete_files_in_directory(directory_path: Path) -> None:
         print(f"Error: Directory not found at {directory_path}")
         return
 
-    for entry in directory_path.iterdir():
-        # Only delete regular files and symlinks; leave directories alone
+    for entry in directory_path.iterdir(): 
         if entry.is_file() or entry.is_symlink():
             try:
                 entry.unlink()
             except OSError:
-                # If you care, log the error; for now we silently skip
                 pass
 
 
@@ -72,10 +61,6 @@ def delete_default_cache_files() -> None:
     """
     delete_files_in_directory(get_default_cache_dir())
 
-
-# ----------------------------
-# Run directory creation
-# ----------------------------
 
 def make_dated_run_dir(
     base_dir: Path,
@@ -132,10 +117,6 @@ def get_current_cache_dir() -> Path:
     """
     return make_dated_run_dir(get_cache_base_dir(), chdir_to="none")
 
-
-# ----------------------------
-# Retention cleanup (interactive)
-# ----------------------------
 
 def retention_cleanup(base_dir: Path | None = None) -> None:
     """
@@ -210,11 +191,6 @@ def retention_cleanup(base_dir: Path | None = None) -> None:
             shutil.rmtree(folder)
             print(f"Deleted old folder: {folder}")
 
-
-# ----------------------------
-# Copy staging cache -> dated run folder
-# ----------------------------
-
 def copy_to_date_folder(source_dir: Path) -> Path:
     """
     Copy everything from source_dir (e.g., cache/0_cache) into a newly created
@@ -241,11 +217,6 @@ def copy_to_date_folder(source_dir: Path) -> Path:
             target.symlink_to(item.readlink())
 
     return dest_dir
-
-
-# ----------------------------
-# Demo / entry point
-# ----------------------------
 
 if __name__ == "__main__":
     # Optional: clean up old dated cache folders interactively
