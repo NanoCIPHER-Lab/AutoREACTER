@@ -104,8 +104,16 @@ def detect_reactions(input_dict) -> dict[str, list]:
 if __name__ == "__main__":
     sample_inputs = {
         "monomers": {
-            "1": "C1=CC=C(C(=C1)C(=O)O)O",
-            "2": "OCCC(O)=O",
+            1: "C1=CC=C(C(=C1)C(=O)O)O",
+            2: "OCCC(O)=O",
+            3: "CCO",
+        }
+    }
+    sample_inputs = {
+        "monomers": {
+            1: "O=C(O)c1cc(O)cc(C(=O)O)c1",
+            2: "O=C(O)CCCC(O)CCCO",
+            3: "CCO",
         }
     }
     detected_reactions, non_monomers = detect_reactions(sample_inputs)

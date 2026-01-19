@@ -1,7 +1,40 @@
-from reaction_template_pipeline.util import get_all_possible_reactions
+from rdkit import Chem
+from rdkit.Chem import AllChem
 
 
-
+def get_all_possible_reactions(detected_reactions):
+    """Get all possible reactions from detected reactions.
+    
+    Args:
+        detected_reactions (dict): Detected reactions dictionary.
+    Returns:
+        list: List of all possible reactions.
+    """
+    for key in detected_reactions:
+        reaction_dict = detected_reactions[key]
+        reactant_1 = reaction_dict["monomer_1"]["smiles"]
+        same_reactants = reaction_dict["same_reactants"]
+        if same_reactants:
+            reactant_2 = reactant_1
+        else:
+            reactant_2 = reaction_dict["monomer_2"]["smiles"]
+        rxn_smarts = reaction_dict["reaction"]
+        rxn = AllChem.ReactionFromSmarts(rxn_smarts)
+        reactant_mol_1 = Chem.MolFromSmiles(reactant_1)
+        reactant_mol_1 = AllChem.AddHs(reactant_mol_1)
+        reactant_mol_2 = Chem.MolFromSmiles(reactant_2)
+        reactant_mol_2 = AllChem.AddHs(reactant_mol_2)
+        products = rxn.RunReactants((reactant_mol_1, reactant_mol_2))
+        if not products:
+            raise ValueError("No products generated from the reaction.")
+        number_of_products = len(products)
+        if not same_reactants:
+            products = rxn.RunReactants((reactant_mol_2, reactant_mol_1))
+            number_of_products += len(products)
+        reaction_dict["number_of_products"] = number_of_products
+    return detected_reactions
+ 
+    
 
 if __name__ == "__main__":
     detected_reactions = {
@@ -89,9 +122,4 @@ if __name__ == "__main__":
         },
     }
     Non_monomer_molecules_to_retain = ["CCO"]
-    all_possible_reactions = get_all_possible_reactions(
-        detected_reactions
-    )
-    import json
-    print(json.dumps(all_possible_reactions, indent=2))
-
+    print(get_all_possible_reactions(detected_reactions))
