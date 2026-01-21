@@ -1,6 +1,6 @@
 from rdkit import Chem
 
-def remove_atoms_by_indices(mol, atom_indices_to_keep):
+def extract_fragment_by_indices(mol, atom_indices_to_keep):
     """
     Removes a list of atoms from an RDKit molecule by their indices.
     """
