@@ -237,7 +237,7 @@ def process_reactions(rxn, csv_cache, reaction_tuple, key=None,
                 pass
             
             # Initialize data structures
-            df = pd.DataFrame(columns=["reactant_index", "product_idx"])
+            df = pd.DataFrame(columns=["reactant_idx", "product_idx"])
             first_shell = []      # Atoms in first coordination shell
             initiator_idxs = []   # Initiator atom indices
             mapping_dict = {}     # Additional mapping dictionary
@@ -266,7 +266,7 @@ def process_reactions(rxn, csv_cache, reaction_tuple, key=None,
             for r_atom in reactant_combined.GetAtoms():
                 for p_atom in product_combined.GetAtoms():
                     if r_atom.GetAtomMapNum() == p_atom.GetAtomMapNum():
-                        new_row = pd.DataFrame([{"reactant_index": r_atom.GetIdx(), 
+                        new_row = pd.DataFrame([{"reactant_idx": r_atom.GetIdx(), 
                                                 "product_idx": p_atom.GetIdx()}])
                         df = pd.concat([df, new_row], ignore_index=True)
                         break
@@ -274,14 +274,14 @@ def process_reactions(rxn, csv_cache, reaction_tuple, key=None,
             # Validate mapping completeness and consistency
             num_reactant_atoms = reactant_combined.GetNumAtoms()
             num_product_atoms = product_combined.GetNumAtoms()
-            reactant_mapped = df["reactant_index"].notna().sum()
+            reactant_mapped = df["reactant_idx"].notna().sum()
             product_mapped = df["product_idx"].notna().sum()
 
             # Validation 1: Mapped atom counts must match between columns
             if reactant_mapped != product_mapped:
                 raise ValueError(
                     "Mismatch in mapped atom counts between columns: "
-                    f"reactant_index mapped={reactant_mapped}, product_idx mapped={product_mapped}"
+                    f"reactant_idx mapped={reactant_mapped}, product_idx mapped={product_mapped}"
                 )
 
             # Validation 2: All reactant atoms must be mapped
@@ -300,11 +300,11 @@ def process_reactions(rxn, csv_cache, reaction_tuple, key=None,
                 )
 
             # Validation 4: Mapping indices must be consecutive
-            if (is_consecutive(df["reactant_index"].tolist()) is False or 
+            if (is_consecutive(df["reactant_idx"].tolist()) is False or 
                 is_consecutive(df["product_idx"].tolist()) is False):
                 raise ValueError(
                     "Mapping indices are not consecutive: "
-                    f"reactant indices={df['reactant_index'].tolist()}, "
+                    f"reactant indices={df['reactant_idx'].tolist()}, "
                     f"product indices={df['product_idx'].tolist()}"
                 )
 
@@ -646,7 +646,7 @@ if __name__ == "__main__":
     # run_all(cache, rxn_smarts, reactant_smiles_1, reactant_smiles_2)
     
     # Process all reactions in the dictionary
-    molecule_dict_csv_path_dict, detected_reactions = processing_monomer_dict(detected_reactions, cache)
+    molecule_dict_csv_path_dict, detected_reactions = process_reaction_dict(detected_reactions, cache)
     
     # Display results
     import pprint
