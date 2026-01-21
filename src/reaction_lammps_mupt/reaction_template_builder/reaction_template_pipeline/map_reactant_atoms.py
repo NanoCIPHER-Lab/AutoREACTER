@@ -534,7 +534,7 @@ def run_all(cache, rxn_smarts, reactant_smiles_1, reactant_smiles_2):
     )
     
     # Save outputs
-    save_grid_image(mols, csv_cache, None)
+    save_grid_image(mols, cache, None)
 
     return molecule_and_csv_path_dict
 

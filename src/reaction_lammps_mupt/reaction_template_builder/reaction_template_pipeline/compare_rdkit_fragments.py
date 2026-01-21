@@ -6,7 +6,7 @@ against a history of processed structures to identify unique chemical transforma
 """
 
 from rdkit import Chem
-from rdkit.Chem import rdmolops
+
 import copy
 
 def dict_keys_to_list(input_dict):

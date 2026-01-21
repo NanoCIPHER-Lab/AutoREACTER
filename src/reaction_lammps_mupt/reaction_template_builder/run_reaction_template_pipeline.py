@@ -28,7 +28,7 @@ def is_continuous(d):
         return True
     return keys == list(range(1, len(keys) + 1))
 
-def molecule_dict_csv_path_dict_rerrange(molecule_dict_csv_path_dict):
+def molecule_dict_csv_path_dict_rearrange(molecule_dict_csv_path_dict):
     """
     Rearranges the reaction dictionary keys to be continuous and renames 
     associated CSV files on the filesystem to match the new keys.
