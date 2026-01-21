@@ -1,9 +1,12 @@
-from reaction_template_pipeline.util import get_all_possible_reactions
+from reaction_template_pipeline.map_reactant_atoms import processing_monomer_dict
+
+
 
 
 
 
 if __name__ == "__main__":
+    
     detected_reactions = {
         1: {
             "reaction_name": "Hydroxy Carboxylic Acid Polycondensation(Polyesterification)",
@@ -89,9 +92,5 @@ if __name__ == "__main__":
         },
     }
     Non_monomer_molecules_to_retain = ["CCO"]
-    all_possible_reactions = get_all_possible_reactions(
-        detected_reactions
-    )
-    import json
-    print(json.dumps(all_possible_reactions, indent=2))
-
+    cache = "C:\\Users\\Janitha\\Documents\\GitHub\\reaction_lammps_mupt\\cache\\00_cache"
+    molecule_dict_csv_path_dict, detected_reactions = processing_monomer_dict(detected_reactions, cache)

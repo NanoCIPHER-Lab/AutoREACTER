@@ -430,7 +430,7 @@ def reaction_tuples(same_reactants, mol_reactant_1, mol_reactant_2):
         return [[mol_reactant_1, mol_reactant_2]]
 
 
-def processing_dict(detected_reactions, cache):
+def processing_monomer_dict(detected_reactions, cache):
     """
     Process a dictionary of detected reactions and generate mapping data.
     
@@ -636,7 +636,7 @@ if __name__ == "__main__":
     molecule_dict_csv_path_dict = run_all(cache, rxn_smarts, reactant_smiles_1, reactant_smiles_2)
     
     # Process all reactions in the dictionary
-    molecule_dict_csv_path_dict, detected_reactions = processing_dict(detected_reactions, cache)
+    molecule_dict_csv_path_dict, detected_reactions = processing_monomer_dict(detected_reactions, cache)
     
     # Display results
     import pprint
