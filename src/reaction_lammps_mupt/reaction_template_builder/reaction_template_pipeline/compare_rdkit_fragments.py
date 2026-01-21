@@ -1,124 +1,222 @@
+"""
+Chemical Fragment Extraction and Comparison Utility
+This module provides functions to extract specific fragments from RDKit molecules,
+cap open valences with placeholder atoms (Francium), and compare these fragments
+against a history of processed structures to identify unique chemical transformations.
+"""
+
 from rdkit import Chem
 from rdkit.Chem import rdmolops
+import copy
+
+def dict_keys_to_list(input_dict):
+    """
+    Converts a dictionary of atom mappings into two separate lists of indices.
+
+    Args:
+        input_dict (dict): A dictionary where keys represent reactant atom indices 
+                           and values represent product atom indices.
+
+    Returns:
+        tuple: (reactant_indices, product_indices) as lists of integers.
+    """
+    # Convert keys and values to integers to ensure consistent indexing
+    reactant_indices = [int(k) for k in input_dict.keys()]
+    product_indices = [int(v) for v in input_dict.values()]
+    return reactant_indices, product_indices
+
 
 def extract_fragment_by_indices(mol, atom_indices_to_keep):
     """
-    Removes a list of atoms from an RDKit molecule by their indices.
+    Creates a new molecule containing only the atoms specified by the provided indices.
+    All other atoms are removed.
+
+    Args:
+        mol (rdkit.Chem.rdchem.Mol): The source RDKit molecule.
+        atom_indices_to_keep (list): List of atom indices to retain in the fragment.
+
+    Returns:
+        rdkit.Chem.rdchem.Mol: The extracted molecular fragment, or None if input is invalid.
     """
-    # 1. Convert to an RWMol object for editing
+    if mol is None:
+        return None
+
+    # 1. Convert to an RWMol (Read-Write Molecule) object to allow structural editing
     rwmol = Chem.RWMol(mol)
 
-    # 2. Sort indices in reverse (descending) order
+    # 2. Identify atoms to remove
+    # We find the difference between all atoms in the molecule and the ones we want to keep
     all_indices = [a.GetIdx() for a in mol.GetAtoms()]
     atom_indices_to_remove = [idx for idx in all_indices if idx not in atom_indices_to_keep]
 
+    # 3. Sort indices in reverse (descending) order
+    # Crucial: Removing atoms shifts the indices of subsequent atoms. 
+    # Removing from highest index to lowest prevents this shifting issue.
     sorted_indices = sorted(atom_indices_to_remove, reverse=True)
 
-    # 3. Iterate and remove atoms
+    # 4. Iterate and remove atoms from the RWMol
     for idx in sorted_indices:
-        rwmol.RemoveAtom(idx) # or rwmol.RemoveAtomIdx(idx)
+        rwmol.RemoveAtom(idx) 
 
-    # 4. Convert back to a standard Mol object and sanitize
-    # The sanitization step is important to fix valence and bond info
+    # Convert back to a standard Molecule object
     new_mol = rwmol.GetMol()
-    Chem.SanitizeMol(new_mol)
+    
+    # 5. Attempt Sanitization
+    # Fragments often have "broken" valences. We try to sanitize to refresh 
+    # molecular properties, but wrap it in a try-except to prevent valence errors
+    # from crashing the execution.
+    try:
+        Chem.SanitizeMol(new_mol)
+    except Exception:
+        # If sanitization fails (e.g., due to invalid valences), we proceed with the raw fragment
+        pass
     
     return new_mol
 
-def cap_open_valences_with_fr(new_mol_fragment, francium_atomic_num = 87):
+def cap_open_valences_with_fr(new_mol_fragment, francium_atomic_num=87):
     """
-    Cap all open valences in an RDKit molecular fragment with placeholder atoms.
+    Identifies atoms with unsatisfied valences and attaches Francium (Fr) atoms 
+    as placeholders. This is useful for maintaining structural context in fragments.
 
-    This function scans the given fragment for atoms whose current valence is lower
-    than their default valence and adds new atoms with the specified atomic number,
-    connected by single bonds, to satisfy the open valences.
+    Args:
+        new_mol_fragment (rdkit.Chem.rdchem.Mol): The fragment to cap.
+        francium_atomic_num (int): The atomic number to use for capping (default 87 for Fr).
 
-    :param new_mol_fragment: RDKit Mol fragment whose open valences will be capped.
-    :param francium_atomic_num: Atomic number to use for the capping atoms (default: 87).
-    :return: A dict with keys:
-        - "object": the capped RDKit Mol object
-        - "smiles": SMILES string of the capped molecule
-        - "inchi": InChI string of the capped molecule
+    Returns:
+        dict: A dictionary containing the RDKit object, SMILES string, and InChI string.
     """
-    # 1. Convert to RWMol for editing
+    # Handle empty or null fragments
+    if new_mol_fragment is None or new_mol_fragment.GetNumAtoms() == 0:
+        return {"object": None, "smiles": "", "inchi": ""}
+
     rw_mol = Chem.RWMol(new_mol_fragment)
-    # 2. Iterate over atoms to find open valences
-    for atom in rw_mol.GetAtoms():
+    
+    # Use a static list of atoms to avoid iterator invalidation during modification
+    atoms = list(rw_mol.GetAtoms())
+    
+    for atom in atoms:
         atom_idx = atom.GetIdx()
-        # 3. Determine open valences
-        default_valence = Chem.GetPeriodicTable().GetDefaultValence(atom.GetAtomicNum())
-        current_valence = sum(bond.GetBondTypeAsDouble() for bond in atom.GetBonds())
         try:
+            # Determine the expected valence for the atom type
+            default_valence = Chem.GetPeriodicTable().GetDefaultValence(atom.GetAtomicNum())
+            
+            # Calculate the current valence based on existing bonds
+            current_valence = sum(bond.GetBondTypeAsDouble() for bond in atom.GetBonds())
+            
+            # Handle cases where default valence might be a tuple (multiple oxidation states)
             base_valence = default_valence[0] if isinstance(default_valence, tuple) else default_valence
+            
+            # Calculate how many bonds are "missing"
             open_valences = max(0, int(base_valence) - int(current_valence))
-        except (TypeError, ValueError):
-            # If we cannot determine a sensible integer valence, skip capping for this atom
-            continue
-        if open_valences == 0:
+            
+            # Add Francium atoms for each open valence
+            if open_valences > 0:
+                for _ in range(open_valences):
+                    fr_atom = Chem.Atom(francium_atomic_num)
+                    fr_idx = rw_mol.AddAtom(fr_atom)
+                    # Connect the placeholder atom with a single bond
+                    rw_mol.AddBond(atom_idx, fr_idx, Chem.BondType.SINGLE)
+        except:
+            # Skip atoms where valence cannot be determined (e.g., certain metals)
             continue
 
-        for _ in range(open_valences):
-            # 4. Add a "fr" atom (using atomic number for Francium as a placeholder)
-            fr_atom = Chem.Atom(francium_atomic_num)
-            fr_idx = rw_mol.AddAtom(fr_atom)
-            rw_mol.AddBond(atom_idx, fr_idx, Chem.BondType.SINGLE)
-    # 5. Convert back to Mol and sanitize
+    # Finalize the molecule after capping
     capped_mol = rw_mol.GetMol()
-    Chem.SanitizeMol(capped_mol)
-    capped_mol_info = {
+    try:
+        Chem.SanitizeMol(capped_mol)
+    except:
+        pass
+
+    return {
         "object": capped_mol,
-        "smiles": Chem.MolToSmiles(capped_mol)    ,
+        "smiles": Chem.MolToSmiles(capped_mol),
         "inchi": Chem.MolToInchi(capped_mol),
-    }  
-    return capped_mol_info
+    }
 
 def compare_fragments(mol1_info, mol2_info):
     """
-    Compares two RDKit molecules and returns True if they are identical,
-    otherwise returns False.
+    Compares two molecular info dictionaries to determine if they represent 
+    the same chemical structure.
+
+    Args:
+        mol1_info (dict): Dictionary containing 'smiles' and/or 'inchi'.
+        mol2_info (dict): Dictionary containing 'smiles' and/or 'inchi'.
+
+    Returns:
+        bool: True if molecules match by SMILES or InChI, False otherwise.
     """
-    # Check for None inputs
     if not mol1_info or not mol2_info:
         return False
     
-    # Compare by SMILES or InChI
+    # Check SMILES identity
     if mol1_info.get("smiles") == mol2_info.get("smiles"):
         return True
 
+    # Check InChI identity (more robust for tautomers/stereoisomers in some cases)
     if mol1_info.get("inchi") == mol2_info.get("inchi"):
         return True
+        
     return False
 
-def compare_rdkit_fragments(processed_dict, new_fragment_dict):
+def compare_rdkit_fragments(processed_dict, combined_reactant_mol, combined_product_mol, template_mapped_dict):
     """
-    Check whether a new RDKit fragment has already been processed.
+    Main logic to extract fragments from a reaction and check if this specific 
+    transformation has been encountered before.
 
-    This function compares a candidate fragment (``new_fragment_dict``) against
-    all fragments stored in ``processed_dict`` using :func:`compare_fragments`.
-    If an identical fragment is found, it returns ``True`` and leaves
-    ``processed_dict`` unchanged. If no match is found, the new fragment is
-    appended to ``processed_dict`` under a new integer key
-    (``len(processed_dict) + 1``), and the function returns ``(False, processed_dict)``.
+    Args:
+        processed_dict (dict): A history of previously seen fragments.
+        combined_reactant_mol (rdkit.Chem.rdchem.Mol): The full reactant molecule.
+        combined_product_mol (rdkit.Chem.rdchem.Mol): The full product molecule.
+        template_mapped_dict (dict): Mapping of atom indices involved in the reaction.
 
-    :param dict processed_dict: Mapping from fragment identifiers (typically
-        integers) to fragment information dictionaries. Each fragment info
-        dictionary is expected to contain at least ``"smiles"`` and/or
-        ``"inchi"`` entries, as produced by upstream processing functions.
-    :param dict new_fragment_dict: Fragment information dictionary for the
-        candidate fragment to compare, in the same format as the values in
-        ``processed_dict``.
-
-    :returns: If an identical fragment is already present in
-        ``processed_dict``, returns ``True``. If the fragment is new, it is
-        added to ``processed_dict`` and the function returns a tuple
-        ``(False, processed_dict)``.
-    :rtype: bool or (bool, dict)
+    Returns:
+        tuple: (bool, updated_processed_dict). True if the fragment pair was already known.
     """
-    for proc_id, proc_frag_info in processed_dict.items():
-        if compare_fragments(proc_frag_info, new_fragment_dict):
+    # Create deep copies to avoid modifying the original molecules in memory
+    react_mol = copy.deepcopy(combined_reactant_mol)
+    prod_mol = copy.deepcopy(combined_product_mol)
+    
+    # Get the indices of the atoms involved in the reaction center
+    react_indices, prod_indices = dict_keys_to_list(template_mapped_dict)
+    
+    # Process Reactant Fragment
+    raw_react_frag = extract_fragment_by_indices(react_mol, react_indices)
+    raw_react_info = {
+        "smiles": Chem.MolToSmiles(raw_react_frag) if raw_react_frag else "", 
+        "inchi": Chem.MolToInchi(raw_react_frag) if raw_react_frag else ""
+    }
+    capped_react_info = cap_open_valences_with_fr(raw_react_frag)
+    
+    # Process Product Fragment
+    raw_prod_frag = extract_fragment_by_indices(prod_mol, prod_indices)
+    raw_prod_info = {
+        "smiles": Chem.MolToSmiles(raw_prod_frag) if raw_prod_frag else "", 
+        "inchi": Chem.MolToInchi(raw_prod_frag) if raw_prod_frag else ""
+    }
+    capped_prod_info = cap_open_valences_with_fr(raw_prod_frag)
+
+    # Compare against history
+    for proc_id, history in processed_dict.items():
+        hist_react = history['reactant_info']
+        hist_prod = history['product_info']
+        
+        # Check if current reactant matches history (either raw or capped)
+        react_match = compare_fragments(hist_react, raw_react_info) or \
+                      compare_fragments(hist_react, capped_react_info)
+        
+        # Check if current product matches history (either raw or capped)
+        prod_match = compare_fragments(hist_prod, raw_prod_info) or \
+                     compare_fragments(hist_prod, capped_prod_info)
+
+        # If both reactant and product fragments match an entry, it's a duplicate
+        if react_match and prod_match:
             return True, processed_dict
-    processed_dict[len(processed_dict) + 1] = new_fragment_dict
+        
+    # If it's a new transformation, add it to the history
+    new_id = len(processed_dict) + 1
+    processed_dict[new_id] = {
+        "reactant_info": capped_react_info,
+        "product_info": capped_prod_info
+    }
+    
     return False, processed_dict
-
-
-
