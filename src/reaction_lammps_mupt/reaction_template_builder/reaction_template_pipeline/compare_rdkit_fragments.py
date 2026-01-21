@@ -24,7 +24,7 @@ def extract_fragment_by_indices(mol, atom_indices_to_keep):
     
     return new_mol
 
-def cap_open_valences_with_fr(new_mol_fragment, fr_atomic_num = 87):
+def cap_open_valences_with_fr(new_mol_fragment, francium_atomic_num = 87):
     """
     Docstring for cap_open_valences_with_fr
     
