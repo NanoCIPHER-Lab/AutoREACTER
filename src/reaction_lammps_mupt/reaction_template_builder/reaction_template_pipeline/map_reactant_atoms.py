@@ -633,7 +633,7 @@ if __name__ == "__main__":
     print("Starting reaction processing pipeline...")
     
     # Process a single reaction using run_all
-    molecule_dict_csv_path_dict = run_all(cache, rxn_smarts, reactant_smiles_1, reactant_smiles_2)
+    run_all(cache, rxn_smarts, reactant_smiles_1, reactant_smiles_2)
     
     # Process all reactions in the dictionary
     molecule_dict_csv_path_dict, detected_reactions = processing_monomer_dict(detected_reactions, cache)
