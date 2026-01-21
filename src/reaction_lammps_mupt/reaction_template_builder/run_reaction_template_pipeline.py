@@ -185,7 +185,7 @@ def run_reaction_template_pipeline(detected_reactions_dict, cache):
     
     # If duplicates were found and skipped, re-index the dictionary and files to be continuous
     if duplicated:
-        molecule_dict_csv_path_dict = molecule_dict_csv_path_dict_rerrange(molecule_dict_csv_path_dict)
+        molecule_dict_csv_path_dict = molecule_dict_csv_path_dict_rearrange(molecule_dict_csv_path_dict)
 
     return molecule_dict_csv_path_dict , formatted_dict
 
