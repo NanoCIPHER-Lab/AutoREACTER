@@ -228,13 +228,13 @@ def process_reactions(rxn, csv_cache, reaction_tuple, key=None,
             # Clean up any existing DataFrame
             try:
                 del df
-            except:
+            except NameError:
                 pass
             
             # Initialize data structures
             df = pd.DataFrame(columns=["reactant_index", "product_idx"])
             first_shell = []      # Atoms in first coordination shell
-            initatiator_idxs = [] # Initiator atom indices
+            initiator_idxs = []   # Initiator atom indices
             mapping_dict = {}     # Additional mapping dictionary
 
             # Apply atom mapping from reaction properties
@@ -322,7 +322,7 @@ def process_reactions(rxn, csv_cache, reaction_tuple, key=None,
                     first_shell.append(atom.GetIdx())
                 # we could get the initiators by their map numbers
                 if atom.GetAtomMapNum() in [1, 2]:
-                    initatiator_idxs.append(atom.GetIdx())
+                    initiator_idxs.append(atom.GetIdx())
 
             # Identify byproduct atoms if deletion is requested
             byproduct_indexs = []
