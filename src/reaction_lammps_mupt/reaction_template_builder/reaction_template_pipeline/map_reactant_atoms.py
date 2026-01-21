@@ -1,249 +1,218 @@
-"""
-Still, there is no method to verify that all possible reactions can be implemented correctly.
-So, for now, we will proceed with only one or two reactions.
-
-TODO:
-- Add a verification method for all reactions.
-
-If there are multiple reactions between the same reactants, this is the place to handle that.
-
-Example:
-    reaction_smarts = "[O;!$(OC=*):1]-[H:2].[CX3:3](=[O])[OX2H1:4]>>[OX2:1]-[CX3:3](=[O]).[O:4]-[H:2]"
-    reactant_smiles1 = "OC(F)c1cc(C(O)Cl)cc(C(O)Br)c1"
-    reactant_smiles2 = "O=C(O)c1c(F)c(C(=O)O)c(Br)c(C(=O)O)c1Cl"
-
-To handle such cases, we need to enumerate all possible matches, process them one-by-one,
-and assign manual mapping based on each match.
-
-This may also require modifications to the reaction selector logic inside
-`run_reaction_template_pipeline.py` to support iterating through multiple match candidates.
-"""
-
 from rdkit import Chem
-from rdkit.Chem import AllChem
+from rdkit.Chem import AllChem, rdmolops, Draw
+import pandas as pd
+from pathlib import Path
+import os
 
 
-def map_reactant_atoms(reactant1, reactant2, rxn, delete_atom=False):
-    """
-    Maps atom indices in two reactant molecules to the atom map numbers defined
-    in the reaction SMARTS template using substructure matching. Runs the reaction
-    to produce products, reveals the template map numbers in the products, combines
-    reactants and products into single molecules, and optionally extracts map numbers
-    from a byproduct for deletion.
+def is_number_in_set(set_of_tuples, reactant):
+    print(set_of_tuples)
+    for atom in reactant.GetAtoms():
+        if atom.GetAtomMapNum() == 101 or atom.GetAtomMapNum() == 102:
+            x = atom.GetIdx()
+            for t in set_of_tuples:
+                if x in t:
+                    print(f"Found matching atom index {x} in tuple {t}")
+                    return t
+    raise ValueError("No matching atom found in the provided set of tuples.")
 
-    This ensures proper atom tracking across the reaction for downstream analysis,
-    such as identifying changed atoms or handling byproducts.
 
-    Args:
-        reactant1 (Chem.Mol): First reactant molecule (with hydrogens added).
-        reactant2 (Chem.Mol): Second reactant molecule (with hydrogens added).
-        rxn (AllChem.ReactionFromSmarts): The chemical reaction object from SMARTS.
-        delete_atom (bool): If True, expects a byproduct in the second position of products
-            and collects its atom map numbers for deletion handling. Raises error if only
-            one product found.
+def smart_mapping(reactant, smarts_template, match_tuple):
+    if not match_tuple:
+        return
+    SMARTS_index_to_Map_Number = {}
+    for smarts_atom in smarts_template.GetAtoms():
+        map_num = smarts_atom.GetAtomMapNum()
+        if map_num != 0:
+            SMARTS_index_to_Map_Number[smarts_atom.GetIdx()] = map_num
+    for smarts_pos, map_num in SMARTS_index_to_Map_Number.items():
+        if smarts_pos < len(match_tuple):
+            atom_index_in_mol = match_tuple[smarts_pos]
+            atom = reactant.GetAtomWithIdx(atom_index_in_mol)
+            atom.SetAtomMapNum(map_num)
 
-    Returns:
-        tuple:
-            - combined_reactants (Chem.Mol): Combined molecule of both reactants.
-            - combined_products (Chem.Mol): Combined molecule(s) of the first product set.
-            - byproduct_map_numbers (list[int]): List of atom map numbers from byproduct
-              (empty if delete_atom=False).
 
-    Raises:
-        RuntimeError: If no products produced or (if delete_atom=True) only one product found.
+def is_consecutive(num_list):
+    if not num_list:
+        return False
+    return len(set(num_list)) == len(num_list) and max(num_list) - min(num_list) + 1 == len(num_list)
 
-    Notes:
-        - Initial map numbers: reactant1 atoms get 1001+, reactant2 get 2001+ (for identification).
-        - Assumes single product set; uses first set for combination, reveals maps on all.
-    """
-    # Assign unique initial map numbers to all atoms in reactants for identification
-    # reactant1: 1001 + idx, reactant2: 2001 + idx
-    for atom in reactant1.GetAtoms():
-        atom.SetAtomMapNum(atom.GetIdx() + 1001)
-    for atom in reactant2.GetAtoms():
-        atom.SetAtomMapNum(atom.GetIdx() + 2001)
-    from rdkit.Chem import Draw
-    from pathlib import Path
-    # path = Path("C:\\Users\\Janitha\\Documents\\GitHub\\reaction_lammps_mupt\\cache\\lunar\\bond_react_merge")
-    # Draw.MolsToGridImage([reactant1, reactant2], molsPerRow=2, subImgSize=(1800, 1800)).save(path / f"reaction.png")
 
-    def smart_mapping(reactant, smarts_template, match_tuple):
-        """
-        Applies atom map numbers from the reaction's reactant SMARTS template
-        to the corresponding matched atoms in the reactant molecule.
+def prepare_paths(cache):
+    csv_cache = Path(cache) / "reactant_product_sets" / "csv"
+    os.makedirs(csv_cache, exist_ok=True)
+    return csv_cache
 
-        Args:
-            reactant (Chem.Mol): The reactant molecule.
-            smarts_template (Chem.Mol): The reactant part of the reaction SMARTS.
-            match_tuple (tuple): Atom indices match from GetSubstructMatch.
-        """
-        if not match_tuple:
-            return
 
-        # Map from SMARTS atom indices to their map numbers (non-zero)
-        SMARTS_index_to_Map_Number = {}
-        for smarts_atom in smarts_template.GetAtoms():
-            map_num = smarts_atom.GetAtomMapNum()
-            if map_num != 0:
-                SMARTS_index_to_Map_Number[smarts_atom.GetIdx()] = map_num
+def build_reaction(rxn_smarts):
+    return AllChem.ReactionFromSmarts(rxn_smarts)
 
-        # Assign map numbers to matched atoms in reactant
-        for smarts_pos, map_num in SMARTS_index_to_Map_Number.items():
-            if smarts_pos < len(match_tuple):
-                atom_index_in_mol = match_tuple[smarts_pos]
-                atom = reactant.GetAtomWithIdx(atom_index_in_mol)
-                atom.SetAtomMapNum(map_num)
 
-    # Prepare mapping info for both reactants using substructure matches
-    mapping_dict = {
-        "reactant1": {
-            "reactant": reactant1,
-            "smarts_template": rxn.GetReactants()[0],
-            "match": reactant1.GetSubstructMatch(rxn.GetReactants()[0])
-        },
-        "reactant2": {
-            "reactant": reactant2,
-            "smarts_template": rxn.GetReactants()[1],
-            "match": reactant2.GetSubstructMatch(rxn.GetReactants()[1])
-        }
-    }
+def build_reactants(reactant_smiles_1, reactant_smiles_2):
+    mol_reactant_1 = Chem.MolFromSmiles(reactant_smiles_1)
+    mol_reactant_1 = Chem.AddHs(mol_reactant_1)
+    mol_reactant_2 = Chem.MolFromSmiles(reactant_smiles_2)
+    mol_reactant_2 = Chem.AddHs(mol_reactant_2)
+    return mol_reactant_1, mol_reactant_2
 
-    # Apply smart mapping to both reactants
-    smart_mapping(
-        mapping_dict["reactant1"]["reactant"],
-        mapping_dict["reactant1"]["smarts_template"],
-        mapping_dict["reactant1"]["match"]
-    )
-    smart_mapping(
-        mapping_dict["reactant2"]["reactant"],
-        mapping_dict["reactant2"]["smarts_template"],
-        mapping_dict["reactant2"]["match"]
-    )
 
-    reactants_tuple = (reactant1, reactant2)
+def process_reactions(rxn, mol_reactant_1, mol_reactant_2, csv_cache):
+    tuples = [
+        [mol_reactant_1, mol_reactant_1],
+        [mol_reactant_1, mol_reactant_2],
+        [mol_reactant_2, mol_reactant_1],
+        [mol_reactant_2, mol_reactant_2],
+    ]
+    total_products = 0
+    mols = []
+    delete_atoms = True
+    output = ""
 
-    def reveal_template_map_numbers(mol: Chem.Mol) -> None:
-        """
-        Reveals the original template atom map numbers in a post-reaction product molecule.
-        RDKit sets 'old_mapno' property on atoms after reaction; this copies it to AtomMapNum
-        for visualization and tracking.
+    for j, pair in enumerate(tuples):
+        r1, r2 = Chem.Mol(pair[0]), Chem.Mol(pair[1])
+        products = rxn.RunReactants((r1, r2))
+        matches_1 = r1.GetSubstructMatches(rxn.GetReactants()[0])
+        matches_2 = r2.GetSubstructMatches(rxn.GetReactants()[1])
 
-        Args:
-            mol (Chem.Mol): Product molecule from reaction.
-        """
-        for atom in mol.GetAtoms():
-            if atom.HasProp('old_mapno'):  # RDKit "magic" property post-reaction
-                map_num = atom.GetIntProp('old_mapno')
-                atom.SetAtomMapNum(map_num)
+        for product_set in products:
+            try:
+                del df
+            except:
+                pass
+            df = pd.DataFrame(columns=["reactant_index", "product_idx"])
+            first_shell = []
+            initatiator_idxs = []
+            mapping_dict = {}
 
-    # Execute the reaction and get all possible product sets
-    products_sets = list(rxn.RunReactants(reactants_tuple))
-    if not products_sets:
-        raise RuntimeError("Reaction produced no products. SMARTS or mapping failed.")
+            for i, product in enumerate(product_set):
+                num_total_atoms = 0
+                if i == 1:
+                    num_total_atoms = product_set[0].GetNumAtoms()
+                for atom in product.GetAtoms():
+                    if atom.HasProp("react_idx"):
+                        r_idx = atom.GetIntProp("react_idx")
+                        a_idx = atom.GetIntProp("react_atom_idx")
+                        r = (r1, r2)[r_idx]
+                        r_atom = r.GetAtomWithIdx(a_idx)
+                        map_num = atom.GetIdx() + 1 + num_total_atoms + 100
+                        r_atom.SetAtomMapNum(map_num)
+                        atom.SetAtomMapNum(map_num)
 
-    # Take the first product set as main products
-    products = products_sets[0]
+            reactant_combined = Chem.CombineMols(r1, r2)
+            product_combined = Chem.CombineMols(*product_set)
 
-    # Reveal map numbers on all products across all sets (for completeness)
-    for products in products_sets:
-        for product in products:
-            reveal_template_map_numbers(product)
+            for r_atom in reactant_combined.GetAtoms():
+                for p_atom in product_combined.GetAtoms():
+                    if r_atom.GetAtomMapNum() == p_atom.GetAtomMapNum():
+                        print(f"Mapping Reactant Atom {r_atom.GetIdx()} to Product Atom {p_atom.GetIdx()}")
+                        new_row = pd.DataFrame([{"reactant_index": r_atom.GetIdx(), "product_idx": p_atom.GetIdx()}])
+                        df = pd.concat([df, new_row], ignore_index=True)
+                        break
 
-    # Handle byproduct if requested
-    byproduct_map_numbers = []
-    if delete_atom:
-        if len(products) == 1:
-            raise RuntimeError("Reaction expected to produce a byproduct to delete, but only one product found.")
-        byproduct = products[1]  # Assume byproduct is second in tuple
-        for atom in byproduct.GetAtoms():
-            byproduct_map_numbers.append(atom.GetAtomMapNum())
+            num_reactant_atoms = reactant_combined.GetNumAtoms()
+            num_product_atoms = product_combined.GetNumAtoms()
+            reactant_mapped = df["reactant_index"].notna().sum()
+            product_mapped = df["product_idx"].notna().sum()
 
-    # Combine reactants and products into single molecules for easier handling
-    combined_reactants = Chem.CombineMols(reactant1, reactant2)
-    combined_products = Chem.CombineMols(*products)
-    return combined_reactants, combined_products, byproduct_map_numbers
-
-def map_product_atoms(combined_reactants, combined_products, byproduct_map_numbers, delete_atom):
-    MAP_dict = {}
-    mapped_products = set()
-    initiator_atom = []
-    byproduct_atom = []
-    atom_count_reactants = 0
-    atom_count_products = 0
-    from rdkit.Chem import Draw
-    from pathlib import Path
-    # path = Path("C:\\Users\\Janitha\\Documents\\GitHub\\reaction_lammps_mupt\\cache\\lunar\\bond_react_merge")
-    # Draw.MolsToGridImage([combined_reactants, combined_products], molsPerRow=2, subImgSize=(1800, 1800)).save(path / f"reaction2.png")
-    # total product atom count outside loops
-    for _ in combined_products.GetAtoms():
-        atom_count_products += 1
-    
-    for r_atom in combined_reactants.GetAtoms():
-        atom_count_reactants += 1
-    
-        if r_atom.GetAtomMapNum() == 1 or r_atom.GetAtomMapNum() == 2:
-            if r_atom.GetIdx() not in initiator_atom:
-                initiator_atom.append(r_atom.GetIdx())
-    
-        if delete_atom and r_atom.GetAtomMapNum() in byproduct_map_numbers:
-            if r_atom.GetIdx() not in byproduct_atom:
-                byproduct_atom.append(r_atom.GetIdx())
-    
-        for p_atom in combined_products.GetAtoms():
-            if (
-                r_atom.GetAtomMapNum() == p_atom.GetAtomMapNum()
-                and r_atom.GetIdx() not in MAP_dict
-                and p_atom.GetIdx() not in mapped_products
-            ):
-                print(f"Reactant atom {r_atom.GetIdx()} is mapped to product atom {p_atom.GetIdx()}")
-                MAP_dict[r_atom.GetIdx()] = p_atom.GetIdx()
-                mapped_products.add(p_atom.GetIdx())
-                r_atom.SetAtomMapNum(0)
-                p_atom.SetAtomMapNum(0)
-
-    if atom_count_reactants != atom_count_products:
-        raise ValueError(f"Mismatch in Number of mapped atoms between reactants and products. {atom_count_reactants} vs {atom_count_products}"
-                         "  Contact Developers.")
-
-    for molecule in [combined_reactants, combined_products]:
-        for atom in molecule.GetAtoms():
-            if atom.GetAtomMapNum() != 0:
+            if reactant_mapped != product_mapped:
                 raise ValueError(
-                    f"Unmapped atom with map number {atom.GetAtomMapNum()} found after reaction processing. "
-                    "Please contact developers."
+                    "Mismatch in mapped atom counts between columns: "
+                    f"reactant_index mapped={reactant_mapped}, product_idx mapped={product_mapped}"
                 )
-    return MAP_dict, initiator_atom, byproduct_atom
+
+            if reactant_mapped != num_reactant_atoms:
+                df.to_csv(csv_cache / f"debug_mapping_{total_products}.csv", index=False)
+                raise ValueError(
+                    "Mapping does not cover all reactant atoms: "
+                    f"reactant atoms={num_reactant_atoms}, mapped={reactant_mapped}"
+                )
+
+            if product_mapped != num_product_atoms:
+                raise ValueError(
+                    "Mapping does not cover all product atoms: "
+                    f"product atoms={num_product_atoms}, mapped={product_mapped}"
+                )
+
+            if is_consecutive(df["reactant_index"].tolist()) is False or is_consecutive(df["product_idx"].tolist()) is False:
+                raise ValueError(
+                    "Mapping indices are not consecutive: "
+                    f"reactant indices={df['reactant_index'].tolist()}, product indices={df['product_idx'].tolist()}"
+                )
+
+            sub_set1 = is_number_in_set(matches_1, r1)
+            smart_mapping(reactant=r1, smarts_template=rxn.GetReactants()[0], match_tuple=sub_set1 if sub_set1 else ())
+
+            sub_set2 = is_number_in_set(matches_2, r2)
+            smart_mapping(reactant=r2, smarts_template=rxn.GetReactants()[1], match_tuple=sub_set2 if sub_set2 else ())
+
+            reactant_combined = Chem.CombineMols(r1, r2)
+            for atom in reactant_combined.GetAtoms():
+                if atom.GetAtomMapNum() <= 99:
+                    first_shell.append(atom.GetIdx())
+                if atom.GetAtomMapNum() in [1, 2]:
+                    initatiator_idxs.append(atom.GetIdx())
+
+            byproduct_indexs = []
+            if delete_atoms:
+                frags = rdmolops.GetMolFrags(product_combined, asMols=True)
+                smallest_mol = min(frags, key=lambda m: m.GetNumAtoms())
+                for atom in smallest_mol.GetAtoms():
+                    byproduct_map_number = atom.GetAtomMapNum()
+                    for p_atom in product_combined.GetAtoms():
+                        if p_atom.GetAtomMapNum() == byproduct_map_number:
+                            byproduct_indexs.append(p_atom.GetIdx())
+                            break
+                print(Chem.MolToSmiles(smallest_mol))
+
+            total_products += 1
+            mols.append(reactant_combined)
+            mols.append(product_combined)
+
+            for r_idx, p_idx in mapping_dict.items():
+                new_row = pd.DataFrame([{"reactant_index": r_idx, "product_idx": p_idx}])
+                df = pd.concat([df, new_row], ignore_index=True)
+
+            first_shell_column = pd.Series(first_shell, name="first_shell")
+            initatiator_idxs_column = pd.Series(initatiator_idxs, name="initiators")
+            if len(initatiator_idxs) != 2:
+                raise ValueError(f"Expected 2 initiators, got {len(initatiator_idxs)}: {initatiator_idxs}")
+            byproduct_indexs_column = pd.Series(byproduct_indexs, name="byproduct_indices")
+            df_combined = pd.concat([df, first_shell_column, initatiator_idxs_column, byproduct_indexs_column], axis=1)
+            df_combined.to_csv(csv_cache / f"reaction_{total_products}.csv", index=False)
+            print(f"Saved reaction {total_products} to CSV")
+
+    return mols, output
+
+
+def save_output(output, out_path):
+    with open(out_path, "w") as f:
+        f.write(output)
+
+
+def save_grid_image(mols, csv_cache):
+    if mols:
+        img = Draw.MolsToGridImage(mols, molsPerRow=2, subImgSize=(900, 900))
+        img_path = Path(csv_cache) / "reaction_grid.png"
+        img.save(str(img_path))
+        return img_path
+    return None
+
+
+def run_all(cache, rxn_smarts, reactant_smiles_1, reactant_smiles_2):
+    csv_cache = prepare_paths(cache)
+    rxn = build_reaction(rxn_smarts)
+    mol_reactant_1, mol_reactant_2 = build_reactants(reactant_smiles_1, reactant_smiles_2)
+    mols, output = process_reactions(rxn, mol_reactant_1, mol_reactant_2, csv_cache)
+    save_output(output, "reaction_mapping_output.txt")
+    img_path = save_grid_image(mols, csv_cache)
+    return csv_cache, img_path
 
 
 if __name__ == "__main__":
-    # Example usage: Esterification- reaction 
-    reactant_smiles1 = "C1=CC=C(C(=C1)C(=O)O)O" 
-    reactant_smiles2 = "OCCC(O)=O" 
-    reaction_smarts = "[O;!$(OC=*):1]-[H:3].[CX3:2](=[O:5])[OX2H1:4]>>[OX2:1]-[CX3:2](=[O:5]).[O:4]-[H:3]"
-    
-    # Load and add hydrogens to reactants
-    reactant1 = Chem.MolFromSmiles(reactant_smiles1)
-    reactant1 = Chem.AddHs(reactant1)
-    reactant2 = Chem.MolFromSmiles(reactant_smiles2)
-    reactant2 = Chem.AddHs(reactant2)
-    
-    # Create reaction from SMARTS
-    rxn = AllChem.ReactionFromSmarts(reaction_smarts)
-    delete_atom = True  # Expect byproduct (water)
-    
-    # Run mapping and reaction
-    combined_reactants, combined_products, byproduct_map_numbers = map_reactant_atoms(
-        reactant1, reactant2, rxn, delete_atom
-    )
-    
-    # Output results
-    print("Combined Reactants SMILES:", Chem.MolToSmiles(combined_reactants))
-    print("Combined Products SMILES:", Chem.MolToSmiles(combined_products))
-    print("Byproduct Map Numbers:", byproduct_map_numbers)
-
-    MAP_dict, initiator_atom, byproduct_atom = map_product_atoms(
-        combined_reactants, combined_products, byproduct_map_numbers, delete_atom
-    )
-    print("Atom Mapping Dictionary:", MAP_dict)
-    print("Initiator Atoms:", initiator_atom)
-    print("Byproduct Atoms:", byproduct_atom)
+    cache = "C:\\Users\\Janitha\\Documents\\GitHub\\reaction_lammps_mupt\\cache\\00_cache"
+    rxn_smarts = "[O;!$(OC=*):1]-[H:3].[CX3:2](=[O:5])[OX2H1:4]>>[OX2:1]-[CX3:2](=[O:5]).[O:4]-[H:3]"
+    reactant_smiles_1 = "O=C(O)c1cc(O)c(Cl)c(C(=O)O)c1"
+    reactant_smiles_2 = "O=C(O)CCCC(O)CCCO"
+    csv_cache, img_path = run_all(cache, rxn_smarts, reactant_smiles_1, reactant_smiles_2)
+    if img_path is not None:
+        print(f"Saved image to {img_path}")
