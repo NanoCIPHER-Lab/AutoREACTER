@@ -358,16 +358,16 @@ def process_reactions(rxn, csv_cache, reaction_tuple, key=None,
 
             # Create comprehensive DataFrame with all analysis columns
             first_shell_column = pd.Series(first_shell, name="first_shell")
-            initatiator_idxs_column = pd.Series(initatiator_idxs, name="initiators")
+            initiator_idxs_column = pd.Series(initiator_idxs, name="initiators")
             
             # Validation: Must have exactly 2 initiators
-            if len(initatiator_idxs) != 2:
-                raise ValueError(f"Expected 2 initiators, got {len(initatiator_idxs)}: {initatiator_idxs}")
+            if len(initiator_idxs) != 2:
+                raise ValueError(f"Expected 2 initiators, got {len(initiator_idxs)}: {initiator_idxs}")
             
             byproduct_indexs_column = pd.Series(byproduct_indexs, name="byproduct_indices")
             
             # Combine all data into final DataFrame
-            df_combined = pd.concat([df, first_shell_column, initatiator_idxs_column, 
+            df_combined = pd.concat([df, first_shell_column, initiator_idxs_column, 
                                     byproduct_indexs_column], axis=1)
             
             # Save to CSV file
