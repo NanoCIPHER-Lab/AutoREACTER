@@ -23,6 +23,7 @@ import pandas as pd
 from pathlib import Path
 import os
 import itertools
+from util import compare_products
 
 
 def is_number_in_set(set_of_tuples, reactant):
@@ -130,9 +131,9 @@ def prepare_paths(cache):
         
     Example:
         >>> csv_dir = prepare_paths("/path/to/cache")
-        >>> print(csv_dir)  # /path/to/cache/reactant_product_sets/csv
+        >>> print(csv_dir)  # /path/to/cache/csv
     """
-    csv_cache = Path(cache) / "reactant_product_sets" / "csv"
+    csv_cache = Path(cache) / "csv" / "reactant_product_mapping"
     os.makedirs(csv_cache, exist_ok=True)
     return csv_cache
 
@@ -337,11 +338,6 @@ def process_reactions(rxn, csv_cache, reaction_tuple, key=None,
                             byproduct_indexs.append(p_atom.GetIdx())
                             break
 
-            # Update counters and store results
-            total_products += 1
-            mols.append(reactant_combined)
-            mols.append(product_combined)
-
             # Add any additional mappings from mapping_dict
             for r_idx, p_idx in mapping_dict.items():
                 new_row = pd.DataFrame([{"reactant_index": r_idx, "product_idx": p_idx}])
@@ -355,24 +351,32 @@ def process_reactions(rxn, csv_cache, reaction_tuple, key=None,
             if len(initiator_idxs) != 2:
                 raise ValueError(f"Expected 2 initiators, got {len(initiator_idxs)}: {initiator_idxs}")
             
-            byproduct_indexs_column = pd.Series(byproduct_indexs, name="byproduct_indices")
+            by_product_indexs_column = pd.Series(byproduct_indexs, name="byproduct_indices")
             
             # Combine all data into final DataFrame
-            df_combined = pd.concat([df, first_shell_column, initiator_idxs_column, 
-                                    byproduct_indexs_column], axis=1)
+            df_combined = pd.concat([df, first_shell_column, initiator_idxs_column,
+                                     by_product_indexs_column], axis=1).astype(pd.Int64Dtype())
             
-            # Save to CSV file
-            df_combined.to_csv(csv_cache / f"reaction_{key}_{total_products}.csv", index=False)
-            print(f"Saved reaction {key}_{total_products} to CSV")
-            
-            # Store DataFrame in results dictionary
-                        # Organize results in the output dictionary
+            # Check for duplicate products
+            if not compare_products(molecule_and_csv_path_dict, product_combined):
+                continue
+
+            # Update counters and store results
+            total_products += 1
+            mols.append(reactant_combined)
+            mols.append(product_combined)
+
+            # Organize results in the output dictionary
             for i in itertools.count(1):
                 if i not in molecule_and_csv_path_dict: # Check if i IS a key
                     sub_dict = molecule_and_csv_path_dict[i] = {} # Initialize if not found
                     dict_key = i
                     break
-            
+
+            # Save to CSV file
+            df_combined.to_csv(csv_cache / f"reaction_{dict_key}.csv", index=False)
+            print(f"Saved reaction {dict_key} to CSV")
+
             sub_dict["reactant"] = reactant_combined
             sub_dict["product"] = product_combined
             sub_dict["csv_path"] = csv_cache / f"reaction_{dict_key}.csv"
@@ -382,7 +386,7 @@ def process_reactions(rxn, csv_cache, reaction_tuple, key=None,
     return mols, molecule_and_csv_path_dict
 
 
-def save_grid_image(mols, csv_cache, key=None):
+def save_grid_image(mols, cache, key=None):
     """
     Create and save a grid image of molecules.
     
@@ -399,7 +403,9 @@ def save_grid_image(mols, csv_cache, key=None):
     """
     if mols:
         img = Draw.MolsToGridImage(mols, molsPerRow=2, subImgSize=(900, 900))
-        img_path = Path(csv_cache) / (f"reaction_grid_{key}.png" if key is not None else "reaction_grid.png")
+        img_path = Path(cache) /("grid_images")
+        os.makedirs(img_path, exist_ok=True)
+        img_path = Path(cache) /("grid_images") / (f"reaction_grid_{key}.png" if key is not None else "reaction_grid.png")
         img.save(str(img_path))
         return img_path
     return None
@@ -421,18 +427,14 @@ def reaction_tuples(same_reactants, mol_reactant_1, mol_reactant_2):
         For same reactants, returns both [A,B] and [B,A] to account for symmetry.
         For different reactants, returns only [A,B].
     """
-    if not mol_reactant_2:
-        mol_reactant_2 = mol_reactant_1
-    
     if same_reactants:
-        # For symmetric reactions, include both orderings
-        return [[mol_reactant_1, mol_reactant_2], [mol_reactant_2, mol_reactant_1]]
-    else:
-        # For asymmetric reactions, only one ordering
-        return [[mol_reactant_1, mol_reactant_2]]
+        mol_reactant_2 = mol_reactant_1
+
+    return [[mol_reactant_1, mol_reactant_2], [mol_reactant_2, mol_reactant_1]]
 
 
-def processing_monomer_dict(detected_reactions, cache):
+
+def process_reaction_dict(detected_reactions, cache):
     """
     Process a dictionary of detected reactions and generate mapping data.
     
@@ -453,11 +455,14 @@ def processing_monomer_dict(detected_reactions, cache):
         ...     1: {"reaction": "[C:1]=[O:2]>>[C:1]-[O:2]", 
         ...         "monomer_1": {"smiles": "CCO"}, ...}
         ... }
-        >>> results, original = processing_dict(reactions_dict, "/path/to/cache")
+        >>> results, original = process_reaction_dict(reactions_dict, "/path/to/cache")
     """
     molecule_and_csv_path_dict = {}
     csv_cache = prepare_paths(cache)
+
+    # TODO: Add function to compare products if products are identicals drop the duplicates
     
+
     # Process each reaction in the dictionary
     for key in detected_reactions:
         reaction_dict = detected_reactions[key]
@@ -485,7 +490,7 @@ def processing_monomer_dict(detected_reactions, cache):
         )
         
         # Save outputs
-        save_grid_image(mols, csv_cache, key)
+        save_grid_image(mols, cache, key)
     
     return molecule_and_csv_path_dict, detected_reactions
 
@@ -527,7 +532,7 @@ def run_all(cache, rxn_smarts, reactant_smiles_1, reactant_smiles_2):
     
     # Save outputs
     save_grid_image(mols, csv_cache, None)
-    
+
     return molecule_and_csv_path_dict
 
 
@@ -635,7 +640,7 @@ if __name__ == "__main__":
     print("Starting reaction processing pipeline...")
     
     # Process a single reaction using run_all
-    run_all(cache, rxn_smarts, reactant_smiles_1, reactant_smiles_2)
+    # run_all(cache, rxn_smarts, reactant_smiles_1, reactant_smiles_2)
     
     # Process all reactions in the dictionary
     molecule_dict_csv_path_dict, detected_reactions = processing_monomer_dict(detected_reactions, cache)
@@ -653,9 +658,4 @@ if __name__ == "__main__":
     print(f"Total reactions processed: {len(molecule_dict_csv_path_dict)}")
     
     # Count total products across all reactions
-    total_products = 0
-    for reaction_key in molecule_dict_csv_path_dict:
-        total_products += len(molecule_dict_csv_path_dict[reaction_key])
-    print(f"Total product sets generated: {total_products}")
-    
     print("\nProcessing complete! CSV files and images have been saved to the cache directory.")

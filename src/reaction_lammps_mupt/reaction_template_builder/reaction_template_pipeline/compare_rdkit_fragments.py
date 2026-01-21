@@ -1,4 +1,5 @@
 from rdkit import Chem
+from rdkit.Chem import rdmolops
 
 def extract_fragment_by_indices(mol, atom_indices_to_keep):
     """
@@ -33,7 +34,7 @@ def cap_open_valences_with_fr(new_mol_fragment, francium_atomic_num = 87):
     connected by single bonds, to satisfy the open valences.
 
     :param new_mol_fragment: RDKit Mol fragment whose open valences will be capped.
-    :param fr_atomic_num: Atomic number to use for the capping atoms (default: 87).
+    :param francium_atomic_num: Atomic number to use for the capping atoms (default: 87).
     :return: A dict with keys:
         - "object": the capped RDKit Mol object
         - "smiles": SMILES string of the capped molecule
@@ -58,7 +59,7 @@ def cap_open_valences_with_fr(new_mol_fragment, francium_atomic_num = 87):
 
         for _ in range(open_valences):
             # 4. Add a "fr" atom (using atomic number for Francium as a placeholder)
-            fr_atom = Chem.Atom(fr_atomic_num)
+            fr_atom = Chem.Atom(francium_atomic_num)
             fr_idx = rw_mol.AddAtom(fr_atom)
             rw_mol.AddBond(atom_idx, fr_idx, Chem.BondType.SINGLE)
     # 5. Convert back to Mol and sanitize
