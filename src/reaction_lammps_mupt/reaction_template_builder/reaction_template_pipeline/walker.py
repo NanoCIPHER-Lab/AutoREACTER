@@ -112,13 +112,13 @@ def product_atom_walker(template_indexes, MAP_dict):
             template_mapped_dict[i] = atom
     return template_mapped_dict
             
-def reaction_atom_walker(molecule_object, start_atom_indexs, MAP_dict, max_bonds=4):
+def reaction_atom_walker(combined_reactant_molecule_object, start_atom_indexs, MAP_dict, max_bonds=4):
     """
     High-level orchestrator that walks the reactant graph and then maps the 
     resulting environment to the product indices.
 
     Args:
-        molecule_object (rdkit.Chem.rdchem.Mol): The reactant molecule.
+        combined_reactant_molecule_object (rdkit.Chem.rdchem.Mol): The combined reactant molecule.
         start_atom_indexs (list): Starting points for the graph walk.
         MAP_dict (dict): Atom mapping between reactant and product.
         max_bonds (int): Depth of the environment search.
@@ -127,7 +127,7 @@ def reaction_atom_walker(molecule_object, start_atom_indexs, MAP_dict, max_bonds
         tuple: (template_mapped_dict, edge_atoms)
     """
     # 1. Identify the local environment in the reactant
-    reactant_template_indexes, edge_atoms = reactant_atom_walker(molecule_object, start_atom_indexs, max_bonds)
+    reactant_template_indexes, edge_atoms = reactant_atom_walker(combined_reactant_molecule_object, start_atom_indexs, max_bonds)
     
     # 2. Map those reactant atoms to product atoms
     template_mapped_dict = product_atom_walker(reactant_template_indexes, MAP_dict)
