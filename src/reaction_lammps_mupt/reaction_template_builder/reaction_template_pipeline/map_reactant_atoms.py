@@ -22,6 +22,7 @@ from rdkit.Chem import AllChem, rdmolops, Draw
 import pandas as pd
 from pathlib import Path
 import os
+import itertools
 
 
 def is_number_in_set(set_of_tuples, reactant):
@@ -340,16 +341,6 @@ def process_reactions(rxn, csv_cache, reaction_tuple, key=None,
             total_products += 1
             mols.append(reactant_combined)
             mols.append(product_combined)
-            
-            # Organize results in the output dictionary
-            if key not in molecule_and_csv_path_dict:
-                molecule_and_csv_path_dict[key] = {}
-            
-            sub_dict = molecule_and_csv_path_dict[key][total_products] = {}
-            sub_dict["reactant"] = reactant_combined
-            sub_dict["product"] = product_combined
-            sub_dict["csv_path"] = csv_cache / f"reaction_{key}_{total_products}.csv"
-            sub_dict["delete_atoms"] = delete_atoms
 
             # Add any additional mappings from mapping_dict
             for r_idx, p_idx in mapping_dict.items():
@@ -375,6 +366,17 @@ def process_reactions(rxn, csv_cache, reaction_tuple, key=None,
             print(f"Saved reaction {key}_{total_products} to CSV")
             
             # Store DataFrame in results dictionary
+                        # Organize results in the output dictionary
+            for i in itertools.count(1):
+                if i not in molecule_and_csv_path_dict: # Check if i IS a key
+                    sub_dict = molecule_and_csv_path_dict[i] = {} # Initialize if not found
+                    dict_key = i
+                    break
+            
+            sub_dict["reactant"] = reactant_combined
+            sub_dict["product"] = product_combined
+            sub_dict["csv_path"] = csv_cache / f"reaction_{dict_key}.csv"
+            sub_dict["delete_atoms"] = delete_atoms
             sub_dict["reaction_dataframe"] = df_combined
 
     return mols, molecule_and_csv_path_dict
