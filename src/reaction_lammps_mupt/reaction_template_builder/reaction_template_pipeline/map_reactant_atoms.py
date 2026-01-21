@@ -213,7 +213,6 @@ def process_reactions(rxn, csv_cache, reaction_tuple, key=None,
     
     total_products = 0
     mols = []
-    output = ""
 
     # Process each reactant pair in the reaction tuple
     for j, pair in enumerate(reaction_tuple):
@@ -378,7 +377,7 @@ def process_reactions(rxn, csv_cache, reaction_tuple, key=None,
             # Store DataFrame in results dictionary
             sub_dict["reaction_dataframe"] = df_combined
 
-    return mols, output, molecule_and_csv_path_dict
+    return mols, molecule_and_csv_path_dict
 
 
 def save_grid_image(mols, csv_cache, key=None):
@@ -478,7 +477,7 @@ def processing_dict(detected_reactions, cache):
         reaction_tuple = reaction_tuples(same_reactants, mol_reactant_1, mol_reactant_2)
 
         # Process the reaction
-        mols, output, molecule_and_csv_path_dict = process_reactions(
+        mols, molecule_and_csv_path_dict = process_reactions(
             rxn, csv_cache, reaction_tuple, key, molecule_and_csv_path_dict, 
             delete_atoms=delete_atoms
         )
@@ -520,7 +519,7 @@ def run_all(cache, rxn_smarts, reactant_smiles_1, reactant_smiles_2):
     delete_atoms = True  # Default to identifying byproducts
     
     # Process the reaction
-    mols, output, molecule_and_csv_path_dict = process_reactions(
+    mols, molecule_and_csv_path_dict = process_reactions(
         rxn, csv_cache, reaction_tuple, None, molecule_and_csv_path_dict, delete_atoms
     )
     
