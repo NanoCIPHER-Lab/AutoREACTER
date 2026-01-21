@@ -166,7 +166,6 @@ def process_reactions(rxn, csv_cache, reaction_tuple, key=None, molecule_and_csv
             sub_dict["reactant"] = reactant_combined
             sub_dict["product"] = product_combined
             sub_dict["csv_path"] = csv_cache / f"reaction_{key}_{total_products}.csv"
-            sub_dict["mapping_dataframe"] = df
             sub_dict["delete_atoms"] = delete_atoms
 
             for r_idx, p_idx in mapping_dict.items():
@@ -181,6 +180,7 @@ def process_reactions(rxn, csv_cache, reaction_tuple, key=None, molecule_and_csv
             df_combined = pd.concat([df, first_shell_column, initatiator_idxs_column, byproduct_indexs_column], axis=1)
             df_combined.to_csv(csv_cache / f"reaction_{key}_{total_products}.csv", index=False)
             print(f"Saved reaction {key}_{total_products} to CSV")
+            sub_dict["reaction_dataframe"] = df_combined
 
     return mols, output, molecule_and_csv_path_dict
 
@@ -228,7 +228,7 @@ def processing_dict(detected_reactions, cache):
         mols, output, molecule_and_csv_path_dict = process_reactions(rxn, csv_cache, reaction_tuple, key, molecule_and_csv_path_dict, delete_atoms=delete_atoms)
         save_output(output, f"reaction_mapping_output_{key}.txt")
         save_grid_image(mols, csv_cache, key)
-    return molecule_and_csv_path_dict
+    return molecule_and_csv_path_dict, detected_reactions
 
 
 def run_all(cache, rxn_smarts, reactant_smiles_1, reactant_smiles_2):
@@ -336,7 +336,7 @@ if __name__ == "__main__":
     reactant_smiles_2 = "O=C(O)CCCC(O)CCCO"
 
     molecule_dict_csv_path_dict = run_all(cache, rxn_smarts, reactant_smiles_1, reactant_smiles_2)
-    molecule_dict_csv_path_dict = processing_dict(detected_reactions, cache)
+    molecule_dict_csv_path_dict, detected_reactions = processing_dict(detected_reactions, cache)
     import pprint
     pprint.pprint(molecule_dict_csv_path_dict)
     print(molecule_dict_csv_path_dict)
