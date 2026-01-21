@@ -122,4 +122,5 @@ if __name__ == "__main__":
         },
     }
     Non_monomer_molecules_to_retain = ["CCO"]
-    print(get_all_possible_reactions(detected_reactions))
+    import json
+    print(json.dumps(get_all_possible_reactions(detected_reactions), indent=2))
