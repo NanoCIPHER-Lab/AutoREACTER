@@ -56,19 +56,15 @@ def build_reactants(reactant_smiles_1, reactant_smiles_2):
     return mol_reactant_1, mol_reactant_2
 
 
-def process_reactions(rxn, mol_reactant_1, mol_reactant_2, csv_cache):
-    tuples = [
-        [mol_reactant_1, mol_reactant_1],
-        [mol_reactant_1, mol_reactant_2],
-        [mol_reactant_2, mol_reactant_1],
-        [mol_reactant_2, mol_reactant_2],
-    ]
+def process_reactions(rxn, csv_cache, reaction_tuple, key=None, molecule_and_csv_path_dict=None):
+    if molecule_and_csv_path_dict is None:
+        molecule_and_csv_path_dict = {}
     total_products = 0
     mols = []
     delete_atoms = True
     output = ""
 
-    for j, pair in enumerate(tuples):
+    for j, pair in enumerate(reaction_tuple):
         r1, r2 = Chem.Mol(pair[0]), Chem.Mol(pair[1])
         products = rxn.RunReactants((r1, r2))
         matches_1 = r1.GetSubstructMatches(rxn.GetReactants()[0])
@@ -104,7 +100,6 @@ def process_reactions(rxn, mol_reactant_1, mol_reactant_2, csv_cache):
             for r_atom in reactant_combined.GetAtoms():
                 for p_atom in product_combined.GetAtoms():
                     if r_atom.GetAtomMapNum() == p_atom.GetAtomMapNum():
-                        print(f"Mapping Reactant Atom {r_atom.GetIdx()} to Product Atom {p_atom.GetIdx()}")
                         new_row = pd.DataFrame([{"reactant_index": r_atom.GetIdx(), "product_idx": p_atom.GetIdx()}])
                         df = pd.concat([df, new_row], ignore_index=True)
                         break
@@ -121,7 +116,7 @@ def process_reactions(rxn, mol_reactant_1, mol_reactant_2, csv_cache):
                 )
 
             if reactant_mapped != num_reactant_atoms:
-                df.to_csv(csv_cache / f"debug_mapping_{total_products}.csv", index=False)
+                df.to_csv(csv_cache / f"debug_mapping_{key}_{total_products}.csv", index=False)
                 raise ValueError(
                     "Mapping does not cover all reactant atoms: "
                     f"reactant atoms={num_reactant_atoms}, mapped={reactant_mapped}"
@@ -162,11 +157,16 @@ def process_reactions(rxn, mol_reactant_1, mol_reactant_2, csv_cache):
                         if p_atom.GetAtomMapNum() == byproduct_map_number:
                             byproduct_indexs.append(p_atom.GetIdx())
                             break
-                print(Chem.MolToSmiles(smallest_mol))
 
             total_products += 1
             mols.append(reactant_combined)
             mols.append(product_combined)
+            if key not in molecule_and_csv_path_dict:
+                molecule_and_csv_path_dict[key] = {}
+            sub_dict = molecule_and_csv_path_dict[key][total_products] = {}
+            sub_dict["reactant"] = reactant_combined
+            sub_dict["product"] = product_combined
+            sub_dict["csv_path"] = csv_cache / f"reaction_{key}_{total_products}.csv"
 
             for r_idx, p_idx in mapping_dict.items():
                 new_row = pd.DataFrame([{"reactant_index": r_idx, "product_idx": p_idx}])
@@ -178,10 +178,10 @@ def process_reactions(rxn, mol_reactant_1, mol_reactant_2, csv_cache):
                 raise ValueError(f"Expected 2 initiators, got {len(initatiator_idxs)}: {initatiator_idxs}")
             byproduct_indexs_column = pd.Series(byproduct_indexs, name="byproduct_indices")
             df_combined = pd.concat([df, first_shell_column, initatiator_idxs_column, byproduct_indexs_column], axis=1)
-            df_combined.to_csv(csv_cache / f"reaction_{total_products}.csv", index=False)
-            print(f"Saved reaction {total_products} to CSV")
+            df_combined.to_csv(csv_cache / f"reaction_{key}_{total_products}.csv", index=False)
+            print(f"Saved reaction {key}_{total_products} to CSV")
 
-    return mols, output
+    return mols, output, molecule_and_csv_path_dict
 
 
 def save_output(output, out_path):
@@ -189,30 +189,152 @@ def save_output(output, out_path):
         f.write(output)
 
 
-def save_grid_image(mols, csv_cache):
+def save_grid_image(mols, csv_cache, key=None):
     if mols:
         img = Draw.MolsToGridImage(mols, molsPerRow=2, subImgSize=(900, 900))
-        img_path = Path(csv_cache) / "reaction_grid.png"
+        img_path = Path(csv_cache) / (f"reaction_grid_{key}.png" if key is not None else "reaction_grid.png")
         img.save(str(img_path))
         return img_path
     return None
 
 
+def reaction_tuples(same_reactants, mol_reactant_1, mol_reactant_2):
+    if not mol_reactant_2:
+        mol_reactant_2 = mol_reactant_1
+    if same_reactants:
+        return [[mol_reactant_1, mol_reactant_2], [mol_reactant_2, mol_reactant_1]]
+    else:
+        return [[mol_reactant_1, mol_reactant_2]]
+
+
+def processing_dict(detected_reactions, cache):
+    molecule_and_csv_path_dict = {}
+    csv_cache = prepare_paths(cache)
+    for key in detected_reactions:
+        reaction_dict = detected_reactions[key]
+        rxn_smarts = reaction_dict["reaction"]
+        reactant_smiles_1 = reaction_dict["monomer_1"]["smiles"]
+        same_reactants = reaction_dict["same_reactants"]
+        if same_reactants:
+            reactant_smiles_2 = reactant_smiles_1
+        else:
+            reactant_smiles_2 = reaction_dict["monomer_2"]["smiles"]
+
+        rxn = build_reaction(rxn_smarts)
+        mol_reactant_1, mol_reactant_2 = build_reactants(reactant_smiles_1, reactant_smiles_2)
+        reaction_tuple = reaction_tuples(same_reactants, mol_reactant_1, mol_reactant_2)
+
+        mols, output, molecule_and_csv_path_dict = process_reactions(rxn, csv_cache, reaction_tuple, key, molecule_and_csv_path_dict)
+        save_output(output, f"reaction_mapping_output_{key}.txt")
+        save_grid_image(mols, csv_cache, key)
+    return molecule_and_csv_path_dict
+
+
 def run_all(cache, rxn_smarts, reactant_smiles_1, reactant_smiles_2):
+    molecule_and_csv_path_dict = {}
     csv_cache = prepare_paths(cache)
     rxn = build_reaction(rxn_smarts)
     mol_reactant_1, mol_reactant_2 = build_reactants(reactant_smiles_1, reactant_smiles_2)
-    mols, output = process_reactions(rxn, mol_reactant_1, mol_reactant_2, csv_cache)
+    reaction_tuple = [[mol_reactant_1, mol_reactant_2]]
+    mols, output, molecule_and_csv_path_dict = process_reactions(rxn, csv_cache, reaction_tuple, None, molecule_and_csv_path_dict)
     save_output(output, "reaction_mapping_output.txt")
-    img_path = save_grid_image(mols, csv_cache)
-    return csv_cache, img_path
+    save_grid_image(mols, csv_cache, None)
+    return molecule_and_csv_path_dict
 
 
 if __name__ == "__main__":
+    detected_reactions = {
+        1: {
+            "reaction_name": "Hydroxy Carboxylic Acid Polycondensation(Polyesterification)",
+            "same_reactants": True,
+            "reactant_1": "hydroxy_carboxylic_acid",
+            "product": "polyester_chain",
+            "delete_atom": True,
+            "reaction": "[O;!$(OC=*):1]-[H:3].[CX3:2](=[O:5])[OX2H1:4]>>[OX2:1]-[CX3:2](=[O:5]).[O:4]-[H:3]",
+            "reference": {
+                "smarts": "https://pubs.acs.org/doi/10.1021/acs.jcim.3c00329",
+                "reaction_and_mechanism": [
+                    "https://pubs.acs.org/doi/10.1021/ed048pA734.1",
+                    "https://pubs.acs.org/doi/10.1021/ed073pA312",
+                ],
+            },
+            "monomer_1": {
+                "smiles": "O=C(O)c1cc(O)c(Cl)c(C(=O)O)c1",
+                "functionality_type": "di_different",
+                "functional_group_name": "hydroxy_carboxylic_acid",
+                "functional_group_smarts_1": "[OX2H1;!$(OC=*):1]",
+                "functional_count_1": 1,
+                "functional_group_smarts_2": "[CX3:2](=[O])[OX2H1]",
+                "functional_count_2": 2,
+            },
+        },
+        2: {
+            "reaction_name": "Hydroxy Carboxylic Acid Polycondensation(Polyesterification)",
+            "same_reactants": True,
+            "reactant_1": "hydroxy_carboxylic_acid",
+            "product": "polyester_chain",
+            "delete_atom": True,
+            "reaction": "[O;!$(OC=*):1]-[H:3].[CX3:2](=[O:5])[OX2H1:4]>>[OX2:1]-[CX3:2](=[O:5]).[O:4]-[H:3]",
+            "reference": {
+                "smarts": "https://pubs.acs.org/doi/10.1021/acs.jcim.3c00329",
+                "reaction_and_mechanism": [
+                    "https://pubs.acs.org/doi/10.1021/ed048pA734.1",
+                    "https://pubs.acs.org/doi/10.1021/ed073pA312",
+                ],
+            },
+            "monomer_1": {
+                "smiles": "O=C(O)CCCC(O)CCCO",
+                "functionality_type": "di_different",
+                "functional_group_name": "hydroxy_carboxylic_acid",
+                "functional_group_smarts_1": "[OX2H1;!$(OC=*):1]",
+                "functional_count_1": 2,
+                "functional_group_smarts_2": "[CX3:2](=[O])[OX2H1]",
+                "functional_count_2": 1,
+            },
+        },
+        3: {
+            "reaction_name": "Hydroxy Carboxylic and Hydroxy Carboxylic Polycondensation(Polyesterification)",
+            "same_reactants": False,
+            "reactant_1": "hydroxy_carboxylic_acid",
+            "reactant_2": "hydroxy_carboxylic_acid",
+            "product": "polyester_chain",
+            "delete_atom": True,
+            "reaction": "[O;!$(OC=*):1]-[H:3].[CX3:2](=[O:5])[OX2H1:4]>>[OX2:1]-[CX3:2](=[O:5]).[O:4]-[H:3]",
+            "reference": {
+                "smarts": "https://pubs.acs.org/doi/10.1021/acs.jcim.3c00329",
+                "reaction_and_mechanism": [
+                    "https://pubs.acs.org/doi/10.1021/ed048pA734.1",
+                    "https://pubs.acs.org/doi/10.1021/ed073pA312",
+                ],
+            },
+            "monomer_1": {
+                "smiles": "O=C(O)c1cc(O)c(Cl)c(C(=O)O)c1",
+                "functionality_type": "di_different",
+                "functional_group_name": "hydroxy_carboxylic_acid",
+                "functional_group_smarts_1": "[OX2H1;!$(OC=*):1]",
+                "functional_count_1": 1,
+                "functional_group_smarts_2": "[CX3:2](=[O])[OX2H1]",
+                "functional_count_2": 2,
+            },
+            "monomer_2": {
+                "smiles": "O=C(O)CCCC(O)CCCO",
+                "functionality_type": "di_different",
+                "functional_group_name": "hydroxy_carboxylic_acid",
+                "functional_group_smarts_1": "[OX2H1;!$(OC=*):1]",
+                "functional_count_1": 2,
+                "functional_group_smarts_2": "[CX3:2](=[O])[OX2H1]",
+                "functional_count_2": 1,
+            },
+        },
+    }
+
     cache = "C:\\Users\\Janitha\\Documents\\GitHub\\reaction_lammps_mupt\\cache\\00_cache"
     rxn_smarts = "[O;!$(OC=*):1]-[H:3].[CX3:2](=[O:5])[OX2H1:4]>>[OX2:1]-[CX3:2](=[O:5]).[O:4]-[H:3]"
     reactant_smiles_1 = "O=C(O)c1cc(O)c(Cl)c(C(=O)O)c1"
     reactant_smiles_2 = "O=C(O)CCCC(O)CCCO"
-    csv_cache, img_path = run_all(cache, rxn_smarts, reactant_smiles_1, reactant_smiles_2)
-    if img_path is not None:
-        print(f"Saved image to {img_path}")
+
+    molecule_dict_csv_path_dict = run_all(cache, rxn_smarts, reactant_smiles_1, reactant_smiles_2)
+    molecule_dict_csv_path_dict = processing_dict(detected_reactions, cache)
+    import pprint
+    pprint.pprint(molecule_dict_csv_path_dict)
+    print(molecule_dict_csv_path_dict)
