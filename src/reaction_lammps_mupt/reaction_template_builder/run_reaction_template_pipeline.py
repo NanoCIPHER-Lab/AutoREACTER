@@ -1,10 +1,6 @@
 from reaction_template_pipeline.map_reactant_atoms import processing_monomer_dict
 
 
-
-
-
-
 if __name__ == "__main__":
     
     detected_reactions = {
