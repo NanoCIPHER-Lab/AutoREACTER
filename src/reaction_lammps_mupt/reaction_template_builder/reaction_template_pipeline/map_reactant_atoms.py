@@ -23,7 +23,10 @@ import pandas as pd
 from pathlib import Path
 import os
 import itertools
-from util import compare_products
+try:
+    from util import compare_products
+except ImportError:
+    from reaction_template_pipeline.util import compare_products
 
 
 def is_number_in_set(set_of_tuples, reactant):

@@ -15,7 +15,6 @@ def compare_products(dict, _prod2):
             smi1 = Chem.MolToSmiles(prod1, canonical=True)
             smi2 = Chem.MolToSmiles(prod2, canonical=True)
 
-            print("VALUES: ", smi1, smi2)
             if smi1 == smi2:
                 print("DUPLICATE PRODUCT FOUND")
                 return False

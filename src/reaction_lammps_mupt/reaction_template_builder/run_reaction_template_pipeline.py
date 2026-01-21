@@ -2,6 +2,7 @@ from reaction_template_pipeline.map_reactant_atoms import process_reaction_dict
 from reaction_template_pipeline.util import format_detected_reactions_dict
 
 
+
 def run_reaction_template_pipeline(detected_reactions_dict, cache):
     molecule_dict_csv_path_dict, detected_reactions = process_reaction_dict(detected_reactions_dict, cache)
     formatted_dict = format_detected_reactions_dict(detected_reactions)
@@ -97,4 +98,4 @@ if __name__ == "__main__":
     }
     Non_monomer_molecules_to_retain = ["CCO"]
     cache = "C:\\Users\\Janitha\\Documents\\GitHub\\reaction_lammps_mupt\\cache\\00_cache"
-    molecule_dict_csv_path_dict, detected_reactions = processing_monomer_dict(detected_reactions_dict, cache)
+    run_reaction_template_pipeline(detected_reactions_dict, cache)
