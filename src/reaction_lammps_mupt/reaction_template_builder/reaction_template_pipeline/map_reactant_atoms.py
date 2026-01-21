@@ -56,12 +56,11 @@ def build_reactants(reactant_smiles_1, reactant_smiles_2):
     return mol_reactant_1, mol_reactant_2
 
 
-def process_reactions(rxn, csv_cache, reaction_tuple, key=None, molecule_and_csv_path_dict=None):
+def process_reactions(rxn, csv_cache, reaction_tuple, key=None, molecule_and_csv_path_dict=None, delete_atoms=False):
     if molecule_and_csv_path_dict is None:
         molecule_and_csv_path_dict = {}
     total_products = 0
     mols = []
-    delete_atoms = True
     output = ""
 
     for j, pair in enumerate(reaction_tuple):
@@ -167,6 +166,8 @@ def process_reactions(rxn, csv_cache, reaction_tuple, key=None, molecule_and_csv
             sub_dict["reactant"] = reactant_combined
             sub_dict["product"] = product_combined
             sub_dict["csv_path"] = csv_cache / f"reaction_{key}_{total_products}.csv"
+            sub_dict["mapping_dataframe"] = df
+            sub_dict["delete_atoms"] = delete_atoms
 
             for r_idx, p_idx in mapping_dict.items():
                 new_row = pd.DataFrame([{"reactant_index": r_idx, "product_idx": p_idx}])
@@ -219,12 +220,12 @@ def processing_dict(detected_reactions, cache):
             reactant_smiles_2 = reactant_smiles_1
         else:
             reactant_smiles_2 = reaction_dict["monomer_2"]["smiles"]
-
+        delete_atoms = reaction_dict.get("delete_atom", False)
         rxn = build_reaction(rxn_smarts)
         mol_reactant_1, mol_reactant_2 = build_reactants(reactant_smiles_1, reactant_smiles_2)
         reaction_tuple = reaction_tuples(same_reactants, mol_reactant_1, mol_reactant_2)
 
-        mols, output, molecule_and_csv_path_dict = process_reactions(rxn, csv_cache, reaction_tuple, key, molecule_and_csv_path_dict)
+        mols, output, molecule_and_csv_path_dict = process_reactions(rxn, csv_cache, reaction_tuple, key, molecule_and_csv_path_dict, delete_atoms=delete_atoms)
         save_output(output, f"reaction_mapping_output_{key}.txt")
         save_grid_image(mols, csv_cache, key)
     return molecule_and_csv_path_dict
@@ -236,7 +237,8 @@ def run_all(cache, rxn_smarts, reactant_smiles_1, reactant_smiles_2):
     rxn = build_reaction(rxn_smarts)
     mol_reactant_1, mol_reactant_2 = build_reactants(reactant_smiles_1, reactant_smiles_2)
     reaction_tuple = [[mol_reactant_1, mol_reactant_2]]
-    mols, output, molecule_and_csv_path_dict = process_reactions(rxn, csv_cache, reaction_tuple, None, molecule_and_csv_path_dict)
+    delete_atoms = True
+    mols, output, molecule_and_csv_path_dict = process_reactions(rxn, csv_cache, reaction_tuple, None, molecule_and_csv_path_dict, delete_atoms)
     save_output(output, "reaction_mapping_output.txt")
     save_grid_image(mols, csv_cache, None)
     return molecule_and_csv_path_dict
