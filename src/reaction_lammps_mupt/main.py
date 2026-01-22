@@ -2,7 +2,7 @@ import importlib
 import sys
 import pathlib
 from pathlib import Path
-from initializaion import initialize
+from initialization import initialize
 from input_parser import InputParser
 from cache import get_default_cache_dir, retention_cleanup, get_current_cache_dir
 from cache import delete_default_cache_files as delete_cache_dir
