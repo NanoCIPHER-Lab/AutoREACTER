@@ -277,8 +277,11 @@ if __name__ == "__main__":
     }
     
     # Configuration for retained molecules and cache path
-    Non_monomer_molecules_to_retain = ["CCO"]
+    non_monomer_molecules_to_retain = ["CCO"]
     cache_path = "C:\\Users\\Janitha\\Documents\\GitHub\\reaction_lammps_mupt\\cache\\00_cache"
     
     # Execute the pipeline
     run_reaction_template_pipeline(detected_reactions_dict, cache_path)
+    formatted_dict, smiles_list = format_detected_reactions_dict(detected_reactions_dict, non_monomer_molecules_to_retain)
+    print("Formatted Detected Reactions Dictionary:", formatted_dict)
+    print("Unique SMILES List:", smiles_list)

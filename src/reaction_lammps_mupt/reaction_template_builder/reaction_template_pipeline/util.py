@@ -75,7 +75,7 @@ def compare_rdkit_molecules_canonical(smiles_list, mol_smi_2):
     smiles_list.append(mol_smi_2)
     return smiles_list, False
 
-def format_detected_reactions_dict(detected_reactions):
+def format_detected_reactions_dict(detected_reactions, non_monomer_molecules_to_retain = None):
     """
     Aggregates and formats information from a dictionary of detected reactions 
     into a single summary dictionary.
@@ -147,6 +147,10 @@ def format_detected_reactions_dict(detected_reactions):
             continue
         else:
             smiles_list, _ = compare_rdkit_molecules_canonical(smiles_list, m2_smiles)
+        
+        if non_monomer_molecules_to_retain:
+            for non_monomer in non_monomer_molecules_to_retain:
+                smiles_list, _ = compare_rdkit_molecules_canonical(smiles_list, non_monomer)
 
         
 
@@ -157,4 +161,4 @@ def format_detected_reactions_dict(detected_reactions):
         "mechanism_references": mechanism_references,
     }
 
-    return formatted_dict
+    return formatted_dict , smiles_list
