@@ -17,27 +17,57 @@ Dependencies:
     - re: For regular expression operations
 """
 
+import os
+import json
+from pathlib import Path
 import pandas as pd
 import re
-import os
 
 def _extract_int_list(df: pd.DataFrame, col: str) -> list[int]:
+    """
+    Helper to extract a column of integers from a DataFrame, handling NaNs.
+
+    Args:
+        df (pd.DataFrame): The source dataframe.
+        col (str): The column name to extract.
+
+    Returns:
+        list[int]: List of integers from the column. Returns empty list if column missing.
+    """
     if col not in df.columns:
         return []
     s = df[col].dropna()
-    if s.empty:
-        return []
-    return [int(x) for x in s.tolist()]
+    return [int(x) for x in s.tolist()] if not s.empty else []
+
 
 def _extract_initiators(df: pd.DataFrame, col: str = "initiators") -> list[int]:
+    """
+    Extracts the first two initiator atom indices from the dataframe.
+
+    Args:
+        df (pd.DataFrame): The source dataframe.
+        col (str): The column name. Defaults to "initiators".
+
+    Returns:
+        list[int]: A list containing up to 2 initiator indices.
+    """
     xs = _extract_int_list(df, col)
-    # keep first 2 only (REACTER expects two)
-    return xs[:2] if len(xs) >= 2 else xs
+    return xs[:2]  # LAMMPS fix bond/react expects two specific initiating atoms
+
 
 def _extract_reactant_to_product(df: pd.DataFrame) -> dict[int, int]:
-    # full-molecule mapping (0-based)
+    """
+    Creates a mapping dictionary between reactant and product atom indices.
+
+    Args:
+        df (pd.DataFrame): Dataframe containing 'reactant_idx' and 'product_idx'.
+
+    Returns:
+        dict[int, int]: 0-based index mapping {reactant: product}.
+    """
     sub = df[["reactant_idx", "product_idx"]].dropna()
     return {int(r): int(p) for r, p in zip(sub["reactant_idx"], sub["product_idx"])}
+
 
 def get_ending_integer(s: str) -> int | None:
     """
@@ -1126,44 +1156,27 @@ def build_bond_react_templates(
     out_dir,   
 ):
     """
-    Process multiple molecule files for bond-react simulation setup.
+    Process multiple molecule files to generate bond-react simulation templates.
     
-    Iterates through pre- and post-reaction molecule files, processes each one
-    using the appropriate atom index mapping, and saves the results as template
-    molecule files.
-    
-    Parameters:
-    -----------
-    file_dict : dict[str, str]
-        Dictionary mapping file identifiers to file paths:
-        - Keys: 'pre1', 'post1', etc.
-        - Values: Full file paths to molecule files
-    reactant_to_product : dict[int, int]
-        Mapping of reactant atom indices to product atom indices.
-        - Keys: Reactant atom indices (0-based in dictionary, converted to 1-based)
-        - Values: Product atom indices (0-based in dictionary, converted to 1-based)
-    
+    This function handles the conversion of full-molecule index mappings into 
+    local template index mappings, generates the .molecule files for LAMMPS 
+    'fix bond/react', and creates the corresponding .map files.
+
+    Args:
+        file_dict (dict[str, str]): Mapping of file keys (e.g., 'pre_1') to file paths.
+        reactant_to_product (dict[int, int]): 0-based mapping of reactant atom 
+            indices to product atom indices.
+        initiator_atoms (list[int]): 0-based indices of atoms that initiate the reaction.
+        edge_atoms (list[int]): 0-based indices of atoms at the boundary of the template.
+        delete_ids (list[int]): 0-based indices of atoms to be deleted during reaction.
+        out_dir (str): Directory where the generated template and map files will be saved.
+
     Returns:
-    --------
-    None
-        Writes template molecule files to disk in the same directory as input files.
-    
-    Output Files:
-    --------
-    - template_pre{n}.molecule: Processed pre-reaction molecule file
-    - template_post{n}.molecule: Processed post-reaction molecule file
-    
+        dict[str, str]: A dictionary containing paths to the generated .molecule 
+            and .map files, keyed by their reaction identifiers.
+
     Raises:
-    -------
-    ValueError: If expected molecule data file is not found in file_dict.
-    
-    TODO:
-    -----
-    Currently processes files with pre/post naming. Future enhancement could:
-    - Support arbitrary file patterns
-    - Process multiple reaction pathways
-    - Validate file consistency before processing
-    - Modify map file generation for to loop through multiple reactions
+        ValueError: If a 'post' reaction file is missing for a corresponding 'pre' file.
     """
     # Initialize lists to store atom index mappings for reactants and products
     template_indexes_reactant = []
@@ -1173,145 +1186,148 @@ def build_bond_react_templates(
     molecule_file_dict = {}
 
     # Build 1-based index lists from reactant_to_product mapping
-    # LAMMPS uses 1-based indexing while dictionary uses 0-based
+    # LAMMPS and specific molecule preparation tools often use 1-based indexing 
+    # while Python/DataFrames use 0-based indexing.
     for key, value in reactant_to_product.items():
         # Convert reactant indices to 1-based indexing
         template_indexes_reactant.append(int(key + 1))
         # Convert product indices to 1-based indexing
         template_indexes_product.append(int(value + 1))
 
-    # Only drive off "pre" keys, and process as (preN, postN) pairs
+    # Iterate through the file dictionary to find "pre-reaction" files
     for name, pre_path in file_dict.items():
         if not name.startswith("pre_"):
             continue
 
-        # Extract file number from name (e.g., 'pre1' -> 1)
+        # Extract file number from name (e.g., 'pre_1' -> 1) using a helper
         num = get_ending_integer(name)
 
-        # Get paired post path
+        # Ensure the corresponding "post-reaction" file exists
         post_key = f"post_{num}"
         post_path = file_dict.get(post_key)
         if post_path is None:
             raise ValueError(f"Corresponding post-reaction file for pre_{num} not found.")
 
-        # Process pre molecule file with reactant template indices
+        # Process pre-reaction molecule file:
+        # Extracts the relevant template atoms and returns the modified content 
+        # plus a mapping from full-molecule indices to template-local indices.
         pre_modified, index_change_dict_reactant = molecule_file_preparation(
             pre_path,
             template_indexes_reactant
         )
 
-        # Process post molecule file with product template indices
+        # Process post-reaction molecule file similarly
         post_modified, index_change_dict_product = molecule_file_preparation(
             post_path,
             template_indexes_product
         )
 
-        # Get directory path from input file path (assume same folder for pair)
-        out_dir = Path(out_dir)
-        out_dir.mkdir(parents=True, exist_ok=True)
-        save_path = str(out_dir)
+        # Ensure the output directory exists
+        out_dir_path = Path(out_dir)
+        out_dir_path.mkdir(parents=True, exist_ok=True)
+        save_path = str(out_dir_path)
 
-        # Write processed pre molecule file to disk
+        # Write the processed pre-reaction template to disk
         pre_out = os.path.join(save_path, f"template_pre_{num}.molecule")
         with open(pre_out, "w") as f:
             f.write(pre_modified)
 
-        # Write processed post molecule file to disk
+        # Write the processed post-reaction template to disk
         post_out = os.path.join(save_path, f"template_post_{num}.molecule")
         with open(post_out, "w") as f:
             f.write(post_modified)
 
-        # Update the dictionary with the modified molecule template file paths
+        # Track the generated molecule files
         molecule_file_dict[f"pre_{num}"] = pre_out
         molecule_file_dict[f"post_{num}"] = post_out
 
         # Build equivalence mapping in TEMPLATE INDEX SPACE (0-based)
-        # reactant_to_product is full-molecule indices (0-based)
-        # index_change_dict_* are expected to be full_index(1-based?) -> template_index(1-based?) OR similar
-        # We normalize both sides into 0-based template indices below.
+        # We must map the atoms from the reactant template to the product template.
         template_reactant_to_template_product = {}
 
         for r_full0, p_full0 in reactant_to_product.items():
-            # Convert full-molecule 0-based -> 1-based if your index_change_dict uses 1-based keys
+            # Convert 0-based full-molecule indices to 1-based for lookup 
+            # in the index_change_dict (which uses 1-based keys).
             r_full1 = r_full0 + 1
             p_full1 = p_full0 + 1
 
-            # Map full index -> template index (whatever molecule_file_preparation returns)
+            # Get the new 1-based index within the template file
             r_tmp = index_change_dict_reactant[r_full1]
             p_tmp = index_change_dict_product[p_full1]
 
-            # Convert to 0-based template indices for internal dict consistency
+            # Convert back to 0-based for internal map consistency
             template_reactant_to_template_product[r_tmp - 1] = p_tmp - 1
 
-        # Convert special atom lists into TEMPLATE INDEX SPACE (0-based)
+        # Convert special atom categories into TEMPLATE INDEX SPACE (0-based)
+        # This ensures the map file correctly identifies initiators, edge atoms, 
+        # and deleted atoms within the smaller template molecule.
         initiator_atoms_t = [(index_change_dict_reactant[i + 1] - 1) for i in initiator_atoms]
         delete_ids_t = [(index_change_dict_reactant[i + 1] - 1) for i in delete_ids]
         edge_atoms_t = [(index_change_dict_reactant[i + 1] - 1) for i in edge_atoms]
 
-        # Write map file (now equivalences refer to template indices, not full molecule)
+        # Generate the content for the LAMMPS .map file
         map_file = map_file_write(
             template_reactant_to_template_product,
             initiator_atoms_t,
             edge_atoms_t,
             delete_ids_t
-        )  # Equivalences are section is wrong because it uses full molecule atom indices not the template ones
+        )
 
+        # Save the map file to disk
         map_path = os.path.join(save_path, f"RXN_{num}.map")
         with open(map_path, "w") as f:
             f.write(map_file)
 
-        molecule_file_dict[f"map_file_{num}"] = map_path  # this has to go throught a loop because each reaction need its own map file
+        # Track the generated map file
+        molecule_file_dict[f"map_file_{num}"] = map_path
 
     return molecule_file_dict
-
-from pathlib import Path
-import os
-import json
-
-from pathlib import Path
-import pandas as pd
-
-def _extract_int_list(df: pd.DataFrame, col: str) -> list[int]:
-    if col not in df.columns:
-        return []
-    s = df[col].dropna()
-    return [int(x) for x in s.tolist()] if not s.empty else []
-
-def _extract_initiators(df: pd.DataFrame, col: str = "initiators") -> list[int]:
-    xs = _extract_int_list(df, col)
-    return xs[:2]  # REACTER expects two
-
-def _extract_reactant_to_product(df: pd.DataFrame) -> dict[int, int]:
-    sub = df[["reactant_idx", "product_idx"]].dropna()
-    return {int(r): int(p) for r, p in zip(sub["reactant_idx"], sub["product_idx"])}
 
 def molecule_template_preparation(molecule_dict_csv_path_dict: dict,
                                   lunar_out_loc_dict: dict,
                                   cache: str):
     """
-    Writes all template_pre/post + RXN map files into: <cache>/reactor_files/
-    All indices written to files are 1-based (handled inside molecule_file_preparation + map_file_write).
-    """
+    Orchestrates the creation of all template and map files for a set of reactions.
     
+    This function reads reaction dataframes, extracts atom indices, and calls
+    the build_bond_react_templates function for each reaction defined.
+
+    Args:
+        molecule_dict_csv_path_dict (dict): Dictionary containing reaction info 
+            and dataframes keyed by reaction ID.
+        lunar_out_loc_dict (dict): Dictionary mapping file keys to actual 
+            filesystem paths for the full molecule files.
+        cache (str): Base directory path used to store the output 'reactor_files'.
+
+    Returns:
+        dict: A combined dictionary of all generated file paths across all reactions.
+    """
+    # Define and create the output directory for reactor files
     out_dir = Path(cache) / "reactor_files"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     all_outputs = {}
 
+    # Iterate through each reaction ID in the input dictionary
     for rxn_id, rxn in molecule_dict_csv_path_dict.items():
         df = rxn.get("reaction_dataframe")
         if df is None or df.empty:
             continue
 
-        reactant_to_product = _extract_reactant_to_product(df)          # 0-based mapping
-        initiator_atoms = _extract_initiators(df, "initiators")         # 0-based list (len 2)
-        edge_atoms = _extract_int_list(df, "edge_atoms")                # 0-based list
+        # Extract necessary atom lists and mappings (all 0-based)
+        reactant_to_product = _extract_reactant_to_product(df)
+        initiator_atoms = _extract_initiators(df, "initiators")
+        edge_atoms = _extract_int_list(df, "edge_atoms")
+        
+        # Extract deletion indices only if the reaction is flagged to delete atoms
         delete_ids = _extract_int_list(df, "byproduct_indices") if rxn.get("delete_atoms") else []
 
+        # Validation: fix bond/react requires at least 2 initiators
         if len(initiator_atoms) < 2:
             print(f"[skip rxn {rxn_id}] initiators missing: {initiator_atoms}")
             continue
 
+        # Identify the relevant pre/post full molecule files for this reaction
         pre_key = f"pre_{rxn_id}"
         post_key = f"post_{rxn_id}"
 
@@ -1322,22 +1338,23 @@ def molecule_template_preparation(molecule_dict_csv_path_dict: dict,
             print(f"[skip rxn {rxn_id}] missing LUNAR files: {pre_key}={pre_path}, {post_key}={post_path}")
             continue
 
-        # Only pass pre/post for THIS rxn
+        # Create a localized file dictionary for the builder
         file_dict_one = {
             pre_key: str(pre_path),
             post_key: str(post_path),
         }
 
+        # Generate the templates and maps for this specific reaction
         out_one = build_bond_react_templates(
             file_dict_one,
             reactant_to_product,
             initiator_atoms,
             edge_atoms,
             delete_ids,
-            out_dir=str(out_dir),   # <--- writes everything here
+            out_dir=str(out_dir),
         )
 
-        # Keep keys unique across reactions
+        # Aggregate the results into a single dictionary using unique keys
         for k, v in out_one.items():
             all_outputs[f"rxn_{rxn_id}::{k}"] = v
 
