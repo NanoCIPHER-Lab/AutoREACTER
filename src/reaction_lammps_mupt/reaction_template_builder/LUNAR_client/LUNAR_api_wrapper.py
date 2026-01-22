@@ -129,7 +129,7 @@ def get_ending_integer(s: str) -> int | None:
         return None
     
 
-def run_LUNAR_atom_typing(molecule_files: dict[str, Path]) -> dict[str, list[Path]]:
+def run_LUNAR_atom_typing(molecule_files: dict[str, Path],) -> dict[str, list[Path]]:
     """
     Run LUNAR atom typing on a set of molecule files.
     

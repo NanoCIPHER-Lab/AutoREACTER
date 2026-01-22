@@ -127,6 +127,7 @@ def run_reaction_template_pipeline(detected_reactions_dict, cache):
 
     Returns:
         tuple: (updated_molecule_dict, formatted_summary_dict)
+    TODO: Handle duplicates by re-indexing and renaming files accordingly.
     """
     duplicated = False
     processed_dict = {}
@@ -224,7 +225,7 @@ def execute_pipeline(detected_reactions, retain_smiles, cache):
         molecule_dict=molecule_dict
     )
     print("Prepared 3D Molecules:", prepared_molecules)
-    
+
     # 5. Execute final LUNAR workflow
     final_files = lunar_workflow(molecule_files=prepared_molecules)
     print("Final LUNAR Workflow Files:", final_files)

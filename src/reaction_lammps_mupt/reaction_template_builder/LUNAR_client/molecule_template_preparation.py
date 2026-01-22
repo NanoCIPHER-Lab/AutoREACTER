@@ -1191,18 +1191,18 @@ def build_bond_react_templates(
         save_path = os.path.dirname(pre_path)
 
         # Write processed pre molecule file to disk
-        pre_out = os.path.join(save_path, f"template_pre{num}.molecule")
+        pre_out = os.path.join(save_path, f"template_pre_{num}.molecule")
         with open(pre_out, "w") as f:
             f.write(pre_modified)
 
         # Write processed post molecule file to disk
-        post_out = os.path.join(save_path, f"template_post{num}.molecule")
+        post_out = os.path.join(save_path, f"template_post_{num}.molecule")
         with open(post_out, "w") as f:
             f.write(post_modified)
 
         # Update the dictionary with the modified molecule template file paths
-        molecule_file_dict[f"pre{num}"] = pre_out
-        molecule_file_dict[f"post{num}"] = post_out
+        molecule_file_dict[f"pre_{num}"] = pre_out
+        molecule_file_dict[f"post_{num}"] = post_out
 
         # Build equivalence mapping in TEMPLATE INDEX SPACE (0-based)
         # reactant_to_product is full-molecule indices (0-based)
