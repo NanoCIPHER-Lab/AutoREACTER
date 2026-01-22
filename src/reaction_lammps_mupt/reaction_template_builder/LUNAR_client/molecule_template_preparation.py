@@ -1163,17 +1163,17 @@ def build_bond_react_templates(
 
     # Only drive off "pre" keys, and process as (preN, postN) pairs
     for name, pre_path in file_dict.items():
-        if not name.startswith("pre"):
+        if not name.startswith("pre_"):
             continue
 
         # Extract file number from name (e.g., 'pre1' -> 1)
         num = get_ending_integer(name)
 
         # Get paired post path
-        post_key = f"post{num}"
+        post_key = f"post_{num}"
         post_path = file_dict.get(post_key)
         if post_path is None:
-            raise ValueError(f"Corresponding post-reaction file for pre{num} not found.")
+            raise ValueError(f"Corresponding post-reaction file for pre_{num} not found.")
 
         # Process pre molecule file with reactant template indices
         pre_modified, index_change_dict_reactant = molecule_file_preparation(
@@ -1242,6 +1242,10 @@ def build_bond_react_templates(
         molecule_file_dict[f"map_file_{num}"] = map_path  # this has to go throught a loop because each reaction need its own map file
 
     return molecule_file_dict
+
+def molecule_template_preparation(molecule_dict_csv_path_dict, final_files_path):
+
+    pass
 
 
 if __name__ == "__main__":

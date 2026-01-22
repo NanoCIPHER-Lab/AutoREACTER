@@ -13,6 +13,7 @@ from reaction_template_pipeline.compare_rdkit_fragments import compare_rdkit_fra
 from lunar_client.molecule_3d_preparation import prepare_3d_molecule
 from lunar_client.lunar_api_wrapper import lunar_workflow
 import pandas as pd
+from pathlib import Path
 import os
 
 def is_continuous(d):
@@ -151,18 +152,18 @@ def run_reaction_template_pipeline(detected_reactions_dict, cache):
             fully_mapped_dict
         )
         
-        # Check for structural duplicates using RDKit fragments
-        is_duplicate, processed_dict = compare_rdkit_fragments(
-            processed_dict,
-            combined_reactant_molecule_object,
-            combined_product_molecule_object,
-            template_mapped_dict
-        )
+        # # Check for structural duplicates using RDKit fragments
+        # is_duplicate, processed_dict = compare_rdkit_fragments(
+        #     processed_dict,
+        #     combined_reactant_molecule_object,
+        #     combined_product_molecule_object,
+        #     template_mapped_dict
+        # )
         
-        if is_duplicate:
-            duplicated = True
-            print(f"Duplicate reaction found for reaction ID {key}, skipping saving CSV.")
-            continue
+        # if is_duplicate:
+        #     duplicated = True
+        #     print(f"Duplicate reaction found for reaction ID {key}, skipping saving CSV.")
+        #     continue
 
         # Update the dataframe with template mapping indices
         reaction_dataframe = add_dict_as_new_columns(
@@ -179,17 +180,57 @@ def run_reaction_template_pipeline(detected_reactions_dict, cache):
         )
         
         # Store the updated dataframe back in the reaction object and save to disk
-        reaction["reaction_dataframe"] = reaction_dataframe
+        reaction["reaction_dataframe"] = reaction_dataframe.copy() # To avoid SettingWithCopyWarning
         reaction_dataframe.to_csv(csv_save_path, index=False)
         
     print("Formatted Detected Reactions Summary:")
     print(molecule_dict_csv_path_dict)
     
     # If duplicates were found and skipped, re-index the dictionary and files to be continuous
-    if duplicated:
-        molecule_dict_csv_path_dict = molecule_dict_csv_path_dict_rearrange(molecule_dict_csv_path_dict)
-
+    # if duplicated:
+    #     molecule_dict_csv_path_dict = molecule_dict_csv_path_dict_rearrange(molecule_dict_csv_path_dict)
+    #     del molecule_dict_csv_path_dict[key] # Remove the last duplicate entry
+    
     return molecule_dict_csv_path_dict , formatted_dict
+
+def execute_pipeline(detected_reactions, retain_smiles, cache):
+    """
+    Executes the full reaction template pipeline, 3D molecule generation, 
+    and LUNAR workflow.
+    """
+    # 1. Run the main reaction template pipeline
+    molecule_dict_csv_path_dict, formatted_dict = run_reaction_template_pipeline(
+        detected_reactions, 
+        cache
+    )
+    
+    # 2. Re-format and extract unique SMILES
+    formatted_dict, data_smiles_list = format_detected_reactions_dict(
+        detected_reactions, 
+        retain_smiles
+    )
+    print("Unique SMILES List:", data_smiles_list)
+
+    # 3. Prepare dictionary for 3D generation
+    molecule_dict = prep_for_3d_molecule_generation(
+        data_smiles_list, 
+        molecule_dict_csv_path_dict
+    )
+    
+    # 4. Generate 3D structures
+    cache_mol = Path(cache) / "mol_files"
+    prepared_molecules = prepare_3d_molecule(
+        cache_dir=cache_mol, 
+        molecule_dict=molecule_dict
+    )
+    print("Prepared 3D Molecules:", prepared_molecules)
+    
+    # 5. Execute final LUNAR workflow
+    final_files = lunar_workflow(molecule_files=prepared_molecules)
+    print("Final LUNAR Workflow Files:", final_files)
+    
+    return final_files, formatted_dict
+
 
 if __name__ == "__main__":
     # Example configuration for testing the pipeline
@@ -280,17 +321,13 @@ if __name__ == "__main__":
     
     # Configuration for retained molecules and cache path
     non_monomer_molecules_to_retain = ["CCO"]
-    cache_path = "C:\\Users\\Janitha\\Documents\\GitHub\\reaction_lammps_mupt\\cache\\00_cache"
     
     # Execute the pipeline
-    molecule_dict_csv_path_dict , formatted_dict = run_reaction_template_pipeline(detected_reactions_dict, cache_path)
-    formatted_dict, data_smiles_list = format_detected_reactions_dict(detected_reactions_dict, non_monomer_molecules_to_retain)
-    print("Formatted Detected Reactions Dictionary:", formatted_dict)
-    print("Unique SMILES List:", data_smiles_list)
-    molecule_dict = prep_for_3d_molecule_generation(data_smiles_list, molecule_dict_csv_path_dict)
-    print("Molecule Dictionary for 3D Generation:", molecule_dict)
-    from pathlib import Path
-    cache_mol = Path(cache_path) / "mol_files"
-    prepared_molecules = prepare_3d_molecule(cache_dir=cache_mol, molecule_dict=molecule_dict)
-    print("Prepared 3D Molecules:", prepared_molecules)
-    final_files = lunar_workflow(molecule_files=prepared_molecules)
+    cache_path = r"C:\Users\Janitha\Documents\GitHub\reaction_lammps_mupt\cache\00_cache"
+
+    # --- Execution ---
+    execute_pipeline(
+        detected_reactions=detected_reactions_dict,
+        retain_smiles=non_monomer_molecules_to_retain,
+        cache=cache_path
+    )
