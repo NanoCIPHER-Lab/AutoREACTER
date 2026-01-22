@@ -12,6 +12,7 @@ from reaction_template_pipeline.walker import reaction_atom_walker
 from reaction_template_pipeline.compare_rdkit_fragments import compare_rdkit_fragments
 from lunar_client.molecule_3d_preparation import prepare_3d_molecule
 from lunar_client.lunar_api_wrapper import lunar_workflow
+from lunar_client.molecule_template_preparation import molecule_template_preparation
 import pandas as pd
 from pathlib import Path
 import os
@@ -225,12 +226,22 @@ def execute_pipeline(detected_reactions, retain_smiles, cache):
         molecule_dict=molecule_dict
     )
     print("Prepared 3D Molecules:", prepared_molecules)
-    return
+
     # 5. Execute final LUNAR workflow
-    final_files = lunar_workflow(molecule_files=prepared_molecules, cache_dir=cache)
-    print("Final LUNAR Workflow Files:", final_files)
+    lunar_out_loc_dict = lunar_workflow(molecule_files=prepared_molecules, cache_dir=cache)
+    print("Final LUNAR Workflow Files:", lunar_out_loc_dict)
     
-    return final_files, formatted_dict
+    # 6. Generate molecule template files
+    molecule_template_files = molecule_template_preparation(
+            molecule_dict_csv_path_dict,
+            lunar_out_loc_dict,
+            cache
+        )   
+    
+    for name, path in molecule_template_files.items():
+        print(f"Molecule Template File for {name}: {path}")
+
+    return formatted_dict, molecule_template_files
 
 
 if __name__ == "__main__":

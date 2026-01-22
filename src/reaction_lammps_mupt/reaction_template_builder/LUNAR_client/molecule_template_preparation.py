@@ -21,6 +21,24 @@ import pandas as pd
 import re
 import os
 
+def _extract_int_list(df: pd.DataFrame, col: str) -> list[int]:
+    if col not in df.columns:
+        return []
+    s = df[col].dropna()
+    if s.empty:
+        return []
+    return [int(x) for x in s.tolist()]
+
+def _extract_initiators(df: pd.DataFrame, col: str = "initiators") -> list[int]:
+    xs = _extract_int_list(df, col)
+    # keep first 2 only (REACTER expects two)
+    return xs[:2] if len(xs) >= 2 else xs
+
+def _extract_reactant_to_product(df: pd.DataFrame) -> dict[int, int]:
+    # full-molecule mapping (0-based)
+    sub = df[["reactant_idx", "product_idx"]].dropna()
+    return {int(r): int(p) for r, p in zip(sub["reactant_idx"], sub["product_idx"])}
+
 def get_ending_integer(s: str) -> int | None:
     """
     Extract and convert the trailing integer from a string.
@@ -1105,6 +1123,7 @@ def build_bond_react_templates(
     initiator_atoms,
     edge_atoms,
     delete_ids,
+    out_dir,   
 ):
     """
     Process multiple molecule files for bond-react simulation setup.
@@ -1188,7 +1207,9 @@ def build_bond_react_templates(
         )
 
         # Get directory path from input file path (assume same folder for pair)
-        save_path = os.path.dirname(pre_path)
+        out_dir = Path(out_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        save_path = str(out_dir)
 
         # Write processed pre molecule file to disk
         pre_out = os.path.join(save_path, f"template_pre_{num}.molecule")
@@ -1243,9 +1264,84 @@ def build_bond_react_templates(
 
     return molecule_file_dict
 
-def molecule_template_preparation(molecule_dict_csv_path_dict, final_files_path):
+from pathlib import Path
+import os
+import json
 
-    pass
+from pathlib import Path
+import pandas as pd
+
+def _extract_int_list(df: pd.DataFrame, col: str) -> list[int]:
+    if col not in df.columns:
+        return []
+    s = df[col].dropna()
+    return [int(x) for x in s.tolist()] if not s.empty else []
+
+def _extract_initiators(df: pd.DataFrame, col: str = "initiators") -> list[int]:
+    xs = _extract_int_list(df, col)
+    return xs[:2]  # REACTER expects two
+
+def _extract_reactant_to_product(df: pd.DataFrame) -> dict[int, int]:
+    sub = df[["reactant_idx", "product_idx"]].dropna()
+    return {int(r): int(p) for r, p in zip(sub["reactant_idx"], sub["product_idx"])}
+
+def molecule_template_preparation(molecule_dict_csv_path_dict: dict,
+                                  lunar_out_loc_dict: dict,
+                                  cache: str):
+    """
+    Writes all template_pre/post + RXN map files into: <cache>/reactor_files/
+    All indices written to files are 1-based (handled inside molecule_file_preparation + map_file_write).
+    """
+    
+    out_dir = Path(cache) / "reactor_files"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    all_outputs = {}
+
+    for rxn_id, rxn in molecule_dict_csv_path_dict.items():
+        df = rxn.get("reaction_dataframe")
+        if df is None or df.empty:
+            continue
+
+        reactant_to_product = _extract_reactant_to_product(df)          # 0-based mapping
+        initiator_atoms = _extract_initiators(df, "initiators")         # 0-based list (len 2)
+        edge_atoms = _extract_int_list(df, "edge_atoms")                # 0-based list
+        delete_ids = _extract_int_list(df, "byproduct_indices") if rxn.get("delete_atoms") else []
+
+        if len(initiator_atoms) < 2:
+            print(f"[skip rxn {rxn_id}] initiators missing: {initiator_atoms}")
+            continue
+
+        pre_key = f"pre_{rxn_id}"
+        post_key = f"post_{rxn_id}"
+
+        pre_path = lunar_out_loc_dict.get(pre_key)
+        post_path = lunar_out_loc_dict.get(post_key)
+
+        if pre_path is None or post_path is None:
+            print(f"[skip rxn {rxn_id}] missing LUNAR files: {pre_key}={pre_path}, {post_key}={post_path}")
+            continue
+
+        # Only pass pre/post for THIS rxn
+        file_dict_one = {
+            pre_key: str(pre_path),
+            post_key: str(post_path),
+        }
+
+        out_one = build_bond_react_templates(
+            file_dict_one,
+            reactant_to_product,
+            initiator_atoms,
+            edge_atoms,
+            delete_ids,
+            out_dir=str(out_dir),   # <--- writes everything here
+        )
+
+        # Keep keys unique across reactions
+        for k, v in out_one.items():
+            all_outputs[f"rxn_{rxn_id}::{k}"] = v
+
+    return all_outputs
 
 
 if __name__ == "__main__":
