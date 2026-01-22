@@ -7,9 +7,10 @@ and handle deduplication of reaction fragments.
 """
 
 from reaction_template_pipeline.map_reactant_atoms import process_reaction_dict
-from reaction_template_pipeline.util import format_detected_reactions_dict
+from reaction_template_pipeline.util import format_detected_reactions_dict, prep_for_3d_molecule_generation
 from reaction_template_pipeline.walker import reaction_atom_walker
 from reaction_template_pipeline.compare_rdkit_fragments import compare_rdkit_fragments
+from lunar_client.molecule_3d_preparation import prepare_3d_molecule
 import pandas as pd
 import os
 
@@ -281,7 +282,13 @@ if __name__ == "__main__":
     cache_path = "C:\\Users\\Janitha\\Documents\\GitHub\\reaction_lammps_mupt\\cache\\00_cache"
     
     # Execute the pipeline
-    run_reaction_template_pipeline(detected_reactions_dict, cache_path)
-    formatted_dict, smiles_list = format_detected_reactions_dict(detected_reactions_dict, non_monomer_molecules_to_retain)
+    molecule_dict_csv_path_dict , formatted_dict = run_reaction_template_pipeline(detected_reactions_dict, cache_path)
+    formatted_dict, data_smiles_list = format_detected_reactions_dict(detected_reactions_dict, non_monomer_molecules_to_retain)
     print("Formatted Detected Reactions Dictionary:", formatted_dict)
-    print("Unique SMILES List:", smiles_list)
+    print("Unique SMILES List:", data_smiles_list)
+    molecule_dict = prep_for_3d_molecule_generation(data_smiles_list, molecule_dict_csv_path_dict)
+    print("Molecule Dictionary for 3D Generation:", molecule_dict)
+    from pathlib import Path
+    cache_mol = Path(cache_path) / "mol_files"
+    prepared_molecules = prepare_3d_molecule(cache_dir=cache_mol, molecule_dict=molecule_dict)
+    print("Prepared 3D Molecules:", prepared_molecules)

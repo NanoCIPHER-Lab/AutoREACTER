@@ -441,7 +441,10 @@ if __name__ == "__main__":
     """
     # Import Path here to avoid circular imports if this module is imported elsewhere
     from pathlib import Path
-    from molecule_3d_preparation import prepare_3d_molecule
+    try:
+        from molecule_3d_preparation import prepare_3d_molecule
+    except ImportError:
+        from lunar_api_wrapper.molecule_3d_preparation import prepare_3d_molecule
     from rdkit import Chem
     from rdkit.Chem import AllChem
     # Example usage: construct reactants, run a SMARTS-based reaction, prepare 3D structures,

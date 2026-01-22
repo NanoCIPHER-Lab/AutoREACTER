@@ -45,19 +45,19 @@ def compare_products(reactions_dict, _prod2):
     # No duplicates found after checking all entries
     return True
 
-def compare_rdkit_molecules_canonical(smiles_list, mol_smi_2):
+def compare_rdkit_molecules_canonical(data_smiles_list, mol_smi_2):
     """
     Compares two RDKit molecule SMILES strings to determine if they
     represent the same chemical structure using canonical SMILES.
 
     Args:
-        mol_smi_1 (str): SMILES string of the first molecule.
+        data_smiles_list (list): List of SMILES strings to compare against.
         mol_smi_2 (str): SMILES string of the second molecule.
 
     Returns:
         bool: True if molecules are chemically identical, False otherwise.
     """
-    for mol_smi_1 in smiles_list:
+    for mol_smi_1 in data_smiles_list:
         mol1 = Chem.MolFromSmiles(mol_smi_1)
         mol2 = Chem.MolFromSmiles(mol_smi_2)
 
@@ -70,10 +70,10 @@ def compare_rdkit_molecules_canonical(smiles_list, mol_smi_2):
         canonical_smi_2 = Chem.MolToSmiles(mol2, canonical=True)
 
         if canonical_smi_1 == canonical_smi_2:
-            return smiles_list, True
+            return data_smiles_list, True
     
-    smiles_list.append(mol_smi_2)
-    return smiles_list, False
+    data_smiles_list.append(mol_smi_2)
+    return data_smiles_list, False
 
 def format_detected_reactions_dict(detected_reactions, non_monomer_molecules_to_retain = None):
     """
@@ -98,7 +98,7 @@ def format_detected_reactions_dict(detected_reactions, non_monomer_molecules_to_
     smart_references = ""
     mechanism_references = ""
     formatted_dict = {}
-    smiles_list = []
+    data_smiles_list = []
 
     for key, reaction in detected_reactions.items():
         # Extract and aggregate unique reaction names
@@ -142,15 +142,15 @@ def format_detected_reactions_dict(detected_reactions, non_monomer_molecules_to_
         m1_smiles = m1.get("smiles") if isinstance(m1, dict) else None
         m2_smiles = m2.get("smiles") if isinstance(m2, dict) else None
 
-        smiles_list, _ = compare_rdkit_molecules_canonical(smiles_list, m1_smiles)
+        data_smiles_list, _ = compare_rdkit_molecules_canonical(data_smiles_list, m1_smiles)
         if not m2_smiles:
             continue
         else:
-            smiles_list, _ = compare_rdkit_molecules_canonical(smiles_list, m2_smiles)
+            data_smiles_list, _ = compare_rdkit_molecules_canonical(data_smiles_list, m2_smiles)
         
         if non_monomer_molecules_to_retain:
             for non_monomer in non_monomer_molecules_to_retain:
-                smiles_list, _ = compare_rdkit_molecules_canonical(smiles_list, non_monomer)
+                data_smiles_list, _ = compare_rdkit_molecules_canonical(data_smiles_list, non_monomer)
 
         
 
@@ -161,4 +161,19 @@ def format_detected_reactions_dict(detected_reactions, non_monomer_molecules_to_
         "mechanism_references": mechanism_references,
     }
 
-    return formatted_dict , smiles_list
+    return formatted_dict , data_smiles_list
+
+def prep_for_3d_molecule_generation(data_smiles_list, molecule_dict_csv_path_dict):
+    molecule_dict = {}
+    for i, smiles in enumerate(data_smiles_list):
+        key = f"data_{i+1}"
+        molecule = Chem.MolFromSmiles(smiles)
+        molecule = Chem.AddHs(molecule)
+        molecule_dict[key] = molecule
+    for i, (key, value) in enumerate(molecule_dict_csv_path_dict.items()):
+        reactant = value.get("reactant")
+        product = value.get("product")
+        if reactant and product:
+            molecule_dict[f"pre_{i+1}"] = reactant
+            molecule_dict[f"post_{i+1}"] = product
+    return molecule_dict
