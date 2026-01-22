@@ -45,6 +45,36 @@ def compare_products(reactions_dict, _prod2):
     # No duplicates found after checking all entries
     return True
 
+def compare_rdkit_molecules_canonical(smiles_list, mol_smi_2):
+    """
+    Compares two RDKit molecule SMILES strings to determine if they
+    represent the same chemical structure using canonical SMILES.
+
+    Args:
+        mol_smi_1 (str): SMILES string of the first molecule.
+        mol_smi_2 (str): SMILES string of the second molecule.
+
+    Returns:
+        bool: True if molecules are chemically identical, False otherwise.
+    """
+    for mol_smi_1 in smiles_list:
+        mol1 = Chem.MolFromSmiles(mol_smi_1)
+        mol2 = Chem.MolFromSmiles(mol_smi_2)
+
+        # Handle cases where SMILES might be invalid
+        if mol1 is None or mol2 is None:
+            return False # Or raise an error, depending on desired behavior
+
+        # Generate canonical SMILES and compare them
+        canonical_smi_1 = Chem.MolToSmiles(mol1, canonical=True)
+        canonical_smi_2 = Chem.MolToSmiles(mol2, canonical=True)
+
+        if canonical_smi_1 == canonical_smi_2:
+            return smiles_list, True
+    
+    smiles_list.append(mol_smi_2)
+    return smiles_list, False
+
 def format_detected_reactions_dict(detected_reactions):
     """
     Aggregates and formats information from a dictionary of detected reactions 
@@ -68,6 +98,7 @@ def format_detected_reactions_dict(detected_reactions):
     smart_references = ""
     mechanism_references = ""
     formatted_dict = {}
+    smiles_list = []
 
     for key, reaction in detected_reactions.items():
         # Extract and aggregate unique reaction names
@@ -104,6 +135,20 @@ def format_detected_reactions_dict(detected_reactions):
                     mechanism_references += mech_block
                 else:
                     mechanism_references += f", {mech_block}"
+
+        m1 = reaction.get("monomer_1")
+        m2 = reaction.get("monomer_2")
+
+        m1_smiles = m1.get("smiles") if isinstance(m1, dict) else None
+        m2_smiles = m2.get("smiles") if isinstance(m2, dict) else None
+
+        smiles_list, _ = compare_rdkit_molecules_canonical(smiles_list, m1_smiles)
+        if not m2_smiles:
+            continue
+        else:
+            smiles_list, _ = compare_rdkit_molecules_canonical(smiles_list, m2_smiles)
+
+        
 
     # Construct the final summary dictionary
     formatted_dict = {
