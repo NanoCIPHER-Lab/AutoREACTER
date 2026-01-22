@@ -11,6 +11,7 @@ from reaction_template_pipeline.util import format_detected_reactions_dict, prep
 from reaction_template_pipeline.walker import reaction_atom_walker
 from reaction_template_pipeline.compare_rdkit_fragments import compare_rdkit_fragments
 from lunar_client.molecule_3d_preparation import prepare_3d_molecule
+from lunar_client.lunar_api_wrapper import lunar_workflow
 import pandas as pd
 import os
 
@@ -292,3 +293,4 @@ if __name__ == "__main__":
     cache_mol = Path(cache_path) / "mol_files"
     prepared_molecules = prepare_3d_molecule(cache_dir=cache_mol, molecule_dict=molecule_dict)
     print("Prepared 3D Molecules:", prepared_molecules)
+    final_files = lunar_workflow(molecule_files=prepared_molecules)

@@ -37,7 +37,10 @@ for p in (test_cache, test_cache_atom_typing, test_cache_all2lmp, test_cache_bon
 # Ensure cache directory exists (redundant but safe)
 
 # Import LUNAR location detection module
-from locate_lunar import get_LUNAR_loc
+try:
+    from locate_lunar import get_LUNAR_loc
+except ImportError:
+    from lunar_client.locate_lunar import get_LUNAR_loc
 
 # Get current working directory
 cwd = os.getcwd()
