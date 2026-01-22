@@ -225,9 +225,9 @@ def execute_pipeline(detected_reactions, retain_smiles, cache):
         molecule_dict=molecule_dict
     )
     print("Prepared 3D Molecules:", prepared_molecules)
-
+    return
     # 5. Execute final LUNAR workflow
-    final_files = lunar_workflow(molecule_files=prepared_molecules)
+    final_files = lunar_workflow(molecule_files=prepared_molecules, cache_dir=cache)
     print("Final LUNAR Workflow Files:", final_files)
     
     return final_files, formatted_dict
