@@ -203,64 +203,9 @@ def run_reaction_template_pipeline(detected_reactions_dict, cache):
     print("Formatted Detected Reactions Summary:")
     print(molecule_dict_csv_path_dict)
     
-    return molecule_dict_csv_path_dict, formatted_dict
-
-def execute_pipeline(detected_reactions, retain_smiles, cache):
-    """
-    Orchestrates the full reaction template pipeline, including 3D generation 
-    and LUNAR workflow execution.
-
-    Args:
-        detected_reactions (dict): Input reaction definitions.
-        retain_smiles (list): List of SMILES strings for non-monomer molecules to keep.
-        cache (str): Directory path for temporary files and outputs.
-
-    Returns:
-        tuple: (formatted_dict, molecule_template_files)
-    """
-    # 1. Run the core reaction template mapping and walking pipeline
-    molecule_dict_csv_path_dict, formatted_dict = run_reaction_template_pipeline(
-        detected_reactions, 
-        cache
-    )
-    
-    # 2. Re-format data and extract a list of unique SMILES for 3D generation
-    formatted_dict, data_smiles_list = format_detected_reactions_dict(
-        detected_reactions, 
-        retain_smiles
-    )
-    print("Unique SMILES List:", data_smiles_list)
-
-    # 3. Prepare the molecule dictionary structure required for 3D generation
-    molecule_dict = prep_for_3d_molecule_generation(
-        data_smiles_list, 
-        molecule_dict_csv_path_dict
-    )
-    
-    # 4. Generate 3D structures (MOL files) for all involved molecules
-    cache_mol = Path(cache) / "mol_files"
-    prepared_molecules = prepare_3d_molecule(
-        cache_dir=cache_mol, 
-        molecule_dict=molecule_dict
-    )
-    print("Prepared 3D Molecules:", prepared_molecules)
-
-    # 5. Execute the LUNAR workflow (e.g., force field assignment, energy minimization)
-    lunar_out_loc_dict = lunar_workflow(molecule_files=prepared_molecules, cache_dir=cache)
-    print("Final LUNAR Workflow Files:", lunar_out_loc_dict)
-    
-    # 6. Final Step: Generate molecule template files combining 3D data and reaction maps
-    molecule_template_files = molecule_template_preparation(
-            molecule_dict_csv_path_dict,
-            lunar_out_loc_dict,
-            cache
-        )   
-    
-    # Log the location of generated template files
-    for name, path in molecule_template_files.items():
-        print(f"Molecule Template File for {name}: {path}")
-
-    return formatted_dict, molecule_template_files
+    # If duplicates were found and skipped, re-index the dictionary and files to be continuous
+    if duplicated:
+        molecule_dict_csv_path_dict = molecule_dict_csv_path_dict_rearrange(molecule_dict_csv_path_dict)
 
 
 if __name__ == "__main__":
