@@ -330,16 +330,30 @@ def process_reactions(rxn, csv_cache, reaction_tuple, key=None,
                     initiator_idxs.append(atom.GetIdx())
 
             # Identify byproduct atoms if deletion is requested
-            byproduct_indexs = []
+            byproduct_product_idxs = []
+            byproduct_reactant_idxs = []
+
             if delete_atoms:
                 frags = rdmolops.GetMolFrags(product_combined, asMols=True)
                 smallest_mol = min(frags, key=lambda m: m.GetNumAtoms())
+
+                # 1) get byproduct atom indices in PRODUCT space
                 for atom in smallest_mol.GetAtoms():
                     byproduct_map_number = atom.GetAtomMapNum()
                     for p_atom in product_combined.GetAtoms():
                         if p_atom.GetAtomMapNum() == byproduct_map_number:
-                            byproduct_indexs.append(p_atom.GetIdx())
+                            byproduct_product_idxs.append(p_atom.GetIdx())
                             break
+
+                # 2) convert PRODUCT indices -> REACTANT indices using df mapping
+                byproduct_reactant_idxs = (
+                    df.loc[df["product_idx"].isin(byproduct_product_idxs), "reactant_idx"]
+                    .astype(int)
+                    .tolist()
+                )
+
+            # if you want the column to store REACTANT indices now:
+            byproduct_indexs = byproduct_reactant_idxs
 
             # Add any additional mappings from mapping_dict
             for r_idx, p_idx in mapping_dict.items():
