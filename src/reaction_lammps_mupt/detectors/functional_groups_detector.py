@@ -365,7 +365,7 @@ def functional_groups_detector(monomer_dictionary: dict) -> dict:
                     }
 
     # for debugging purposes
-    print(json.dumps(selected_monomers, indent=4))
+    # print(json.dumps(selected_monomers, indent=4))
     return selected_monomers
 
 if __name__ == "__main__":
