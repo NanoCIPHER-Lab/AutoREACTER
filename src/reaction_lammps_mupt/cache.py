@@ -32,7 +32,7 @@ def get_default_cache_dir() -> Path:
     Return the "staging" cache directory: <git_root>/cache/0_cache
     Creates it if missing.
     """
-    default_dir = get_cache_base_dir() / "0_cache"
+    default_dir = get_cache_base_dir() / "00_cache"
     default_dir.mkdir(parents=True, exist_ok=True)
     return default_dir
 

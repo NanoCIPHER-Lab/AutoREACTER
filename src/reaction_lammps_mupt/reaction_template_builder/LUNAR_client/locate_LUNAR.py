@@ -22,8 +22,10 @@ from tkinter import filedialog, messagebox
 from pathlib import Path
 import os
 
-import config
-
+try:
+    import config
+except ImportError:
+    from . import config
 # Global flag to determine whether to use GUI for input prompts. Defaults to False (CLI mode).
 USE_GUI = False
 

@@ -31,17 +31,3 @@ python -m ipykernel install --user --name mupt313 --display-name "Python (mupt31
 cd /mnt/c/Users/<USER>/Documents/GitHub/reaction_lammps_mupt
 code .
 ```
-
-## 5. Verify the Python Executable
-
-```bash
-import sys
-print(sys.executable)
-```
-
-## 6. Test the Package Import
-
-```bash
-from reaction_lammps_mupt.detectors.functional_groups_detector import functional_groups_detection
-print(functional_groups_detection)
-```

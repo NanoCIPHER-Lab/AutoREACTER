@@ -24,9 +24,24 @@ from pathlib import Path
 import os
 import itertools
 try:
-    from util import compare_products
-except ImportError:
-    from reaction_template_pipeline.util import compare_products
+    # Case 1: correct when reaction_template_pipeline is a proper package
+    from .util import compare_products
+
+except (ImportError, ModuleNotFoundError):
+    try:
+        # Case 2: fully-qualified import under your installed namespace
+        from reaction_lammps_mupt.reaction_template_builder.reaction_template_pipeline.util import (
+            compare_products,
+        )
+
+    except (ImportError, ModuleNotFoundError):
+        try:
+            # Case 3: if reaction_template_pipeline is installed as a top-level package
+            from reaction_template_pipeline.util import compare_products
+
+        except (ImportError, ModuleNotFoundError):
+            # Case 4: running as a loose script from the same directory
+            from util import compare_products
 
 
 def is_number_in_set(set_of_tuples, reactant):
@@ -330,16 +345,30 @@ def process_reactions(rxn, csv_cache, reaction_tuple, key=None,
                     initiator_idxs.append(atom.GetIdx())
 
             # Identify byproduct atoms if deletion is requested
-            byproduct_indexs = []
+            byproduct_product_idxs = []
+            byproduct_reactant_idxs = []
+
             if delete_atoms:
                 frags = rdmolops.GetMolFrags(product_combined, asMols=True)
                 smallest_mol = min(frags, key=lambda m: m.GetNumAtoms())
+
+                # 1) get byproduct atom indices in PRODUCT space
                 for atom in smallest_mol.GetAtoms():
                     byproduct_map_number = atom.GetAtomMapNum()
                     for p_atom in product_combined.GetAtoms():
                         if p_atom.GetAtomMapNum() == byproduct_map_number:
-                            byproduct_indexs.append(p_atom.GetIdx())
+                            byproduct_product_idxs.append(p_atom.GetIdx())
                             break
+
+                # 2) convert PRODUCT indices -> REACTANT indices using df mapping
+                byproduct_reactant_idxs = (
+                    df.loc[df["product_idx"].isin(byproduct_product_idxs), "reactant_idx"]
+                    .astype(int)
+                    .tolist()
+                )
+
+            # if you want the column to store REACTANT indices now:
+            byproduct_indexs = byproduct_reactant_idxs
 
             # Add any additional mappings from mapping_dict
             for r_idx, p_idx in mapping_dict.items():
@@ -390,28 +419,45 @@ def process_reactions(rxn, csv_cache, reaction_tuple, key=None,
 
 
 def save_grid_image(mols, cache, key=None):
-    """
-    Create and save a grid image of molecules.
-    
-    Args:
-        mols (list): List of RDKit molecule objects
-        csv_cache (Path): Directory to save the image
-        key (str or int, optional): Identifier for the image filename
-        
-    Returns:
-        Path or None: Path to saved image if molecules were provided, None otherwise
-        
-    Example:
-        >>> img_path = save_grid_image([mol1, mol2, mol3, mol4], csv_dir, "reaction_1")
-    """
-    if mols:
-        img = Draw.MolsToGridImage(mols, molsPerRow=2, subImgSize=(900, 900))
-        img_path = Path(cache) /("grid_images")
-        os.makedirs(img_path, exist_ok=True)
-        img_path = Path(cache) /("grid_images") / (f"reaction_grid_{key}.png" if key is not None else "reaction_grid.png")
-        img.save(str(img_path))
-        return img_path
-    return None
+    from pathlib import Path
+    from rdkit.Chem import Draw
+    import base64
+
+    out_dir = Path(cache) / "grid_images"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    out_path = out_dir / (f"reaction_grid_{key}.png" if key is not None else "reaction_grid.png")
+
+    # Ask RDKit for a raster image (PNG-like)
+    img = Draw.MolsToGridImage(mols, useSVG=False, subImgSize=(900, 900))
+
+    # Case 1: PIL.Image.Image (has .save)
+    if hasattr(img, "save"):
+        img.save(str(out_path))
+        return out_path
+
+    # Case 2: IPython/RDKit display object (often has .data)
+    data = getattr(img, "data", None)
+    if data is None:
+        raise TypeError(f"Unexpected image type {type(img)}; cannot save.")
+
+    # data can be bytes OR base64 string depending on wrapper
+    if isinstance(data, bytes):
+        png_bytes = data
+    elif isinstance(data, str):
+        # try base64 decode; if it fails, treat as raw text
+        try:
+            png_bytes = base64.b64decode(data)
+        except Exception:
+            png_bytes = data.encode("utf-8")
+    else:
+        raise TypeError(f"Unexpected img.data type {type(data)}; cannot save.")
+
+    with open(out_path, "wb") as f:
+        f.write(png_bytes)
+
+    return out_path
+
 
 
 def reaction_tuples(same_reactants, mol_reactant_1, mol_reactant_2):

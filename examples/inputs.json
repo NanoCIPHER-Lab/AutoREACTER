@@ -5,9 +5,11 @@
   "monomers": {
     "1": "OCCC(O)=O",
     "2": "C1=CC=C(C(=C1)C(=O)O)O",
+    "3": "CCO"
   },
   "number_of_monomers": {
     "1": 500,
-    "2": 400
+    "2": 400,
+    "3": 300
   }
 }
