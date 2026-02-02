@@ -28,7 +28,7 @@ TODO:
 try:
     from locate_lunar import get_LUNAR_loc
 except ImportError:
-    from lunar_client.locate_lunar import get_LUNAR_loc
+    from .locate_lunar import get_LUNAR_loc
 
 # Get current working directory
 cwd = os.getcwd()
@@ -41,6 +41,56 @@ atom_typing_py = os.path.join(LUNAR_LOCATION, "atom_typing.py")
 all2lmp_py = os.path.join(LUNAR_LOCATION, "all2lmp.py")
 bond_react_merge_py = os.path.join(LUNAR_LOCATION, "bond_react_merge.py")
 
+import os, re, platform
+from pathlib import Path
+import shutil
+
+def _is_wsl() -> bool:
+    # Check for the interop file or the environment variable
+    return os.path.exists('/proc/sys/fs/binfmt_misc/WSLInterop') or "WSL_INTEROP" in os.environ
+
+import os, re, platform
+from pathlib import Path
+
+def _is_wsl() -> bool:
+    return ("microsoft" in platform.release().lower()) or ("WSL_INTEROP" in os.environ)
+
+def normalize_path(p: str | Path) -> str:
+    p = str(p).strip().strip('"').strip("'")
+    # Convert all backslashes to forward slashes for internal consistency
+    p = p.replace("\\", "/")
+
+    is_wsl = _is_wsl()
+
+    # 1. Convert Windows (C:/...) to WSL (/mnt/c/...)
+    if is_wsl:
+        m = re.match(r"^([A-Za-z]):/(.*)$", p)
+        if m:
+            drive = m.group(1).lower()
+            rest = m.group(2)
+            return f"/mnt/{drive}/{rest}"
+        return p
+
+    # 2. Convert WSL (/mnt/c/...) to Windows (C:/...)
+    else:
+        # Check for /mnt/c/ or mnt/c/
+        m = re.match(r"^/?mnt/([A-Za-z])/(.*)$", p)
+        if m:
+            drive = m.group(1).upper()
+            rest = m.group(2).replace("/", "\\")
+            return f"{drive}:\\{rest}"
+        
+        # If it's already a Windows path, just fix backslashes
+        return p.replace("/", "\\")
+
+def move_merge_outputs(src_dir: Path, dst_dir: Path):
+    src_dir = Path(src_dir)
+    dst_dir = Path(dst_dir)
+    dst_dir.mkdir(parents=True, exist_ok=True)
+
+    for pattern in ("*_merged.data", "*_merged.lmpmol", "force_field.data", "log.lammps", "*.log"):
+        for f in src_dir.glob(pattern):
+            shutil.move(str(f), str(dst_dir / f.name))
 
 def loading_screen(name: str = "LUNAR") -> None:
     """
@@ -232,74 +282,57 @@ def run_LUNAR_all2lmp(molecule_files_typed: dict[str, list[Path]], cache_all2lmp
     return molecule_files_all2lmp
 
 
-def write_bond_react_merge_input(molecule_files_all2lmp: dict[str, str], cache_bond_react_merge: Path, cache_all2lmp: Path) -> Path:
-    """
-    Generate input file for LUNAR's bond_react_merge utility.
-    
-    This function creates a configuration file that specifies which LAMMPS data
-    files to merge and how to process them for reactive simulations.
-    
+def write_bond_react_merge_input(
+    molecule_files_all2lmp: dict[str, str],
+    cache_bond_react_merge: Path,
+    cache_all2lmp: Path
+) -> Path:
+    """Generate the merge input file used by Bond React Merge binaries.
+
     Args:
-        molecule_files_all2lmp (dict[str, str]): Dictionary mapping molecule 
-                                                names to LAMMPS data filenames.
-        cache_bond_react_merge (Path): Path to the cache directory for bond_react_merge.
-        cache_all2lmp (Path): Path to the cache directory for all2lmp.
-    
+        molecule_files_all2lmp: Mapping of file tags to their corresponding LAMMPS filenames.
+        cache_bond_react_merge: Target directory where the merge input and merge results will be written.
+        cache_all2lmp: Directory that holds the generated LAMMPS files referenced in the merge list.
+
     Returns:
-        Path: Path to the directory containing the generated merge input file.
-    
-    Note:
-        The generated file follows LUNAR's bond_react_merge input format with
-        sections for file tags, filenames, and comments.
+        Path to the directory containing the newly written merge_input.txt file.
     """
-    # Start building the merge input file content
-    # Header with format explanation
-    merge_files: str = f"""# anything following the "#" character will be ignored 
- 
-# Specify a desired path to append to the front of each filename (optional however if not present 
-# and the files are a path from LUNAR on your computer each file below must have that path 
-# specified in front of the filename) 
+    # Ensure the provided paths are normalized (resolving redundant separators, symlinks, etc.).
+    cache_bond_react_merge_normalized = Path(normalize_path(cache_bond_react_merge))
+    cache_all2lmp = Path(normalize_path(cache_all2lmp))
 
-path = "{cache_all2lmp}" 
+    # Create the output directory if it does not already exist.
+    os.makedirs(cache_bond_react_merge_normalized, exist_ok=True)
+    # Initialize the merge input file content with header comments and column titles.
+    merge_files = f"""# anything following the "#" character will be ignored
 
-{"# file-tag":<15}{"filename":<40}{"comment (required)"}  
+{"# file-tag":<10}{"filename":<150}{"comment (required)"}
 """
-    
-    # Add entries for each molecule file
+
+    # Append one line per molecule file describing the tag, absolute path, and reason comment.
     for name, lammps_file in molecule_files_all2lmp.items():
-        # Determine appropriate comment based on file type
         if name.startswith("data"):
-            # Data files contain all force field coefficients
             comment = "# This datafile will have all coeffs in it"
         else:
-            # Pre- and post-reaction files are associated with specific reactions
             rxn_number = get_ending_integer(name)
             comment = f"# for rxn{rxn_number}"
-        
-        # Add formatted line to the merge file
-        merge_files += f"{name:<15}{lammps_file:<40}{comment} file\n"
-    
-    # Add footer with output directory specification
-    merge_files += f""" 
-# Specify the parent_directory of where to write results (optional) 
-parent_directory = "{cache_bond_react_merge}"
-"""
-    
-    # Ensure the output directory exists
-    try:
-        os.makedirs(cache_bond_react_merge, exist_ok=True)
-    except FileExistsError:
-        # Directory already exists, continue without error
-        pass
 
-    # Write the merge input file
-    merge_input_path = os.path.join(cache_bond_react_merge, "merge_input.txt")
-    with open(merge_input_path, "w") as f:
-        f.write(merge_files)
-    
-    time.sleep(1)  # Ensure the merge input file is fully written before returning
-    # Return the directory containing the merge input file
+        full_file = normalize_path(Path(cache_all2lmp) / lammps_file)
+        merge_files += f"{name:<10}{full_file:<150}{comment}\n"
+
+    # Specify where the merge outputs should be written to within the merge_input file.
+    merge_files += f"""
+# Specify the parent_directory of where to write results (optional)
+"""
+    # Write the complete merge input text to the target file.
+    with open(cache_bond_react_merge_normalized / "merge_input.txt", "w") as merge_input_file:
+        merge_input_file.write(merge_files)
+
+    move_merge_outputs(cache_all2lmp, cache_bond_react_merge)
+
     return cache_bond_react_merge
+
+
 
 def run_bond_react_merge(merge_input_file_path: Path, 
                          molecule_files_all2lmp: dict[str, str]) -> dict[str, Path]:
@@ -331,7 +364,7 @@ def run_bond_react_merge(merge_input_file_path: Path,
         python3 bond_react_merge.py -files infile:merge_input.txt -atomstyle full
     """
     molecule_files_bond_react_merge: dict[str, Path] = {}
-    
+    merge_input_file_path = Path(normalize_path(merge_input_file_path))
     # Construct and execute the bond_react_merge command
     # Command format: python bond_react_merge.py -files infile:<input_file> -atomstyle full
     subprocess.run(

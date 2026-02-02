@@ -17,6 +17,7 @@ Dependencies:
     - re: For regular expression operations
 """
 
+import shutil
 import pandas as pd
 import re
 import os
@@ -54,6 +55,14 @@ def get_ending_integer(s: str) -> int | None:
     else:
         # No integer found at the end of the string
         return None
+    
+def ensure_dir(p: str) -> str:
+    # If a FILE exists where we want a directory, delete it.
+    if os.path.exists(p) and not os.path.isdir(p):
+        os.remove(p)
+    os.makedirs(p, exist_ok=True)
+    return p
+
 def _col_int_list(col: str, df: pd.DataFrame) -> list[int]:
     if col not in df.columns:
         return []
@@ -1165,6 +1174,11 @@ def build_bond_react_templates(
         # Reindex and filter the molecule files so they only include atoms relevant to the templates.
         # Each call returns new file contents and an index_change_dict mapping original 1-based indices
         # -> new 1-based indices.
+        if not pre_path or not os.path.isfile(pre_path):
+            raise FileNotFoundError(f"Missing pre file: {pre_path}")
+        if not post_path or not os.path.isfile(post_path):
+            raise FileNotFoundError(f"Missing post file: {post_path}")
+        
         pre_modified, index_change_dict_reactant = molecule_file_preparation(
             pre_path,
             template_indexes_reactant
@@ -1259,8 +1273,7 @@ def molecule_template_preparation(molecule_dict_csv_path_dict, lunar_out_loc_dic
     total_molecule_file_dict : dict
       Combined dictionary of generated file paths for all processed reactions.
     """
-    reactor_dir = os.path.join(cache_path, "reactor_files")
-    os.makedirs(reactor_dir, exist_ok=True)
+    reactor_dir = ensure_dir(os.path.join(cache_path, "reactor_files"))
     
     total_molecule_file_dict = {}
 

@@ -11,18 +11,145 @@ Main features:
 2. Sequential indexing and file management for reaction data.
 3. Integration with RDKit for fragment comparison.
 4. 3D structure generation and workflow automation.
+
+TODO:
+- Implement duplicate reaction detection and handling.
 """
 
-from reaction_template_pipeline.map_reactant_atoms import process_reaction_dict
-from reaction_template_pipeline.util import format_detected_reactions_dict, prep_for_3d_molecule_generation
-from reaction_template_pipeline.walker import reaction_atom_walker
-from reaction_template_pipeline.compare_rdkit_fragments import compare_rdkit_fragments
-from lunar_client.molecule_3d_preparation import prepare_3d_molecule
-from lunar_client.lunar_api_wrapper import lunar_workflow
-from lunar_client.molecule_template_preparation import molecule_template_preparation
+# --- preferred: package-relative imports; fallback: absolute imports for script/notebook ---
+
+try:
+    # Case 1 (correct when imported as part of the package)
+    from .reaction_template_pipeline.map_reactant_atoms import process_reaction_dict
+    from .reaction_template_pipeline.util import (
+        format_detected_reactions_dict,
+        prep_for_3d_molecule_generation,
+    )
+    from .reaction_template_pipeline.walker import reaction_atom_walker
+    from .reaction_template_pipeline.compare_rdkit_fragments import compare_rdkit_fragments
+
+    from .lunar_client.molecule_3d_preparation import prepare_3d_molecule
+    from .lunar_client.lunar_api_wrapper import lunar_workflow
+    from .lunar_client.molecule_template_preparation import molecule_template_preparation
+
+except (ImportError, ModuleNotFoundError):
+    try:
+        # Case 2 (works if running as a loose script from inside reaction_template_builder/)
+        from reaction_template_pipeline.map_reactant_atoms import process_reaction_dict
+        from reaction_template_pipeline.util import (
+            format_detected_reactions_dict,
+            prep_for_3d_molecule_generation,
+        )
+        from reaction_template_pipeline.walker import reaction_atom_walker
+        from reaction_template_pipeline.compare_rdkit_fragments import compare_rdkit_fragments
+
+        from lunar_client.molecule_3d_preparation import prepare_3d_molecule
+        from lunar_client.lunar_api_wrapper import lunar_workflow
+        from lunar_client.molecule_template_preparation import molecule_template_preparation
+
+    except (ImportError, ModuleNotFoundError):
+        # Case 3 (fully-qualified import from repo root / installed package)
+        from reaction_lammps_mupt.reaction_template_builder.reaction_template_pipeline.map_reactant_atoms import (
+            process_reaction_dict,
+        )
+        from reaction_lammps_mupt.reaction_template_builder.reaction_template_pipeline.util import (
+            format_detected_reactions_dict,
+            prep_for_3d_molecule_generation,
+        )
+        from reaction_lammps_mupt.reaction_template_builder.reaction_template_pipeline.walker import (
+            reaction_atom_walker,
+        )
+        from reaction_lammps_mupt.reaction_template_builder.reaction_template_pipeline.compare_rdkit_fragments import (
+            compare_rdkit_fragments,
+        )
+
+        from reaction_lammps_mupt.reaction_template_builder.lunar_client.molecule_3d_preparation import (
+            prepare_3d_molecule,
+        )
+        from reaction_lammps_mupt.reaction_template_builder.lunar_client.lunar_api_wrapper import (
+            lunar_workflow,
+        )
+        from reaction_lammps_mupt.reaction_template_builder.lunar_client.molecule_template_preparation import (
+            molecule_template_preparation,
+        )
+
+
+# standard libs / third-party
 import pandas as pd
 from pathlib import Path
 import os
+
+def extract_unique_references(detected_reactions: dict) -> list[str]:
+    """Collect reference URLs from detected_reactions[*]["reference"], dedupe, keep order."""
+    seen = set()
+    refs: list[str] = []
+
+    for rxn in detected_reactions.values():
+        ref = rxn.get("reference") or {}
+
+        # single URL fields
+        for v in ref.values():
+            if isinstance(v, str):
+                if v not in seen:
+                    seen.add(v)
+                    refs.append(v)
+
+            # list-of-URLs fields
+            elif isinstance(v, (list, tuple)):
+                for u in v:
+                    if isinstance(u, str) and u not in seen:
+                        seen.add(u)
+                        refs.append(u)
+
+            # (optional) nested dict handling, if you ever add that later
+            elif isinstance(v, dict):
+                for u in v.values():
+                    if isinstance(u, str) and u not in seen:
+                        seen.add(u)
+                        refs.append(u)
+
+    return refs
+
+
+def save_grid_image(mols, cache, key=None):
+    from pathlib import Path
+    from rdkit.Chem import Draw
+    import base64
+
+    out_dir = Path(cache) / "grid_images"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    out_path = out_dir / (f"reaction_grid_{key}.png" if key is not None else "reaction_grid.png")
+
+    # Ask RDKit for a raster image (PNG-like)
+    img = Draw.MolsToGridImage(mols, useSVG=False)
+
+    # Case 1: PIL.Image.Image (has .save)
+    if hasattr(img, "save"):
+        img.save(str(out_path))
+        return out_path
+
+    # Case 2: IPython/RDKit display object (often has .data)
+    data = getattr(img, "data", None)
+    if data is None:
+        raise TypeError(f"Unexpected image type {type(img)}; cannot save.")
+
+    # data can be bytes OR base64 string depending on wrapper
+    if isinstance(data, bytes):
+        png_bytes = data
+    elif isinstance(data, str):
+        # try base64 decode; if it fails, treat as raw text
+        try:
+            png_bytes = base64.b64decode(data)
+        except Exception:
+            png_bytes = data.encode("utf-8")
+    else:
+        raise TypeError(f"Unexpected img.data type {type(data)}; cannot save.")
+
+    with open(out_path, "wb") as f:
+        f.write(png_bytes)
+
+    return out_path
 
 def is_continuous(d):
     """
@@ -199,10 +326,84 @@ def run_reaction_template_pipeline(detected_reactions_dict, cache):
         
         # Persist the processed reaction data to a CSV file
         reaction_dataframe.to_csv(csv_save_path, index=False)
-        
-    print("Formatted Detected Reactions Summary:")
-    print(molecule_dict_csv_path_dict)
+
+    # For debugging: print the final molecule dictionary with CSV paths
+    # print("Formatted Detected Reactions Summary:")
+    # print(molecule_dict_csv_path_dict)
+    return molecule_dict_csv_path_dict, formatted_dict
+
+
+def execute_pipeline(detected_reactions, retain_smiles, cache):
+    """
+    Orchestrates the full reaction template pipeline, including 3D generation 
+    and LUNAR workflow execution.
+
+    Args:
+        detected_reactions (dict): Input reaction definitions.
+        retain_smiles (list): List of SMILES strings for non-monomer molecules to keep.
+        cache (str): Directory path for temporary files and outputs.
+
+    Returns:
+        tuple: (formatted_dict, molecule_template_files)
+    """
+    # 1. Run the core reaction template mapping and walking pipeline
+    molecule_dict_csv_path_dict, formatted_dict = run_reaction_template_pipeline(
+        detected_reactions, 
+        cache
+    )
     
+    # 2. Re-format data and extract a list of unique SMILES for 3D generation
+    formatted_dict, data_smiles_list = format_detected_reactions_dict(
+        detected_reactions, 
+        retain_smiles
+    )
+    print("Unique SMILES List:", data_smiles_list)
+
+    # 3. Prepare the molecule dictionary structure required for 3D generation
+    molecule_dict = prep_for_3d_molecule_generation(
+        data_smiles_list, 
+        molecule_dict_csv_path_dict
+    )
+    
+    # 4. Generate 3D structures (MOL files) for all involved molecules
+    cache_mol = Path(cache) / "mol_files"
+    prepared_molecules = prepare_3d_molecule(
+        cache_dir=cache_mol, 
+        molecule_dict=molecule_dict
+    )
+    # For debugging: print the prepared 3D molecule file paths
+    # print("Prepared 3D Molecules:", prepared_molecules)
+
+    # 5. Execute the LUNAR workflow (e.g., force field assignment, energy minimization)
+    lunar_out_loc_dict = lunar_workflow(molecule_files=prepared_molecules, cache_dir=cache)
+    
+    # 6. Final Step: Generate molecule template files combining 3D data and reaction maps
+    molecule_template_files = molecule_template_preparation(
+            molecule_dict_csv_path_dict,
+            lunar_out_loc_dict,
+            cache
+        )   
+    
+    # Log the location of generated template files
+    for name, path in molecule_template_files.items():
+        print(f"Molecule Template File for {name}: {path}")
+
+    # Extract and save unique references to a text file for user reference
+    references = extract_unique_references(detected_reactions)
+
+    # Print and save references to a text file
+    print("\nReferences used in detected reactions:")
+    for ref in references:
+        print(ref)
+    
+    with open(Path(cache) / "molecule_template_files.txt", "w") as f:
+        for name, path in molecule_template_files.items():
+            f.write(f"{name}: {path}\n")
+        f.write("\nReferences:\n")
+        for ref in references:
+            f.write(f"{ref}\n")
+
+    return formatted_dict, molecule_template_files
     # If duplicates were found and skipped, re-index the dictionary and files to be continuous
     if duplicated:
         molecule_dict_csv_path_dict = molecule_dict_csv_path_dict_rearrange(molecule_dict_csv_path_dict)

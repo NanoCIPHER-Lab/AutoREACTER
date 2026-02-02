@@ -25,7 +25,7 @@ import os
 try:
     import config
 except ImportError:
-    from lunar_client import config
+    from . import config
 # Global flag to determine whether to use GUI for input prompts. Defaults to False (CLI mode).
 USE_GUI = False
 
