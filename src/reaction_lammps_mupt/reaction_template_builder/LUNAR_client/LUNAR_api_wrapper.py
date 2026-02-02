@@ -41,16 +41,8 @@ atom_typing_py = os.path.join(LUNAR_LOCATION, "atom_typing.py")
 all2lmp_py = os.path.join(LUNAR_LOCATION, "all2lmp.py")
 bond_react_merge_py = os.path.join(LUNAR_LOCATION, "bond_react_merge.py")
 
-import os, re, platform
-from pathlib import Path
+import platform
 import shutil
-
-def _is_wsl() -> bool:
-    # Check for the interop file or the environment variable
-    return os.path.exists('/proc/sys/fs/binfmt_misc/WSLInterop') or "WSL_INTEROP" in os.environ
-
-import os, re, platform
-from pathlib import Path
 
 def _is_wsl() -> bool:
     return ("microsoft" in platform.release().lower()) or ("WSL_INTEROP" in os.environ)
