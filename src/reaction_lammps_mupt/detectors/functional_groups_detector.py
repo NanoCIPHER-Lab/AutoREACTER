@@ -110,6 +110,12 @@ monomer_types = {
     #     "smarts_1": "[C]=[C;D1]",
     #     "group_name": "vinyl"
     # },
+    # "hydroxy_carboxylic_acid_monomer": {
+    #     "functionality_type": "di_different",
+    #     "smarts_1": "[OX2H1;!$(OC=*):1]",
+    #     "smarts_2": "[CX3:2](=[O])[OX2H1]",
+    #     "group_name": "hydroxy_carboxylic_acid"
+    # },
     # "cyclic_olefin_monomer": {
     #     "functionality_type": "vinyl",
     #     "smarts_1": "[CX3;R:1]=[CX3;R:2]",
