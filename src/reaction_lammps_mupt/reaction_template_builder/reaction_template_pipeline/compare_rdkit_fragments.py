@@ -116,7 +116,7 @@ def cap_open_valences_with_fr(new_mol_fragment, francium_atomic_num=87):
                     fr_idx = rw_mol.AddAtom(fr_atom)
                     # Connect the placeholder atom with a single bond
                     rw_mol.AddBond(atom_idx, fr_idx, Chem.BondType.SINGLE)
-        except:
+        except Exception:
             # Skip atoms where valence cannot be determined (e.g., certain metals)
             continue
 
