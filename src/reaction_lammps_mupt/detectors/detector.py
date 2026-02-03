@@ -24,7 +24,7 @@ except (ImportError, ModuleNotFoundError):
         from reaction_lammps_mupt.detectors.reaction_detector import reaction_selector
 
 
-def find_non_reactant_monomers(reactions: dict, input_dict: dict) -> list:
+def find_non_reactant_monomers(reactions: dict, input_dict: dict, interactive: bool = True) -> list:
     """
     Identifies monomers from the input that are not participating in any detected reactions
     and prompts the user to decide whether to retain them in the simulation.
