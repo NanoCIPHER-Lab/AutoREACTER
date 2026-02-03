@@ -10,8 +10,8 @@ TODO (Input Parsing Layer)
 """
 
 from rdkit import Chem
-
-
+import logging
+logger = logging.getLogger(__name__)
 
 
 class InputParser:
@@ -92,11 +92,12 @@ class InputParser:
         smiles_map = inputs.get("monomers", {})
         seen = {}
         for monomer_number, smi in smiles_map.items():
-            if smi in seen:
+            normalized = smi.strip()
+            if normalized in seen:
                 raise ValueError(
                     f"Duplicate SMILES detected for monomers {seen[smi]} and {monomer_number}: {smi!r}"
                 )
-            seen[smi] = monomer_number
+            seen[normalized] = monomer_number
 
     def validate_inputs(self, inputs: dict) -> dict:
         self.component_check(inputs)
@@ -106,7 +107,7 @@ class InputParser:
 
     def to_dict(self) -> dict:
         """Return the validated inputs dict (ready for main.py)."""
-        print("Validation successful. Returning cleaned inputs dictionary.")
+        logger.info("Validation successful. Returning cleaned inputs dictionary.")
         return self.validated_inputs
 
 
