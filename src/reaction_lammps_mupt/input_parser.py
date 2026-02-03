@@ -49,6 +49,19 @@ class InputParser:
         self.validate_smiles_rdkit(inputs)
         self.validate_no_duplicate_smiles(inputs)
         return inputs
+    
+    def _validate_smiles(self, smiles: str) -> str:
+        """
+        Validate a SMILES string with RDKit and return a canonical SMILES.
+        Raises ValueError if invalid.
+        """
+        s = (smiles or "").strip()
+        mol = Chem.MolFromSmiles(s)
+        if mol is None:
+            raise ValueError(f"Invalid SMILES: {smiles!r}")
+        # Canonicalize to remove whitespace/ordering differences
+        return Chem.MolToSmiles(mol, canonical=True)
+
       
     def _validate_numeric_fields(self, inputs: dict) -> None:
         # Density
@@ -86,18 +99,22 @@ class InputParser:
         for monomer_number, smiles_string in inputs["monomers"].items():
             if not isinstance(smiles_string, str) or not smiles_string.strip():
                 raise ValueError(f"Monomer {monomer_number}: SMILES must be a non-empty string.")
-            self._validate_smiles(smiles_string)
+            canonical = self._validate_smiles(smiles_string)
+            # store cleaned version so everything downstream is consistent
+            inputs["monomers"][monomer_number] = canonical
+
 
     def validate_no_duplicate_smiles(self, inputs: dict) -> None:
         smiles_map = inputs.get("monomers", {})
-        seen = {}
+        seen: dict[str, int] = {}
         for monomer_number, smi in smiles_map.items():
-            normalized = smi.strip()
+            normalized = (smi or "").strip()
             if normalized in seen:
                 raise ValueError(
-                    f"Duplicate SMILES detected for monomers {seen[smi]} and {monomer_number}: {smi!r}"
+                    f"Duplicate SMILES detected for monomers {seen[normalized]} and {monomer_number}: {normalized!r}"
                 )
             seen[normalized] = monomer_number
+
 
 
     def to_dict(self) -> dict:

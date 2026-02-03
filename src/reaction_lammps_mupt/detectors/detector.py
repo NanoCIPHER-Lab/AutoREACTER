@@ -113,7 +113,7 @@ def find_non_reactant_monomers(reactions: dict, input_dict: dict, interactive: b
     return []
 
 
-def detect_reactions(input_dict) -> tuple:
+def detect_reactions(input_dict, interactive=True) -> tuple:
     """
     Detects chemical reactions and identifies non-reactant monomers based on the provided input.
 
