@@ -1137,8 +1137,8 @@ def build_bond_react_templates(
     delete_ids : list[int]
       List of atom indices (0-based) to be considered deleted (byproducts) if present.
     cache_dir_reactor : str
-      Directory path where reactor-related files should be cached. The function will write output files
-      to the directory that contains this path (i.e., os.path.dirname(cache_dir_reactor)).
+      Directory path where reactor-related files should be cached. Output files are written directly
+      under this directory.
 
     Returns
     -------
