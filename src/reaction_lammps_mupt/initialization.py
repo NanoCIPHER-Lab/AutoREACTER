@@ -7,6 +7,11 @@ except ImportError: # for running as a script
 
 
 def ASCII_Mupt_reaction_LAMMPS():
+    """
+    Display the ASCII art banner for Mupt reaction LAMMPS.
+    
+    Prints a multi-line ASCII banner to standard output.
+    """
     ascii_art = r"""
 .___  ___.  __    __  .______   .___________.              .______       _______     ___       ______ .___________. __    ______   .__   __. 
 |   \/   | |  |  |  | |   _  \  |           |              |   _  \     |   ____|   /   \     /      ||           ||  |  /  __  \  |  \ |  | 
@@ -19,6 +24,11 @@ def ASCII_Mupt_reaction_LAMMPS():
 
 
 def initialize():
+    """
+    Verify required dependencies are present, display the startup banner, and remove default cache files.
+    
+    Checks that the `rdkit`, `pandas`, and `numpy` modules can be imported. If all are available, prints a confirmation message and displays the ASCII banner via ASCII_Mupt_reaction_LAMMPS(). If any required module is missing, exits the process with an error message naming the missing module. After successful checks, removes default cache files by calling delete_cache_dir().
+    """
     try:
         for module in ['rdkit', 'pandas', 'numpy']:
             importlib.import_module(module)

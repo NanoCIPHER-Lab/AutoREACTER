@@ -11,14 +11,13 @@ import copy
 
 def dict_keys_to_list(input_dict):
     """
-    Converts a dictionary of atom mappings into two separate lists of indices.
-
-    Args:
-        input_dict (dict): A dictionary where keys represent reactant atom indices 
-                           and values represent product atom indices.
-
+    Create two lists of integer atom indices from a mapping of reactant-to-product atom indices.
+    
+    Parameters:
+        input_dict (dict): Mapping where keys are reactant atom indices and values are product atom indices.
+    
     Returns:
-        tuple: (reactant_indices, product_indices) as lists of integers.
+        tuple: (reactant_indices, product_indices) — two lists of integers corresponding to the reactant and product atom indices.
     """
     # Convert keys and values to integers to ensure consistent indexing
     reactant_indices = [int(k) for k in input_dict.keys()]
@@ -28,15 +27,14 @@ def dict_keys_to_list(input_dict):
 
 def extract_fragment_by_indices(mol, atom_indices_to_keep):
     """
-    Creates a new molecule containing only the atoms specified by the provided indices.
-    All other atoms are removed.
-
-    Args:
-        mol (rdkit.Chem.rdchem.Mol): The source RDKit molecule.
-        atom_indices_to_keep (list): List of atom indices to retain in the fragment.
-
+    Create a molecule containing only the atoms at the specified indices.
+    
+    Parameters:
+        mol (rdkit.Chem.rdchem.Mol): Source RDKit molecule to fragment.
+        atom_indices_to_keep (list[int]): Atom indices to retain in the resulting fragment.
+    
     Returns:
-        rdkit.Chem.rdchem.Mol: The extracted molecular fragment, or None if input is invalid.
+        rdkit.Chem.rdchem.Mol or None: The extracted fragment as an RDKit Mol, or `None` if `mol` is `None`. A sanitization attempt is made; if sanitization fails the raw (unsanitized) fragment is returned.
     """
     if mol is None:
         return None
@@ -75,15 +73,18 @@ def extract_fragment_by_indices(mol, atom_indices_to_keep):
 
 def cap_open_valences_with_fr(new_mol_fragment, francium_atomic_num=87):
     """
-    Identifies atoms with unsatisfied valences and attaches Francium (Fr) atoms 
-    as placeholders. This is useful for maintaining structural context in fragments.
-
-    Args:
-        new_mol_fragment (rdkit.Chem.rdchem.Mol): The fragment to cap.
-        francium_atomic_num (int): The atomic number to use for capping (default 87 for Fr).
-
+    Attach Francium placeholder atoms to any atoms in the fragment that have unsatisfied valences.
+    
+    Parameters:
+        new_mol_fragment (rdkit.Chem.rdchem.Mol): RDKit molecule fragment whose open valences should be capped.
+        francium_atomic_num (int): Atomic number to use for placeholder atoms (default 87 for Fr).
+    
     Returns:
-        dict: A dictionary containing the RDKit object, SMILES string, and InChI string.
+        dict: {
+            "object": rdkit.Chem.rdchem.Mol or None — the capped molecule object (None if input was None or empty),
+            "smiles": str — SMILES of the capped molecule (empty string if input was None or empty),
+            "inchi": str — InChI of the capped molecule (empty string if input was None or empty)
+        }
     """
     # Handle empty or null fragments
     if new_mol_fragment is None or new_mol_fragment.GetNumAtoms() == 0:
@@ -138,15 +139,14 @@ def cap_open_valences_with_fr(new_mol_fragment, francium_atomic_num=87):
 
 def compare_fragments(mol1_info, mol2_info):
     """
-    Compares two molecular info dictionaries to determine if they represent 
-    the same chemical structure.
-
-    Args:
-        mol1_info (dict): Dictionary containing 'smiles' and/or 'inchi'.
-        mol2_info (dict): Dictionary containing 'smiles' and/or 'inchi'.
-
+    Determine whether two molecular info dictionaries represent the same chemical structure.
+    
+    Parameters:
+        mol1_info (dict): Mapping that may contain "smiles" and/or "inchi" string entries.
+        mol2_info (dict): Mapping that may contain "smiles" and/or "inchi" string entries.
+    
     Returns:
-        bool: True if molecules match by SMILES or InChI, False otherwise.
+        True if the SMILES or InChI strings are equal, False otherwise.
     """
     if not mol1_info or not mol2_info:
         return False
@@ -163,17 +163,18 @@ def compare_fragments(mol1_info, mol2_info):
 
 def compare_rdkit_fragments(processed_dict, combined_reactant_mol, combined_product_mol, template_mapped_dict):
     """
-    Main logic to extract fragments from a reaction and check if this specific 
-    transformation has been encountered before.
-
-    Args:
-        processed_dict (dict): A history of previously seen fragments.
-        combined_reactant_mol (rdkit.Chem.rdchem.Mol): The full reactant molecule.
-        combined_product_mol (rdkit.Chem.rdchem.Mol): The full product molecule.
-        template_mapped_dict (dict): Mapping of atom indices involved in the reaction.
-
+    Extract reactant and product fragments for a mapped reaction, cap open valences, and determine whether the transformation has been seen before.
+    
+    Processes the mapped atom indices from template_mapped_dict to build raw and francium-capped fragment representations for both reactant and product, compares those representations against entries in processed_dict, and appends a new history entry when no match is found.
+    
+    Parameters:
+        processed_dict (dict): History mapping IDs to entries with keys "reactant_info" and "product_info".
+        combined_reactant_mol (rdkit.Chem.rdchem.Mol): Full reactant molecule to extract the reactant fragment from.
+        combined_product_mol (rdkit.Chem.rdchem.Mol): Full product molecule to extract the product fragment from.
+        template_mapped_dict (dict): Mapping of atom indices involved in the reaction (reactant index -> product index).
+    
     Returns:
-        tuple: (bool, updated_processed_dict). True if the fragment pair was already known.
+        tuple: `True` if the reactant/product fragment pair already exists in processed_dict, `False` otherwise; the second element is the (possibly updated) processed_dict.
     """
     # Create deep copies to avoid modifying the original molecules in memory
     react_mol = copy.deepcopy(combined_reactant_mol)

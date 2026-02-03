@@ -45,9 +45,26 @@ import platform
 import shutil
 
 def _is_wsl() -> bool:
+    """
+    Detects whether the current Python process is running under Windows Subsystem for Linux (WSL).
+    
+    @returns
+        True if running under WSL, False otherwise.
+    """
     return ("microsoft" in platform.release().lower()) or ("WSL_INTEROP" in os.environ)
 
 def normalize_path(p: str | Path) -> str:
+    """
+    Normalize a filesystem path for the current execution environment (native or WSL).
+    
+    Converts path separators and, when running under Windows Subsystem for Linux (WSL), translates Windows-style drive paths (e.g., `C:/path`) to WSL-style paths (`/mnt/c/path`). When not running under WSL, converts WSL-style paths (`/mnt/c/path` or `mnt/c/path`) to Windows-style drive paths (`C:\path`) and normalizes forward/backward slashes. Leading and trailing quotes are removed before conversion.
+    
+    Parameters:
+        p (str | Path): The input path to normalize.
+    
+    Returns:
+        str: The normalized path string appropriate for the current environment.
+    """
     p = str(p).strip().strip('"').strip("'")
     # Convert all backslashes to forward slashes for internal consistency
     p = p.replace("\\", "/")
@@ -76,6 +93,16 @@ def normalize_path(p: str | Path) -> str:
         return p.replace("/", "\\")
 
 def move_merge_outputs(src_dir: Path, dst_dir: Path):
+    """
+    Move LUNAR bond_react_merge output files from a source directory into a destination directory.
+    
+    This creates the destination directory if it does not exist and relocates files matching these patterns:
+    `*_merged.data`, `*_merged.lmpmol`, `force_field.data`, `log.lammps`, and `*.log`.
+    
+    Parameters:
+        src_dir (Path | str): Directory containing generated merge outputs to move.
+        dst_dir (Path | str): Destination directory where matching files will be placed; created if missing.
+    """
     src_dir = Path(src_dir)
     dst_dir = Path(dst_dir)
     dst_dir.mkdir(parents=True, exist_ok=True)
@@ -161,26 +188,16 @@ def get_ending_integer(s: str) -> int | None:
 
 def run_LUNAR_atom_typing(molecule_files: dict[str, Path], cache_atom_typing: Path) -> dict[str, list[Path]]:
     """
-    Run LUNAR atom typing on a set of molecule files.
+    Run LUNAR atom typing for each input molecule and return paths to the generated typed files.
     
-    This function assigns atom types to molecules using the PCFF-IFF force field
-    and generates typed data files and NTA (Neighbor Table Analysis) files.
-    
-    Args:
-        molecule_files (dict[str, Path]): Dictionary mapping molecule names to 
-                                         their file paths. Files should be in 
-                                         .mol format.
+    Parameters:
+        molecule_files (dict[str, Path]): Mapping of molecule names to input molecule files (expected topology files such as .mol).
+        cache_atom_typing (Path): Directory where atom-typing outputs will be written.
     
     Returns:
-        dict[str, list[Path]]: Dictionary mapping molecule names to a list of 
-                              two Path objects:
-                              - [0]: Typed data file (.data)
-                              - [1]: NTA file (.nta)
-    
-    Note:
-        Uses the following LUNAR atom_typing.py command:
-        python3 atom_typing.py -topo <file.mol> -dir <cache_dir> -ff PCFF-IFF 
-               -del-method mass -del-crit 0
+        dict[str, list[Path]]: Mapping of molecule names to a two-element list of Paths:
+            - [0]: Typed LAMMPS data file named "<stem>_typed.data"
+            - [1]: Neighbor table analysis file named "<stem>_typed.nta"
     """
     molecule_files_typed: dict[str, list[Path]] = {}
     
@@ -219,24 +236,14 @@ def run_LUNAR_atom_typing(molecule_files: dict[str, Path], cache_atom_typing: Pa
 
 def run_LUNAR_all2lmp(molecule_files_typed: dict[str, list[Path]], cache_all2lmp: Path) -> dict[str, str]:
     """
-    Convert typed molecule files to LAMMPS data format using LUNAR's all2lmp utility.
+    Convert typed molecule files and their corresponding NTA files into LAMMPS data filenames using LUNAR's all2lmp conversion.
     
-    This function takes the typed data and NTA files and converts them to 
-    LAMMPS-readable data files with force field parameters.
-    
-    Args:
-        molecule_files_typed (dict[str, list[Path]]): Dictionary mapping molecule 
-                                                     names to a list of two Paths:
-                                                     [data_file, nta_file]
+    Parameters:
+        molecule_files_typed (dict[str, list[Path]]): Mapping from molecule name to a two-element list of Paths [data_file, nta_file].
+        cache_all2lmp (Path): Directory where converted LAMMPS files are written.
     
     Returns:
-        dict[str, str]: Dictionary mapping molecule names to the generated 
-                       LAMMPS data filenames (without full path).
-    
-    Note:
-        Uses the following LUNAR all2lmp.py command:
-        python3 all2lmp.py -topo <data_file> -nta <nta_file> -frc <frc_file> 
-               -dir <cache_dir>
+        dict[str, str]: Mapping from molecule name to the generated LAMMPS data filename (basename, not full path).
     """
     # Sometimes LUNAR can't identify the .frc file location automatically,
     # so we provide the full path to the force field file
@@ -279,15 +286,18 @@ def write_bond_react_merge_input(
     cache_bond_react_merge: Path,
     cache_all2lmp: Path
 ) -> Path:
-    """Generate the merge input file used by Bond React Merge binaries.
-
-    Args:
-        molecule_files_all2lmp: Mapping of file tags to their corresponding LAMMPS filenames.
-        cache_bond_react_merge: Target directory where the merge input and merge results will be written.
-        cache_all2lmp: Directory that holds the generated LAMMPS files referenced in the merge list.
-
+    """
+    Create a merge_input.txt for Bond React Merge and prepare the merge cache directory.
+    
+    Generates a merge_input.txt in cache_bond_react_merge that lists each tagged LAMMPS file (from cache_all2lmp) with a short comment, normalizes paths written into the file, ensures the merge cache directory exists, and moves relevant all2lmp outputs into the merge cache.
+    
+    Parameters:
+        molecule_files_all2lmp (dict[str, str]): Mapping from file tag (e.g., "data_1", "pre_1", "post_1") to the LAMMPS filename produced by the all2lmp step.
+        cache_bond_react_merge (Path): Directory where merge_input.txt and merge results will be written (created if missing).
+        cache_all2lmp (Path): Directory containing the LAMMPS files referenced by molecule_files_all2lmp.
+    
     Returns:
-        Path to the directory containing the newly written merge_input.txt file.
+        Path: The path to the cache_bond_react_merge directory containing the written merge_input.txt.
     """
     # Ensure the provided paths are normalized (resolving redundant separators, symlinks, etc.).
     cache_bond_react_merge_normalized = Path(normalize_path(cache_bond_react_merge))
@@ -329,32 +339,18 @@ def write_bond_react_merge_input(
 def run_bond_react_merge(merge_input_file_path: Path, 
                          molecule_files_all2lmp: dict[str, str]) -> dict[str, Path]:
     """
-    Execute LUNAR's bond_react_merge utility to combine and process LAMMPS data files.
-    
-    This function merges multiple LAMMPS data files into a unified format suitable
-    for reactive molecular dynamics simulations, generating both merged data files
-    and a force field parameter file.
-    
-    Args:
-        merge_input_file_path (Path): Directory containing the merge input file.
-        molecule_files_all2lmp (dict[str, str]): Dictionary mapping molecule names 
-                                                to LAMMPS data filenames.
-    
-    Returns:
-        dict[str, Path]: Dictionary mapping molecule names and special keys to 
-                        their output file paths:
-                        - "dataX": Merged data files for data molecules
-                        - "preX": LAMMPS molecule files for pre-reaction states
-                        - "postX": LAMMPS molecule files for post-reaction states
-                        - "force_field_data": Combined force field parameter file
-    
-    Raises:
-        FileNotFoundError: If expected output files are not generated.
-    
-    Note:
-        Uses the following LUNAR bond_react_merge.py command:
-        python3 bond_react_merge.py -files infile:merge_input.txt -atomstyle full
-    """
+                         Run LUNAR's bond_react_merge using the merge_input.txt in the given directory and collect the generated output file paths.
+                         
+                         Parameters:
+                             merge_input_file_path (Path): Directory containing merge_input.txt (working directory for the merge run).
+                             molecule_files_all2lmp (dict[str, str]): Mapping of input tags (e.g., "data1", "pre1", "post1") to their LAMMPS data filenames.
+                         
+                         Returns:
+                             dict[str, Path]: Mapping from each input tag and the special key "force_field_data" to the corresponding generated output Path.
+                         
+                         Raises:
+                             FileNotFoundError: If any expected output file is missing after the merge run.
+                         """
     molecule_files_bond_react_merge: dict[str, Path] = {}
     merge_input_file_path = Path(normalize_path(merge_input_file_path))
     # Construct and execute the bond_react_merge command
@@ -409,28 +405,16 @@ def run_bond_react_merge(merge_input_file_path: Path,
 
 def lunar_workflow(molecule_files: dict[str, Path], cache_dir: Path) -> dict[str, Path]:
     """
-    Execute the complete LUNAR workflow for preparing molecules for LAMMPS simulations.
+    Execute the full LUNAR preparation workflow and return generated output paths.
     
-    This function orchestrates the entire process:
-    1. Atom typing using PCFF-IFF force field
-    2. Conversion to LAMMPS data format
-    3. Generation of all topological requirements 
-    4. Merging of files for reactive simulations
+    Runs atom typing, converts typed files to LAMMPS format, writes the bond_react_merge input, and runs bond_react_merge. Creates and uses a LUNAR cache directory under `cache_dir/lunar` unless overridden by the `LUNAR_CACHE_DIR` environment variable; subdirectories `atom_typing`, `all2lmp`, and `bond_react_merge` are created and used for intermediate and final files.
     
-    Args:
-        molecule_files (dict[str, Path]): Dictionary mapping molecule names to 
-                                         their .mol file paths.
+    Parameters:
+        molecule_files (dict[str, Path]): Mapping of molecule identifiers to their input molecule file paths.
+        cache_dir (Path): Base directory under which the LUNAR cache directory will be created (unless `LUNAR_CACHE_DIR` is set).
     
     Returns:
-        dict[str, Path]: Dictionary mapping molecule names and special keys to 
-                        their final output file paths after the complete workflow.
-    
-    Workflow Steps:
-        0. Display loading screen
-        1. Run LUNAR atom typing
-        2. Run all2lmp conversion
-        3. Write bond_react_merge input file
-        4. Run bond_react_merge utility
+        dict[str, Path]: Mapping of molecule identifiers and special keys (e.g., force field file) to their final output file paths produced by the bond_react_merge step.
     """
     lunar_cache = os.path.join(cache_dir, "lunar")
     os.makedirs(lunar_cache, exist_ok=True)

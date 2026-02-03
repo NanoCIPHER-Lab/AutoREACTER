@@ -13,17 +13,15 @@ import json
 
 def get_new_neighbors(molecule_object, atom_index, visited):
     """
-    Identifies neighbors of a specific atom that have not yet been visited 
-    in the current graph traversal.
-
-    Args:
-        molecule_object (rdkit.Chem.rdchem.Mol): The RDKit molecule object.
-        atom_index (int): The index of the atom whose neighbors are being queried.
-        visited (dict): A dictionary where values are lists of atom indices 
-                        representing previously visited shells.
-
+    Return neighbor atom indices of a given atom that are not present in any previously visited shells.
+    
+    Parameters:
+        molecule_object (rdkit.Chem.rdchem.Mol): RDKit molecule containing the atom.
+        atom_index (int): Index of the atom whose neighbors are queried.
+        visited (dict): Dictionary whose values are lists of atom indices already visited.
+    
     Returns:
-        list: A list of integer indices for neighbors not found in the 'visited' values.
+        list: Neighbor atom indices (int) that do not appear in any of the lists in `visited`.
     """
     neighbors = []
     # Retrieve the atom object by its index
@@ -40,18 +38,16 @@ def get_new_neighbors(molecule_object, atom_index, visited):
 
 def reactant_atom_walker(combined_reactant_molecule_object, start_atom_indexes, max_bonds=4):
     """
-    Performs a breadth-first traversal of the molecular graph starting from 
-    specified seed atoms up to a maximum bond distance.
-
-    Args:
-        combined_reactant_molecule_object (rdkit.Chem.rdchem.Mol): The molecule to traverse.
-        start_atom_indexes (int or list): The starting atom index (or indices) for the walk.
-        max_bonds (int): The maximum distance (number of bonds) to explore from the start.
-
+    Perform a breadth-first walk of the molecule from given seed atom indices up to a specified bond distance.
+    
+    Parameters:
+        combined_reactant_molecule_object (rdkit.Chem.rdchem.Mol): Molecule to traverse.
+        start_atom_indexes (int or iterable[int]): Starting atom index or iterable of start indices.
+        max_bonds (int): Maximum bond steps (shell depth) to explore.
+    
     Returns:
-        tuple: (reactant_template_indexes, edge_atoms)
-            - reactant_template_indexes (list): All atom indices encountered during the walk.
-            - edge_atoms (list): Atom indices located exactly at the max_bonds distance.
+        reactant_template_indexes (list): Flattened list of all atom indices encountered during the walk.
+        edge_atoms (list): Atom indices that are exactly at the specified max_bonds distance.
     """
     # Ensure start_atom_indexes is a list even if a single integer is passed
     try:
@@ -114,17 +110,18 @@ def product_atom_walker(template_indexes, MAP_dict):
             
 def reaction_atom_walker(combined_reactant_molecule_object, start_atom_indexes, MAP_dict, max_bonds=4):
     """
-    High-level orchestrator that walks the reactant graph and then maps the 
-    resulting environment to the product indices.
-
-    Args:
-        combined_reactant_molecule_object (rdkit.Chem.rdchem.Mol): The combined reactant molecule.
-        start_atom_indexes (list): Starting points for the graph walk.
-        MAP_dict (dict): Atom mapping between reactant and product.
-        max_bonds (int): Depth of the environment search.
-
+    Orchestrates a local-environment walk on the combined reactant molecule and maps the discovered reactant atom indices to product atom indices.
+    
+    Parameters:
+        combined_reactant_molecule_object (rdkit.Chem.rdchem.Mol): Combined reactant molecule used for the graph walk.
+        start_atom_indexes (list|int): Starting atom index or iterable of starting atom indices that seed the traversal.
+        MAP_dict (dict): Mapping from reactant atom indices to product atom indices.
+        max_bonds (int): Maximum bond distance (shell depth) to explore.
+    
     Returns:
         tuple: (template_mapped_dict, edge_atoms)
+            template_mapped_dict (dict): Mapping of reactant atom indices found in the walked template to their corresponding product atom indices.
+            edge_atoms (list): Atom indices located exactly at the specified `max_bonds` distance from the start atoms.
     """
     # 1. Identify the local environment in the reactant
     reactant_template_indexes, edge_atoms = reactant_atom_walker(combined_reactant_molecule_object, start_atom_indexes, max_bonds)

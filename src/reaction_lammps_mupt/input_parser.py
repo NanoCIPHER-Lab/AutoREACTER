@@ -23,10 +23,29 @@ class InputParser:
     """
 
     def __init__(self, inputs_dict: dict) -> None:
+        """
+        Initialize the InputParser with a raw inputs dictionary and perform validation.
+        
+        Parameters:
+            inputs_dict (dict): User-provided inputs to validate and normalize; stored as `self.inputs` and the validated result as `self.validated_inputs`.
+        """
         self.inputs = inputs_dict
         self.validated_inputs = self.validate_inputs(inputs_dict)
 
     def component_check(self, inputs: dict) -> None:
+        """
+        Validate presence and basic structure of required top-level input fields.
+        
+        Parameters:
+            inputs (dict): User-provided inputs dictionary expected to contain keys
+                "simulation_name", "temperature", "density", "monomers", and "number_of_monomers".
+                "monomers" and "number_of_monomers" must each be non-empty dictionaries with matching entry counts.
+        
+        Raises:
+            KeyError: If any required key is missing from `inputs`.
+            ValueError: If "monomers" or "number_of_monomers" is not a non-empty dictionary,
+                        or if their lengths differ.
+        """
         required_keys = ["simulation_name", "temperature", "density", "monomers", "number_of_monomers"]
         for key in required_keys:
             if key not in inputs:
@@ -45,11 +64,31 @@ class InputParser:
             )
 
     def _validate_smiles(self, smiles: str) -> None:
+        """
+        Validate that a SMILES string can be parsed by RDKit.
+        
+        Parameters:
+            smiles (str): SMILES string to validate.
+        
+        Raises:
+            ValueError: If the SMILES string cannot be converted to an RDKit molecule.
+        """
         mol = Chem.MolFromSmiles(smiles)
         if mol is None:
             raise ValueError(f"Invalid SMILES string: {smiles!r}. Terminating program.")
 
     def validate_smiles_rdkit(self, inputs: dict) -> None:
+        """
+        Validate that `inputs` contains a "monomers" mapping and that each monomer's SMILES is a non-empty string that RDKit can parse.
+        
+        Parameters:
+            inputs (dict): Input dictionary expected to contain a "monomers" mapping of monomer identifiers to SMILES strings.
+        
+        Raises:
+            KeyError: If the "monomers" key is missing from `inputs`.
+            ValueError: If a monomer's SMILES is not a non-empty string.
+            ValueError: If RDKit fails to parse any SMILES (propagated from `_validate_smiles`).
+        """
         if "monomers" not in inputs:
             raise KeyError('Missing required key: "monomers"')
 
@@ -59,6 +98,15 @@ class InputParser:
             self._validate_smiles(smiles_string)
 
     def validate_no_duplicate_smiles(self, inputs: dict) -> None:
+        """
+        Ensure no two monomer entries share the same SMILES string.
+        
+        Parameters:
+            inputs (dict): Input dictionary containing a "monomers" key whose value is a mapping of monomer identifiers to SMILES strings.
+        
+        Raises:
+            ValueError: If the same SMILES string appears for more than one monomer, indicating which monomer identifiers conflict.
+        """
         smiles_map = inputs.get("monomers", {})
         seen = {}
         for monomer_number, smi in smiles_map.items():
@@ -69,13 +117,27 @@ class InputParser:
             seen[smi] = monomer_number
 
     def validate_inputs(self, inputs: dict) -> dict:
+        """
+        Validate the provided inputs dictionary and return it once all checks pass.
+        
+        Parameters:
+            inputs (dict): Raw user inputs to validate (must contain required keys and valid monomer SMILES).
+        
+        Returns:
+            dict: The same inputs dictionary after successful validation, suitable for downstream processing.
+        """
         self.component_check(inputs)
         self.validate_smiles_rdkit(inputs)
         self.validate_no_duplicate_smiles(inputs)
         return inputs
 
     def to_dict(self) -> dict:
-        """Return the validated inputs dict (ready for main.py)."""
+        """
+        Provide the validated inputs dictionary prepared for downstream processing.
+        
+        Returns:
+            dict: Cleaned inputs dictionary containing validated and ready-to-use values for main.py.
+        """
         print("Validation successful. Returning cleaned inputs dictionary.")
         return self.validated_inputs
 

@@ -26,19 +26,14 @@ except (ImportError, ModuleNotFoundError):
 
 def find_non_reactant_monomers(reactions: dict, input_dict: dict) -> list:
     """
-    Identifies monomers from the input that are not participating in any detected reactions
-    and prompts the user to decide whether to retain them in the simulation.
-
-    Args:
-        reactions (dict): A dictionary containing detected reaction data. Expected keys
-            include 'monomer_1', 'monomer_2', and 'smiles' for each reaction entry.
-        input_dict (dict): The original input dictionary containing a 'monomers' key
-            mapping monomer IDs to SMILES strings.
-
+    Identify input monomers that do not participate in any detected reactions and prompt the user to choose which of them to retain.
+    
+    Parameters:
+        reactions (dict): Mapping of reaction identifiers to reaction data. Each entry is expected to contain keys 'monomer_1' and 'monomer_2' whose values are dicts with a 'smiles' key, and may include a reaction 'smiles' string.
+        input_dict (dict): Original input dictionary containing a 'monomers' mapping from monomer IDs to SMILES strings.
+    
     Returns:
-        list: A list of SMILES strings representing the non-reactant monomers selected
-              by the user to be retained. Returns an empty list if the user chooses
-              to proceed with reactants only.
+        list: SMILES strings for the non-reactant monomers selected by the user to retain. Returns an empty list if no non-reactants exist or the user chooses to proceed with reactants only.
     """
     # 1) Collect all unique SMILES strings that participate in detected reactions
     reactant_smiles = set()

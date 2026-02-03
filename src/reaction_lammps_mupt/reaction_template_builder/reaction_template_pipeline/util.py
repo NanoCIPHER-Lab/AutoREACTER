@@ -47,15 +47,14 @@ def compare_products(reactions_dict, _prod2):
 
 def compare_rdkit_molecules_canonical(data_smiles_list, mol_smi_2):
     """
-    Compares two RDKit molecule SMILES strings to determine if they
-    represent the same chemical structure using canonical SMILES.
-
-    Args:
-        data_smiles_list (list): List of SMILES strings to compare against.
-        mol_smi_2 (str): SMILES string of the second molecule.
-
+    Check whether a SMILES string is chemically identical to any SMILES in a list using RDKit canonicalization.
+    
+    Parameters:
+        data_smiles_list (list): List of SMILES strings to compare against; this list may be mutated and is returned.
+        mol_smi_2 (str): SMILES string to check for a match.
+    
     Returns:
-        bool: True if molecules are chemically identical, False otherwise.
+        tuple or bool: If an invalid SMILES is encountered for either molecule, returns `False`. If a canonical-match is found, returns `(data_smiles_list, True)`. If no match is found, appends `mol_smi_2` to `data_smiles_list` and returns `(data_smiles_list, False)`.
     """
     for mol_smi_1 in data_smiles_list:
         mol1 = Chem.MolFromSmiles(mol_smi_1)
@@ -77,22 +76,22 @@ def compare_rdkit_molecules_canonical(data_smiles_list, mol_smi_2):
 
 def format_detected_reactions_dict(detected_reactions, non_monomer_molecules_to_retain = None):
     """
-    Aggregates and formats information from a dictionary of detected reactions 
-    into a single summary dictionary.
-
-    This function compiles unique reaction names, SMARTS references, and 
-    mechanism references into comma-separated strings.
-
-    Args:
-        detected_reactions (dict): A dictionary containing reaction data, 
-                                   where each value is a dictionary with keys 
-                                   like "reaction_name" and "reference".
-
+    Compile unique reaction names, SMARTS references, and mechanism references from detected_reactions and collect unique monomer and optional non-monomer SMILES.
+    
+    Parameters:
+        detected_reactions (dict): Mapping of identifiers to reaction dictionaries. Each reaction dictionary may contain:
+            - "reaction_name" (str)
+            - "reference" (dict) with optional keys "smarts" (str) and "reaction_and_mechanism" (list[str])
+            - "monomer_1" / "monomer_2" (dict) with a "smiles" (str) entry.
+        non_monomer_molecules_to_retain (iterable[str] or None): Optional additional SMILES strings to include in the collected SMILES list.
+    
     Returns:
-        dict: A dictionary containing aggregated strings for:
-              - "reactions_names"
-              - "smart_references"
-              - "mechanism_references"
+        tuple:
+            formatted_dict (dict): Dictionary with aggregated comma-separated strings:
+                - "reactions_names": unique reaction names
+                - "smart_references": unique SMARTS references
+                - "mechanism_references": unique mechanism reference blocks
+            data_smiles_list (list[str]): List of unique SMILES strings collected from monomers and optional non-monomer inputs.
     """
     reactions_names = ""
     smart_references = ""
@@ -164,6 +163,18 @@ def format_detected_reactions_dict(detected_reactions, non_monomer_molecules_to_
     return formatted_dict , data_smiles_list
 
 def prep_for_3d_molecule_generation(data_smiles_list, molecule_dict_csv_path_dict):
+    """
+    Prepare a mapping of identifiers to RDKit Mol objects for 3D geometry generation.
+    
+    Converts each SMILES in `data_smiles_list` to an RDKit Mol, adds explicit hydrogens, and stores it under keys "data_1", "data_2", ...; if `molecule_dict_csv_path_dict` contains entries with both "reactant" and "product", those values are inserted unchanged under keys "pre_1", "post_1", "pre_2", "post_2", ... respectively.
+    
+    Parameters:
+        data_smiles_list (list[str]): SMILES strings to convert into RDKit Mol objects. Each SMILES is converted with Chem.MolFromSmiles and then Chem.AddHs is applied.
+        molecule_dict_csv_path_dict (dict): Mapping of identifiers to dicts that may contain "reactant" and "product" entries. Values for "reactant" and "product" are expected to be RDKit Mol objects (they are added to the result without modification).
+    
+    Returns:
+        dict: A dictionary mapping string keys to RDKit Mol objects. Keys "data_N" contain molecules produced from `data_smiles_list` with explicit hydrogens added; keys "pre_N" and "post_N" (when present) contain the corresponding reactant and product Mol objects from `molecule_dict_csv_path_dict`.
+    """
     molecule_dict = {}
     for i, smiles in enumerate(data_smiles_list):
         key = f"data_{i+1}"

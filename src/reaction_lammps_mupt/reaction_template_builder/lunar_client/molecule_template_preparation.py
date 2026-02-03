@@ -25,25 +25,12 @@ import json
 
 def get_ending_integer(s: str) -> int | None:
     """
-    Extract and convert the trailing integer from a string.
+    Return the integer found at the end of the input string, if any.
     
-    This function is useful for parsing reaction numbers from filenames
-    (e.g., extracting "1" from "pre1" or "post1").
-    
-    Args:
-        s (str): Input string that may end with an integer.
+    If the string ends with one or more decimal digits, those digits are converted to an int and returned.
     
     Returns:
-        int | None: The integer found at the end of the string, 
-                   or None if no integer is found.
-    
-    Example:
-        >>> get_ending_integer("pre1")
-        1
-        >>> get_ending_integer("data2")
-        2
-        >>> get_ending_integer("molecule")
-        None
+        int if an integer is found at the end of the string, `None` otherwise.
     """
     # Regular expression pattern to match one or more digits at the end of the string
     # r'\d+$' matches digits (\d+) at the end ($) of the string
@@ -58,12 +45,34 @@ def get_ending_integer(s: str) -> int | None:
     
 def ensure_dir(p: str) -> str:
     # If a FILE exists where we want a directory, delete it.
+    """
+    Ensure a filesystem path exists as a directory, creating it if necessary.
+    
+    If a file exists at the given path but is not a directory, that file is removed before creating the directory.
+    
+    Parameters:
+        p (str): Path to the directory to ensure exists.
+    
+    Returns:
+        str: The same path `p`.
+    """
     if os.path.exists(p) and not os.path.isdir(p):
         os.remove(p)
     os.makedirs(p, exist_ok=True)
     return p
 
 def _col_int_list(col: str, df: pd.DataFrame) -> list[int]:
+    """
+    Extract ordered unique integers from a DataFrame column.
+    
+    Parameters:
+        col (str): Column name to read from the DataFrame.
+        df (pd.DataFrame): DataFrame containing the column.
+    
+    Returns:
+        list[int]: Integers from `df[col]` in their original order with duplicates removed.
+            Returns an empty list if `col` is not in `df` or if the column has no non-null values.
+    """
     if col not in df.columns:
         return []
     s = df[col].dropna()
@@ -148,26 +157,19 @@ def load_molecule_file(molecule_file):
 
 def modify_types(lines, template_indexes, type_start_index):
     """
-    Extract, filter, and reindex atom type information from the molecule file.
+    Filter and reindex the molecule file's Types section to include only specified atoms.
     
-    This function processes the Types section of a molecule file, keeping only atoms
-    whose indices are in the template_indexes list, and reassigns their indices sequentially.
-    The modified data is saved to a file and formatted as a string section.
-    
-    Args:
-        lines (list): All lines from the molecule file.
-        template_indexes (list): List of original atom indices to keep in the output.
-        type_start_index (int): Starting line index of the Types section.
+    Parameters:
+        lines (list[str]): All lines from the molecule file.
+        template_indexes (list[int]): Original atom indices to retain from the Types section.
+        type_start_index (int): Line index where the Types section begins within `lines`.
     
     Returns:
-        tuple: A tuple containing:
-            - df (pd.DataFrame): DataFrame with filtered and reindexed atom type data
-            - types_section (str): Formatted string representation of the types section
-            - number_of_types (int): Total number of atom types in the filtered data
-    
-    Note:
-        - Atoms not in template_indexes are excluded from the output
-        - Atom indices are reassigned sequentially starting from 1
+        tuple:
+            df (pd.DataFrame): DataFrame of retained atom rows with columns `atom_index`, `atom_type`, `hash`, `atom_type_real`, and `new_atom_index` (reindexed sequentially starting at 1).
+            types_section (str): Formatted Types section text containing the retained atoms with their new indices.
+            number_of_types (int): Count of retained atom rows.
+            index_change_dict (dict): Mapping from original atom_index -> new_atom_index for each retained atom.
     """
     # Sort template indices for consistent processing
     template_indexes.sort()
@@ -971,41 +973,18 @@ Types
 
 def molecule_file_preparation(test_molecule_file, template_indexes):
     """
-    Orchestrate the complete molecule file processing pipeline.
+    Prepare and reindex a LAMMPS molecule file according to a set of template atom indices.
     
-    This function coordinates all steps needed to convert a template molecule
-    file to a product molecule file by parsing sections, modifying atom indices,
-    and reformatting the data.
+    Parse the input molecule file, filter and reindex the Types section to retain only atoms listed in `template_indexes`, then remap and reformat the Charges, Coords, Bonds, Angles, Dihedrals, and Impropers sections to match the new atom indexing. The function assembles and returns the complete reformatted molecule file content and the mapping from original atom indices to new indices.
     
     Parameters:
-    -----------
-    test_molecule_file : str
-        File path to the input molecule file to be processed.
-    template_indexes : list[int]
-        List of atom indices to use for mapping (1-based indexing).
-        These are the atoms that will be tracked through the reaction.
+        test_molecule_file (str): Path to the input molecule file.
+        template_indexes (list[int]): 1-based atom indices to retain and track through reindexing.
     
     Returns:
-    --------
-    str
-        Complete formatted molecule file content ready for output.
-    
-    Workflow:
-    ---------
-    1. Load and parse the input molecule file
-    2. Extract and modify types section with template indices
-    3. Modify charges based on new atom mappings
-    4. Modify coordinates based on new atom mappings
-    5. Modify bonds with new atom indices
-    6. Modify angles with new atom indices
-    7. Modify dihedrals with new atom indices
-    8. Modify impropers with new atom indices
-    9. Format all sections into complete molecule file
-    
-    Notes:
-    ------
-    - Depends on external functions: load_molecule_file, modify_* functions
-    - Uses type_df returned by modify_types for all subsequent mappings
+        tuple:
+            modified_molecule_file (str): Complete molecule file content formatted for output.
+            index_change_dict (dict[int, int]): Mapping from original atom index (int) to new atom index (int).
     """
     # Parse molecule file and get starting indices for each section
     lines, type_start_index, charge_start_index, coord_start_index, bond_start_index, angle_start_index, dihedral_start_index, improper_start_index = load_molecule_file(test_molecule_file)
@@ -1040,22 +1019,16 @@ def molecule_file_preparation(test_molecule_file, template_indexes):
 
 def map_file_write(reactant_to_product, initiator_atoms, edge_atoms, delete_ids):
     """
-    Construct a textual ".map" file describing a superimposition mapping
-    between reactant and product atom indices.
-
-    The textual format constructed here is a simple, human-readable structure
-    expected downstream by other tools in the workflow. The important details:
-
-    - reactant_to_product: dict mapping reactant_index (0-based) -> product_index (0-based)
-      These indices refer to template atom indices after reindexing/filtering; the
-      entries will be written as 1-based values in the map file.
-    - initiator atoms: list of two atom indices (0-based) that define the initiator pair.
-    - edge_atoms: list of atom indices (0-based) that are considered edge atoms.
-    - delete_ids: list of atom indices (0-based) to mark as deleted; an empty or falsy
-      value disables the DeleteIDs section.
-
+    Create the text contents of a ".map" file that describes atom correspondences for superimposition.
+    
+    Parameters:
+        reactant_to_product (dict): Mapping from reactant atom index (0-based) to product atom index (0-based). Each pair becomes a line in the Equivalences section using 1-based indices.
+        initiator_atoms (list[int]): Two 0-based atom indices identifying the initiator pair; written as two 1-based entries in the InitiatorIDs section.
+        edge_atoms (list[int]): Iterable of 0-based atom indices written as 1-based entries in the EdgeIDs section.
+        delete_ids (list[int] | None): Optional iterable of 0-based atom indices to mark as deleted; when present, they are emitted in a #DeleteIDs section.
+    
     Returns:
-      A single string containing the contents of the map file.
+        str: The complete ".map" file content. All input indices are converted to 1-based numbering in the output.
     """
     # Header giving a nominal description
     map_file = "this is a nominal superimpose file\n\n"

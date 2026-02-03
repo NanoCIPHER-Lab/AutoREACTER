@@ -10,8 +10,13 @@ from typing import Literal
 
 def get_git_root() -> Path:
     """
-    Return the root directory of the current git repo.
-    Raises subprocess.CalledProcessError if not in a git repo.
+    Locate the root directory of the current Git repository.
+    
+    Returns:
+        Path: Path to the repository root directory.
+    
+    Raises:
+        subprocess.CalledProcessError: If the current working directory is not inside a Git repository.
     """
     out = subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip()
     return Path(out)
@@ -19,8 +24,12 @@ def get_git_root() -> Path:
 
 def get_cache_base_dir() -> Path:
     """
-    Return the cache base directory: <git_root>/cache
-    Creates it if missing.
+    Get the repository cache base directory at <git_root>/cache.
+    
+    Creates the directory and any missing parent directories if it does not exist.
+    
+    Returns:
+        Path: Path to the cache base directory under the repository root.
     """
     base_dir = get_git_root() / "cache"
     base_dir.mkdir(parents=True, exist_ok=True)
@@ -29,8 +38,10 @@ def get_cache_base_dir() -> Path:
 
 def get_default_cache_dir() -> Path:
     """
-    Return the "staging" cache directory: <git_root>/cache/0_cache
-    Creates it if missing.
+    Get the staging cache directory under the repository cache, creating it if missing.
+    
+    Returns:
+        Path: Path to the staging cache directory located at <git_root>/cache/00_cache.
     """
     default_dir = get_cache_base_dir() / "00_cache"
     default_dir.mkdir(parents=True, exist_ok=True)
@@ -38,8 +49,12 @@ def get_default_cache_dir() -> Path:
 
 def delete_files_in_directory(directory_path: Path) -> None:
     """
-    Delete only files/symlinks directly inside directory_path.
-    (Does NOT delete subfolders.)
+    Remove regular files and symlinks that are direct children of the given directory while leaving subdirectories intact.
+    
+    If the provided path does not refer to an existing directory, an error message is printed and no removal is attempted. Individual unlink failures are ignored so the function continues processing other entries.
+    
+    Parameters:
+        directory_path (Path | str): Path to the target directory whose immediate files and symlinks will be removed.
     """
     directory_path = Path(directory_path)
 
@@ -57,7 +72,9 @@ def delete_files_in_directory(directory_path: Path) -> None:
 
 def delete_default_cache_files() -> None:
     """
-    Convenience: clear out files from <git_root>/cache/0_cache.
+    Remove files and symlinks directly inside the staging cache directory.
+    
+    The staging cache directory is located at <git_root>/cache/00_cache. This function does not remove subdirectories or their contents.
     """
     delete_files_in_directory(get_default_cache_dir())
 
@@ -69,15 +86,16 @@ def make_dated_run_dir(
     chdir_to: Literal["run", "date", "none"] = "run",
 ) -> Path:
     """
-    Create:
-        base_dir/YYYY-MM-DD/<N>/
-
-    Where <N> is the next integer run folder (1, 2, 3, ...).
-
-    chdir_to:
-      - "run":  chdir into the new run folder
-      - "date": chdir into the date folder
-      - "none": do not change cwd
+    Create a new dated run directory under base_dir with an incremented numeric run number.
+    
+    Parameters:
+        base_dir (Path): Base directory where the dated folder (YYYY-MM-DD) will be created.
+        date (datetime.date | None): Date to use for the dated folder; uses today's date when None.
+        chdir_to (Literal["run", "date", "none"]): If "run", change the current working directory to the new run folder;
+            if "date", change to the date folder; if "none", do not change the working directory.
+    
+    Returns:
+        Path: Path to the newly created run directory (base_dir / YYYY-MM-DD / N).
     """
     base_dir = Path(base_dir)
     base_dir.mkdir(parents=True, exist_ok=True)
@@ -112,17 +130,23 @@ def make_dated_run_dir(
 
 def get_current_cache_dir() -> Path:
     """
-    Create (or pick next) dated run folder under <git_root>/cache and return it.
-    Does NOT change cwd.
+    Selects or creates the next dated run directory under the repository cache without changing the current working directory.
+    
+    Returns:
+        Path: The path to the created or selected dated run directory (format: <git_root>/cache/YYYY-MM-DD/<N>).
     """
     return make_dated_run_dir(get_cache_base_dir(), chdir_to="none")
 
 
 def retention_cleanup(base_dir: Path | None = None) -> None:
     """
-    Interactive cleanup of dated cache folders under base_dir (default: <git_root>/cache).
-
-    Deletes folders whose names match YYYY-MM-DD and are older than chosen retention.
+    Interactively remove dated cache directories under the cache base or a provided base directory.
+    
+    Prompts the user to choose a retention policy (1 week, 1 month, 3 months, 6 months, custom number of days, delete all, or skip).
+    Only directories whose names match the YYYY-MM-DD pattern are considered; directories older than the chosen retention (or all directories when "delete all" is selected) are removed with shutil.rmtree and a deletion message is printed. If no base_dir is provided, the cache base directory returned by get_cache_base_dir() is used.
+    
+    Parameters:
+        base_dir (Path | None): Base directory containing dated cache folders. If None, uses the repository cache base.
     """
     base_dir = Path(base_dir) if base_dir is not None else get_cache_base_dir()
 
@@ -193,10 +217,15 @@ def retention_cleanup(base_dir: Path | None = None) -> None:
 
 def copy_to_date_folder(source_dir: Path) -> Path:
     """
-    Copy everything from source_dir (e.g., cache/0_cache) into a newly created
-    dated run folder under cache/YYYY-MM-DD/N.
-
-    Returns the destination run folder path.
+    Copy the contents of source_dir into a newly created dated run folder under the cache and return the destination path.
+    
+    Files are copied with metadata preserved, directories are copied recursively, and symbolic links are recreated as symlinks at the destination.
+    
+    Parameters:
+        source_dir (Path | str): Source directory whose immediate contents will be copied into the new dated run folder.
+    
+    Returns:
+        Path: Path to the created dated run directory (cache/YYYY-MM-DD/<N>).
     """
     source_dir = Path(source_dir)
     dest_dir = get_current_cache_dir()

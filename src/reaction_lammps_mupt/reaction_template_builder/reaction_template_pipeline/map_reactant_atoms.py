@@ -78,23 +78,14 @@ def is_number_in_set(set_of_tuples, reactant):
 
 def smart_mapping(reactant, smarts_template, match_tuple):
     """
-    Apply atom mapping from SMARTS template to reactant molecule based on match indices.
+    Transfer atom map numbers from a SMARTS template to a reactant molecule using a SMARTS-to-reactant index mapping.
     
-    This function transfers atom map numbers from a SMARTS template to corresponding
-    atoms in the reactant molecule using the provided match tuple that maps SMARTS
-    atom indices to reactant atom indices.
+    Only SMARTS atoms that have a non-zero atom map number are applied; the reactant is modified in-place. If `match_tuple` is empty the function returns immediately.
     
-    Args:
-        reactant (Chem.Mol): The reactant molecule to apply mapping to
-        smarts_template (Chem.Mol): SMARTS pattern molecule with atom map numbers
-        match_tuple (tuple): Tuple mapping SMARTS atom indices to reactant atom indices
-        
-    Returns:
-        None: Modifies the reactant molecule in-place by setting atom map numbers
-        
-    Note:
-        Only atoms with non-zero map numbers in the SMARTS template are processed.
-        The function does nothing if match_tuple is empty.
+    Parameters:
+        reactant (Chem.Mol): Molecule whose atom map numbers will be set.
+        smarts_template (Chem.Mol): SMARTS pattern molecule containing atom map numbers to copy.
+        match_tuple (tuple): Mapping where each SMARTS atom index maps to the corresponding reactant atom index; indices outside the tuple length are ignored.
     """
     if not match_tuple:
         return
@@ -116,18 +107,13 @@ def smart_mapping(reactant, smarts_template, match_tuple):
 
 def is_consecutive(num_list):
     """
-    Check if a list of numbers forms a consecutive sequence without gaps.
+    Determine whether a list of integers forms a consecutive sequence with no gaps.
     
-    Args:
-        num_list (list): List of integers to check
-        
+    Parameters:
+        num_list (list[int]): Sequence of integers to evaluate.
+    
     Returns:
-        bool: True if the numbers are consecutive, False otherwise
-        
-    Examples:
-        >>> is_consecutive([1, 2, 3, 4])  # Returns True
-        >>> is_consecutive([1, 3, 4])     # Returns False
-        >>> is_consecutive([])            # Returns False
+        True if the integers form a consecutive sequence (each integer appears once and max - min + 1 equals the length), False otherwise.
     """
     if not num_list:
         return False
@@ -158,16 +144,13 @@ def prepare_paths(cache):
 
 def build_reaction(rxn_smarts):
     """
-    Create an RDKit reaction object from SMARTS string.
+    Create an RDKit ChemicalReaction from a reaction SMARTS string.
     
-    Args:
-        rxn_smarts (str): Reaction SMARTS string
-        
+    Parameters:
+        rxn_smarts (str): Reaction SMARTS describing reactants and products.
+    
     Returns:
-        Chem.rdChemReactions.ChemicalReaction: RDKit reaction object
-        
-    Example:
-        >>> rxn = build_reaction("[C:1]=[O:2]>>[C:1]-[O:2]")
+        rdkit.Chem.rdChemReactions.ChemicalReaction: A ChemicalReaction object representing the SMARTS.
     """
     return AllChem.ReactionFromSmarts(rxn_smarts)
 
@@ -196,38 +179,29 @@ def build_reactants(reactant_smiles_1, reactant_smiles_2):
 def process_reactions(rxn, csv_cache, reaction_tuple, key=None, 
                       molecule_and_csv_path_dict=None, delete_atoms=False):
     """
-    Process chemical reactions, map atoms between reactants and products, and save data.
-    
-    This is the main processing function that:
-    1. Runs reactions on reactant pairs
-    2. Maps atoms between reactants and products
-    3. Validates mapping consistency
-    4. Saves mapping data to CSV files
-    5. Identifies reaction features (first shell, initiators, byproducts)
-    
-    Args:
-        rxn (Chem.rdChemReactions.ChemicalReaction): RDKit reaction object
-        csv_cache (Path): Directory path for CSV output files
-        reaction_tuple (list): List of reactant pairs to process
-        key (str or int, optional): Identifier for the reaction set
-        molecule_and_csv_path_dict (dict, optional): Dictionary to store results
-        delete_atoms (bool, optional): Whether to identify byproduct atoms for deletion
-        
-    Returns:
-        tuple: (mols, output, molecule_and_csv_path_dict)
-            - mols: List of reactant and product molecules for visualization
-            - output: String output (currently empty, reserved for future use)
-            - molecule_and_csv_path_dict: Dictionary containing all processed data
-            
-    Raises:
-        ValueError: If mapping validation fails at any step
-        
-    Note:
-        This function performs extensive validation including:
-        - Atom count consistency between reactants and products
-        - Consecutive indexing requirements
-        - Initiator count validation (must be exactly 2)
-    """
+                      Process reactant pairs with an RDKit reaction, build and validate atom-level mappings between reactants and products, save per-reaction CSVs, and collect molecules and metadata.
+                      
+                      Parameters:
+                          rxn (Chem.rdChemReactions.ChemicalReaction): RDKit reaction template used to run the transformations.
+                          csv_cache (Path): Directory where per-reaction CSV files will be written.
+                          reaction_tuple (list): Iterable of reactant-pair tuples to process; each element is a two-item sequence of RDKit Mol-like objects or objects convertible to Mol.
+                          key (str | int, optional): Optional identifier used in intermediate debug filenames and logging.
+                          molecule_and_csv_path_dict (dict, optional): Existing dictionary to populate with processed results; if omitted a new dict is created.
+                          delete_atoms (bool, optional): If True, identify smallest product fragment as a byproduct and record corresponding reactant atom indices for deletion.
+                      
+                      Returns:
+                          tuple: (mols, molecule_and_csv_path_dict)
+                              - mols: List of RDKit Mol objects appended as [reactant_combined, product_combined, ...] for each successful product.
+                              - molecule_and_csv_path_dict: Dictionary mapping integer keys to per-reaction metadata including:
+                                  - "reactant": combined reactant Mol,
+                                  - "product": combined product Mol,
+                                  - "csv_path": Path to the saved CSV,
+                                  - "delete_atoms": boolean flag,
+                                  - "reaction_dataframe": DataFrame containing atom-index mappings and analysis columns (first_shell, initiators, byproduct_indices).
+                      
+                      Raises:
+                          ValueError: If mapping validation fails (mismatched mapped counts, incomplete coverage of reactant/product atoms, non-consecutive indices, incorrect initiator count, or other mapping consistency errors).
+                      """
     if molecule_and_csv_path_dict is None:
         molecule_and_csv_path_dict = {}
     
@@ -418,6 +392,20 @@ def process_reactions(rxn, csv_cache, reaction_tuple, key=None,
 
 
 def save_grid_image(mols, cache, key=None):
+    """
+    Create and save a grid image of the provided molecule objects to the cache directory.
+    
+    Parameters:
+        mols (Sequence): Iterable of RDKit molecule objects to include in the grid.
+        cache (str | pathlib.Path): Base directory where a "grid_images" subdirectory will be created and the image saved.
+        key (str, optional): Optional identifier appended to the filename (produces `reaction_grid_<key>.png`); if omitted, uses `reaction_grid.png`.
+    
+    Returns:
+        pathlib.Path: Path to the saved PNG image file.
+    
+    Raises:
+        TypeError: If the generated image object is of an unexpected form and cannot be serialized to PNG.
+    """
     from pathlib import Path
     from rdkit.Chem import Draw
     import base64
@@ -461,19 +449,15 @@ def save_grid_image(mols, cache, key=None):
 
 def reaction_tuples(same_reactants, mol_reactant_1, mol_reactant_2):
     """
-    Generate reaction tuples based on whether reactants are the same or different.
+    Produce reactant pairings for processing; when `same_reactants` is True the second reactant is set to the first.
     
-    Args:
-        same_reactants (bool): Whether both reactants are the same molecule
-        mol_reactant_1 (Chem.Mol): First reactant molecule
-        mol_reactant_2 (Chem.Mol): Second reactant molecule (can be None)
-        
+    Parameters:
+        same_reactants (bool): If True, use `mol_reactant_1` for both reactants.
+        mol_reactant_1 (Chem.Mol): First reactant molecule.
+        mol_reactant_2 (Chem.Mol): Second reactant molecule; may be ignored when `same_reactants` is True.
+    
     Returns:
-        list: List of reactant pairs for reaction processing
-        
-    Note:
-        For same reactants, returns both [A,B] and [B,A] to account for symmetry.
-        For different reactants, returns only [A,B].
+        list: Two-element list of reactant pairs `[[A, B], [B, A]]`, where `A` and `B` are the provided (or substituted) reactant molecules.
     """
     if same_reactants:
         mol_reactant_2 = mol_reactant_1
@@ -484,26 +468,23 @@ def reaction_tuples(same_reactants, mol_reactant_1, mol_reactant_2):
 
 def process_reaction_dict(detected_reactions, cache):
     """
-    Process a dictionary of detected reactions and generate mapping data.
+    Orchestrate processing of multiple reaction definitions, producing atom-mapping CSVs and grid images for each reaction.
     
-    This is a high-level function that processes multiple reactions defined in
-    a dictionary structure, handling all steps from SMILES to final CSV output.
+    Processes each entry in `detected_reactions` by building the reaction and reactant molecules, running the mapping/validation pipeline, saving per-reaction CSV files and a grid image, and collecting metadata and output paths.
     
-    Args:
-        detected_reactions (dict): Dictionary containing reaction definitions
-        cache (str or Path): Base cache directory for output files
-        
+    Parameters:
+        detected_reactions (dict): Mapping of keys to reaction definition dictionaries. Each reaction definition must include at minimum:
+            - "reaction": SMARTS string for the reaction template
+            - "monomer_1": dict with key "smiles"
+            - "same_reactants": bool indicating whether both reactants are identical
+            - optionally "monomer_2": dict with key "smiles" (when "same_reactants" is False)
+            - optionally "delete_atom": bool to enable byproduct identification
+        cache (str or Path): Base directory used to store CSV outputs and generated images.
+    
     Returns:
-        tuple: (molecule_and_csv_path_dict, detected_reactions)
-            - molecule_and_csv_path_dict: Dictionary with all processed reaction data
-            - detected_reactions: The original input dictionary (unchanged)
-            
-    Example:
-        >>> reactions_dict = {
-        ...     1: {"reaction": "[C:1]=[O:2]>>[C:1]-[O:2]", 
-        ...         "monomer_1": {"smiles": "CCO"}, ...}
-        ... }
-        >>> results, original = process_reaction_dict(reactions_dict, "/path/to/cache")
+        tuple:
+            molecule_and_csv_path_dict (dict): Collected metadata and file paths for each processed reaction (CSV and image locations, molecule data, and related mapping info).
+            detected_reactions (dict): The original input `detected_reactions` dictionary (returned unchanged).
     """
     molecule_and_csv_path_dict = {}
     csv_cache = prepare_paths(cache)

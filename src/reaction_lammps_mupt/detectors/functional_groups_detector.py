@@ -199,23 +199,23 @@ monomer_types = {
 
 def detect_monomer_functionality(smiles: str, functionality_type: str, smarts_1: str, smarts_2: str = None) -> tuple:
     """
-    Detect the functionality type of a monomer based on its SMILES string using RDKit substructure matching with SMARTS patterns.
+    Identify occurrences of the specified SMARTS functional group(s) in a monomer SMILES.
     
-    Args:
-        smiles (str): SMILES representation of the monomer.
-        functionality_type (str): Type of functionality (e.g., 'mono', 'di_identical', 'di_different', 'vinyl').
-        smarts_1 (str): Primary SMARTS pattern for matching.
-        smarts_2 (str, optional): Secondary SMARTS pattern for 'di_different' types. Defaults to None.
+    Parameters:
+        smiles (str): SMILES string of the monomer to analyze.
+        functionality_type (str): Expected functionality category; commonly 'mono', 'vinyl', 'di_identical', or 'di_different'.
+        smarts_1 (str): Primary SMARTS pattern to search for.
+        smarts_2 (str, optional): Secondary SMARTS pattern used for 'di_different' detection. Defaults to None.
     
     Returns:
-        tuple: (functionality_count: int, count_1: int or None, count_2: int or None)
-            - functionality_count: 0 (no match), 1 (single match), or 2 (dual matches).
-            - count_1: Number of matches for smarts_1.
-            - count_2: Number of matches for smarts_2 (if applicable).
+        tuple: (functionality_count, functional_count_1, functional_count_2)
+            - functionality_count (int): 0 if no required functionality detected; 1 for a single-pattern match (mono or vinyl); 2 for a detected di-functional case (both patterns present for 'di_different', or at least two occurrences of `smarts_1` for 'di_identical').
+            - functional_count_1 (int or None): Number of substructure matches for `smarts_1`, or None if SMILES/SMARTS parsing failed.
+            - functional_count_2 (int or None): Number of substructure matches for `smarts_2` when provided, None otherwise.
     
     Notes:
-        For 'di_identical', requires at least 2 matches of smarts_1.
-        Duplicate definition present in original code; this is the second instance.
+        - If the SMILES or either SMARTS pattern cannot be parsed, the function returns (0, None, None).
+        - For 'di_identical', a functionality_count of 2 is returned only when `smarts_1` matches two or more times.
     """
     # Convert SMILES to RDKit molecule object
     mol = Chem.MolFromSmiles(smiles)
@@ -260,20 +260,20 @@ def detect_monomer_functionality(smiles: str, functionality_type: str, smarts_1:
 
 def functional_groups_detector(monomer_dictionary: dict) -> dict:
     """
-    Detect functional groups in a dictionary of monomers and categorize them based on predefined types.
+    Detects and annotates functional groups in input monomer SMILES using predefined SMARTS patterns.
     
-    Args:
-        monomer_dictionary (dict): Dictionary with monomer indices as keys and SMILES strings as values.
+    Parameters:
+        monomer_dictionary (dict): Mapping from monomer index to a SMILES string.
     
     Returns:
-        dict: Selected monomers with detected functionalities, structured as:
-            {index: {'smiles': str, functional_group_index: {details of functionality}}}
-    
-    Notes:
-        Iterates over monomer_types and uses detect_monomer_functionality to match patterns.
-        Prints detection results for each matching monomer.
-        Code structure has repetitive if-blocks for each functionality_type; loops noted as needing fixes in original.
-        Debugging print statement commented out.
+        dict: Mapping of monomer index to a dictionary with the original "smiles" and one or more numeric entries describing detected functionalities. Each functionality entry includes:
+            - "functionality_type": one of "vinyl", "mono", "di_identical", "di_different"
+            - "functional_group_name": human-readable group name
+            - "functional_group_smarts_1": primary SMARTS pattern
+            - "functional_count_1": count of matches for the primary pattern
+          For "di_different" entries, also includes:
+            - "functional_group_smarts_2": secondary SMARTS pattern
+            - "functional_count_2": count of matches for the secondary pattern
     """
     selected_monomers = {}
 

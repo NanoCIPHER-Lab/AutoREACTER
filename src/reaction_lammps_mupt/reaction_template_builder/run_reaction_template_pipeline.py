@@ -80,7 +80,15 @@ from pathlib import Path
 import os
 
 def extract_unique_references(detected_reactions: dict) -> list[str]:
-    """Collect reference URLs from detected_reactions[*]["reference"], dedupe, keep order."""
+    """
+    Collect ordered, deduplicated reference URLs from a mapping of detected reactions.
+    
+    Parameters:
+        detected_reactions (dict): Mapping of reaction identifiers to reaction dictionaries. Each reaction may contain a "reference" entry whose values can be a string, a list/tuple of strings, or a nested dict of strings.
+    
+    Returns:
+        list[str]: Ordered list of unique reference URLs, preserving the first-seen occurrence for each URL.
+    """
     seen = set()
     refs: list[str] = []
 
@@ -112,6 +120,22 @@ def extract_unique_references(detected_reactions: dict) -> list[str]:
 
 
 def save_grid_image(mols, cache, key=None):
+    """
+    Save a grid image of the provided RDKit molecule objects to the cache's grid_images directory.
+    
+    Creates a PNG file named "reaction_grid.png" or "reaction_grid_{key}.png" inside a "grid_images" subdirectory of `cache`, rendering `mols` as a grid image and returning the file path.
+    
+    Parameters:
+        mols: Iterable of RDKit molecule objects to render into a grid.
+        cache (str or pathlib.Path): Directory where the "grid_images" subdirectory will be created.
+        key (str, optional): Optional identifier appended to the filename to avoid collisions.
+    
+    Returns:
+        pathlib.Path: Path to the written PNG image file.
+    
+    Raises:
+        TypeError: If the RDKit drawing result is an unexpected object type or its data is neither bytes nor a decodable base64/string that can be written as PNG.
+    """
     from pathlib import Path
     from rdkit.Chem import Draw
     import base64
@@ -172,18 +196,15 @@ def is_continuous(d):
 
 def molecule_dict_csv_path_dict_rearrange(molecule_dict_csv_path_dict):
     """
-    Rearranges the reaction dictionary keys to be continuous and renames 
-    associated CSV files on the filesystem to match the new keys.
-
-    This ensures that if reaction #2 is deleted, reaction #3 becomes the new #2,
-    maintaining a clean, gapless sequence for downstream processing.
-
-    Args:
-        molecule_dict_csv_path_dict (dict): Dictionary containing reaction metadata 
-                                           and 'csv_path' entries.
-
+    Normalize reaction keys to a continuous 1..N sequence and rename their CSV files accordingly.
+    
+    Parameters:
+        molecule_dict_csv_path_dict (dict): Mapping of integer reaction keys to metadata dicts.
+            Each metadata dict is expected to include a "csv_path" entry pointing to the reaction's CSV file.
+    
     Returns:
-        dict: A new dictionary with normalized continuous keys (1 to N) and updated file paths.
+        dict: New mapping with consecutive integer keys starting at 1 and metadata dictionaries whose
+            "csv_path" values have been updated to match any renamed files.
     """
     # Skip if already continuous to save processing time
     if is_continuous(molecule_dict_csv_path_dict):
@@ -263,21 +284,16 @@ def add_column_safe(df, list_data, column_name):
 
 def run_reaction_template_pipeline(detected_reactions_dict, cache):
     """
-    Main execution pipeline for mapping reactions, identifying templates, 
-    and saving results to CSV.
-
-    Steps:
-    1. Maps atoms between reactants and products.
-    2. Uses an atom walker to identify the 'reaction center' (template).
-    3. Identifies 'edge atoms' that connect the template to the rest of the molecule.
-    4. Updates reaction dataframes with mapping indices and saves them.
-
-    Args:
-        detected_reactions_dict (dict): Raw dictionary of detected reactions.
-        cache (str): Path to the cache directory for processing.
-
+    Orchestrates atom mapping, reaction-template extraction, and persistence of processed reaction data to CSV.
+    
+    Parameters:
+        detected_reactions_dict (dict): Raw detected-reactions input; keys map to reaction entries containing reactant/product objects and mapping data.
+        cache (str): Filesystem path to a cache directory used for intermediate files and output CSVs.
+    
     Returns:
-        tuple: (updated_molecule_dict, formatted_summary_dict)
+        tuple: (molecule_dict_csv_path_dict, formatted_dict)
+            molecule_dict_csv_path_dict (dict): Updated mapping of reaction keys to reaction records (each record includes the updated DataFrame and its `csv_path`).
+            formatted_dict (dict): A human-readable summary of the detected reactions after initial processing.
     """
     # Initial processing: atom mapping and basic dictionary formatting
     molecule_dict_csv_path_dict, detected_reactions = process_reaction_dict(detected_reactions_dict, cache)
@@ -335,16 +351,17 @@ def run_reaction_template_pipeline(detected_reactions_dict, cache):
 
 def execute_pipeline(detected_reactions, retain_smiles, cache):
     """
-    Orchestrates the full reaction template pipeline, including 3D generation 
-    and LUNAR workflow execution.
-
-    Args:
-        detected_reactions (dict): Input reaction definitions.
-        retain_smiles (list): List of SMILES strings for non-monomer molecules to keep.
-        cache (str): Directory path for temporary files and outputs.
-
+    Orchestrates the reaction template pipeline, producing 3D structures, running the LUNAR workflow, and writing molecule template files.
+    
+    Parameters:
+        detected_reactions (dict): Detected reaction definitions and associated metadata.
+        retain_smiles (list): SMILES strings for non-monomer molecules that must be retained for 3D generation.
+        cache (str or Path): Directory path used for intermediate files, outputs, and cache storage.
+    
     Returns:
-        tuple: (formatted_dict, molecule_template_files)
+        tuple: 
+            formatted_dict (dict): Reformatted representation of detected reactions prepared for downstream use.
+            molecule_template_files (dict): Mapping from molecule identifier to the generated molecule template file path.
     """
     # 1. Run the core reaction template mapping and walking pipeline
     molecule_dict_csv_path_dict, formatted_dict = run_reaction_template_pipeline(

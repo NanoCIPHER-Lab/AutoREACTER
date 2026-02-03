@@ -192,29 +192,33 @@ reactions = {
 
 def reaction_detector(monomer_dictionary: dict) -> dict:
     """
-    Detects possible polymerization reactions based on the functional groups in the provided monomer dictionary.
-
-    This function iterates through predefined reactions and matches them against the functional groups
-    in the monomers. It supports homopolymerization (same reactants) and copolymerization (different reactants).
-    For each match, it records the monomer details and reaction index.
-
-    Args:
-        monomer_dictionary (dict): A dictionary where keys are monomer indices or IDs,
-                                  and values are dictionaries containing monomer details,
-                                  including 'smiles' and functional groups with 'functional_group_name'.
-
+    Detect possible polymerization reactions by matching monomer functional groups to predefined reaction types.
+    
+    Scans the provided monomer dictionary for functional groups whose "functional_group_name" matches reaction reactant types and records each valid homopolymerization or copolymerization instance without performing SMARTS/reactivity validation. Homopolymer reactions (same_reactants with no reactant_2) produce single-monomer instances; two-reactant definitions produce paired instances with deduplication for symmetric reactant types.
+    
+    Parameters:
+        monomer_dictionary (dict): Mapping of monomer IDs to monomer data. Each monomer value must include a "smiles" string and zero or more integer-keyed functional-group dictionaries (e.g., 0, 1, ...) that contain at least a "functional_group_name" key.
+    
     Returns:
-        dict: A dictionary of detected reactions, structured as:
-              {reaction_name: {<reaction metadata keys>, rx_index: {monomer_1: {...}, monomer_2: {... (if applicable)}}}}
-
+        dict: Detected reactions keyed by reaction name. Each reaction entry contains the reaction metadata (copied from the predefined reactions) and integer keys for each detected instance (rx_index). Each instance contains "monomer_1" and, when applicable, "monomer_2" dictionaries with a "smiles" entry and the matched functional-group metadata.
+    
     Note:
-        This logic matches functional_group_name against reaction reactant types.
-        It does not validate the reaction SMARTS against the exact monomer structures (RDKit reaction execution is later).
+        Matching is performed only on the "functional_group_name" field; SMARTS patterns in the reaction definitions are not applied here.
     """
     detected_reactions = {}
 
     # Helper: get all functional-group indices in a monomer that match a target functional_group_name
     def _matching_fg_indices(monomer_entry: dict, target_group_name: str) -> list:
+        """
+        Finds indices of functional groups in a monomer entry that match a given functional group name.
+        
+        Parameters:
+        	monomer_entry (dict): A monomer data mapping where integer keys index functional-group dictionaries.
+        	target_group_name (str): The functional group name to match against each group's "functional_group_name" field.
+        
+        Returns:
+        	matching_indices (list): List of integer indices from monomer_entry whose "functional_group_name" equals target_group_name.
+        """
         fg_hits = []
         for fg_index in monomer_entry:
             if isinstance(fg_index, int):
@@ -316,18 +320,19 @@ def reaction_detector(monomer_dictionary: dict) -> dict:
 
 def reaction_arranger(monomer_dictionary: dict) -> dict:
     """
-    Arranges and prints detected reactions from the monomer dictionary.
-
-    This function processes the output of reaction_detector, organizes reactions by index,
-    and prints user-friendly messages about identified homomonomers or comonomers.
-    It restructures the data for easier selection in subsequent steps.
-
-    Args:
-        monomer_dictionary (dict): The same dictionary as input to reaction_detector.
-
+    Organizes detected reactions into a numbered dictionary and prints a short summary for each found reaction.
+    
+    Processes the output of reaction_detector to produce a mapping from sequential integer indices to reaction entries, preserving reaction metadata and placing detected monomer data under "monomer_1" and, when present, "monomer_2". Prints a one-line identification for each arranged entry (homomonomer or comonomer).
+    
+    Parameters:
+        monomer_dictionary (dict): Input monomer data passed through reaction_detector; keys and structure are unchanged by this function.
+    
     Returns:
-        dict: An arranged dictionary of reactions, structured as:
-              {reaction_name_index: {reaction_name: str, monomer_1: {...}, monomer_2: {... (if applicable)}, ...}}
+        dict: A dictionary keyed by sequential integers where each value contains:
+              - "reaction_name": name of the detected reaction
+              - preserved reaction metadata keys (non-integer keys from reaction_detector output)
+              - "monomer_1": dict with the first monomer's data
+              - "monomer_2": dict with the second monomer's data (only present for comonomer entries)
     """
     detected_reactions = reaction_detector(monomer_dictionary)
     arrenged_reactions = {}
@@ -385,22 +390,18 @@ from typing import Dict, Any
 
 def reaction_selector(monomer_dictionary: Dict[str, Any]) -> Dict[int, Any]:
     """
-    Allows the user to select specific reactions from the arranged list.
-
-    This function uses reaction_arranger to get the list of detected and arranged reactions,
-    then prompts the user for indices to select via input. It filters and returns only the selected reactions.
-
-    Rules:
-    - Re-asks if any token is not a positive integer.
-    - Re-asks if any index is not present in arranged_reactions.
-    - Re-asks if the input is empty.
-
-    Args:
-        monomer_dictionary: Input dictionary containing monomers + metadata.
-
+    Prompt the user to select reactions from the arranged reactions and return the chosen entries.
+    
+    Calls reaction_arranger to obtain available reactions, repeatedly prompts for comma-separated numeric indices until a valid selection is entered, and returns a dictionary containing only the selected reactions keyed by their indices.
+    
+    Parameters:
+        monomer_dictionary (Dict[str, Any]): Mapping of monomer identifiers to their metadata used to detect and arrange possible reactions.
+    
     Returns:
-        A dictionary containing only the user-selected reactions, keyed by their indices.
-        If no reactions are detected, raises a ValueError.
+        Dict[int, Any]: Mapping from selected numeric indices to the corresponding arranged reaction entries.
+    
+    Raises:
+        ValueError: If no possible reactions are detected from the provided monomers.
     """
     arranged_reactions = reaction_arranger(monomer_dictionary)
     
@@ -709,4 +710,3 @@ if __name__ == "__main__":
     }
     import json
     print(json.dumps(reaction_selector(monomer_dictionary), indent=4))
-
