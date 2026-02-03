@@ -22,6 +22,8 @@ import pandas as pd
 import re
 import os
 import json
+import logging
+logger = logging.getLogger(__name__)
 
 def get_ending_integer(s: str) -> int | None:
     """
@@ -56,9 +58,11 @@ def get_ending_integer(s: str) -> int | None:
         # No integer found at the end of the string
         return None
     
-def ensure_dir(p: str) -> str:
-    # If a FILE exists where we want a directory, delete it.
+def ensure_dir(p: str, remove_blocking_file: bool = False) -> str:
     if os.path.exists(p) and not os.path.isdir(p):
+        if not remove_blocking_file:
+            raise FileExistsError(f"Path exists and is a file (expected dir): {p}")
+        logger.warning("ensure_dir: removing blocking file: %s", p)
         os.remove(p)
     os.makedirs(p, exist_ok=True)
     return p
