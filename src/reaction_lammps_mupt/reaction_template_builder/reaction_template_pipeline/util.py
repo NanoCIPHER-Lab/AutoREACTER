@@ -63,8 +63,7 @@ def compare_rdkit_molecules_canonical(data_smiles_list, mol_smi_2):
 
         # Handle cases where SMILES might be invalid
         if mol1 is None or mol2 is None:
-            return False # Or raise an error, depending on desired behavior
-
+            return data_smiles_list, False  # or raise a ValueError
         # Generate canonical SMILES and compare them
         canonical_smi_1 = Chem.MolToSmiles(mol1, canonical=True)
         canonical_smi_2 = Chem.MolToSmiles(mol2, canonical=True)
