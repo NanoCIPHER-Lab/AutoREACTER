@@ -72,7 +72,7 @@ def find_non_reactant_monomers(reactions: dict, input_dict: dict) -> list:
     if non_reactants:
         print(
             "\nThere are non-reactant monomers/molecules in the input.\n"
-            "There are may be reactions possible with the given monomers in the user inputs,\n"
+            "There may be reactions possible with the given monomers in the user inputs,\n"
             "but some of them are not detected for a reaction.\n"
             "You can choose to retain some or all of these non-reactant molecules in the simulation.\n"
             "Non-reactant molecules:"
