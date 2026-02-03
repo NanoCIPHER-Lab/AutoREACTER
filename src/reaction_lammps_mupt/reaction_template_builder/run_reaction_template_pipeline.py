@@ -404,9 +404,10 @@ def execute_pipeline(detected_reactions, retain_smiles, cache):
             f.write(f"{ref}\n")
 
     return formatted_dict, molecule_template_files
-    # If duplicates were found and skipped, re-index the dictionary and files to be continuous
-    if duplicated:
-        molecule_dict_csv_path_dict = molecule_dict_csv_path_dict_rearrange(molecule_dict_csv_path_dict)
+    # TODO: If duplicates were found and skipped, re-index the dictionary and files to be continuous
+    # if duplicated:
+    #     molecule_dict_csv_path_dict = molecule_dict_csv_path_dict_rearrange(molecule_dict_csv_path_dict)
+
 
 
 if __name__ == "__main__":
