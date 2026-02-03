@@ -1212,13 +1212,38 @@ def build_bond_react_templates(
         # to indices in the reindexed template files. The index_change_dicts map original
         # 1-based indices -> new 1-based indices, so we convert accordingly.
         template_reactant_to_template_product = {}
+        missing_pairs = []  # (r_full0, p_full0, r_missing, p_missing)
+        
         for r_full0, p_full0 in reactant_to_product.items():
-            # Convert original 0-based full indices -> 1-based to query index_change_dict
-            r_tmp = index_change_dict_reactant[r_full0 + 1]
-            p_tmp = index_change_dict_product[p_full0 + 1]
+            r_key = r_full0 + 1  # full -> 1-based for index_change_dict keys
+            p_key = p_full0 + 1
+        
+            r_missing = r_key not in index_change_dict_reactant
+            p_missing = p_key not in index_change_dict_product
+        
+            if r_missing or p_missing:
+                missing_pairs.append((r_full0, p_full0, r_missing, p_missing))
+                continue
+        
+            r_tmp = index_change_dict_reactant[r_key]  # 1-based template index
+            p_tmp = index_change_dict_product[p_key]
             # Convert back to 0-based template indices in the map that will be passed to map_file_write
             template_reactant_to_template_product[r_tmp - 1] = p_tmp - 1
-
+        
+        if missing_pairs:
+            N = 20
+            preview = missing_pairs[:N]
+            r_miss_count = sum(1 for *_, rm, _ in missing_pairs if rm)
+            p_miss_count = sum(1 for *_, _, pm in missing_pairs if pm)
+        
+            raise ValueError(
+                "Template mapping indices missing after filtering. "
+                "reactant_to_product contains atoms removed during template trimming.\n"
+                f"Missing reactant mappings: {r_miss_count}; missing product mappings: {p_miss_count}; "
+                f"total missing pairs: {len(missing_pairs)}.\n"
+                f"First {min(N, len(missing_pairs))} missing (r_full0, p_full0, r_missing, p_missing): {preview}"
+            )
+        
         # Recompute initiator, delete, and edge atom lists for the reindexed template.
         # Only include atoms that survived the filtering process (i.e., have an entry in the index_change_dict).
         initiator_atoms_t = [
@@ -1236,6 +1261,7 @@ def build_bond_react_templates(
             for i in edge_atoms
             if (i + 1) in index_change_dict_reactant
         ]
+
 
         # Construct the .map file contents using the reindexed template-space mappings
         map_file = map_file_write(
