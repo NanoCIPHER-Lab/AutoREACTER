@@ -34,6 +34,7 @@ def find_non_reactant_monomers(reactions: dict, input_dict: dict, interactive: b
             include 'monomer_1', 'monomer_2', and 'smiles' for each reaction entry.
         input_dict (dict): The original input dictionary containing a 'monomers' key
             mapping monomer IDs to SMILES strings.
+        interactive (bool): If False, automatically retain all non-reactants without prompting.
 
     Returns:
         list: A list of SMILES strings representing the non-reactant monomers selected
@@ -144,7 +145,7 @@ def detect_reactions(input_dict) -> tuple:
     reactions = reaction_selector(fg_results)
     
     # Step 3: Identify and handle monomers that are not part of any detected reaction
-    non_reactants_list = find_non_reactant_monomers(reactions, input_dict)
+    non_reactants_list = find_non_reactant_monomers(reactions, input_dict, interactive=interactive)
     
     return reactions, non_reactants_list
 
