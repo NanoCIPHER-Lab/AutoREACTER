@@ -43,10 +43,41 @@ class InputParser:
                 f"but 'number_of_monomers' has {len(inputs['number_of_monomers'])} entries. They must match."
             )
 
-    def _validate_smiles(self, smiles: str) -> None:
-        mol = Chem.MolFromSmiles(smiles.strip())
-        if mol is None:
-            raise ValueError(f"Invalid SMILES string: {smiles!r}. Terminating program.")
+    def validate_inputs(self, inputs: dict) -> dict:
+        self.component_check(inputs)
+        self._validate_numeric_fields(inputs)
+        self.validate_smiles_rdkit(inputs)
+        self.validate_no_duplicate_smiles(inputs)
+        return inputs
+      
+    def _validate_numeric_fields(self, inputs: dict) -> None:
+        # Density
+        density = inputs.get("density", None)
+        if not isinstance(density, (int, float)) or density <= 0:
+            raise ValueError(f"'density' must be a positive number. Got: {density!r}")
+      
+        # Temperature: allow scalar or list
+        temps = inputs.get("temperature", None)
+        if temps is None:
+            raise ValueError("'temperature' is required (number or list of numbers).")
+    
+        temps_list = temps if isinstance(temps, list) else [temps]
+        for t in temps_list:
+            if not isinstance(t, (int, float)) or t <= 0:
+                raise ValueError(f"Temperature values must be positive numbers. Got: {t!r}")
+      
+        # number_of_monomers: dict of id -> count
+        num_monomers = inputs.get("number_of_monomers", None)
+        if not isinstance(num_monomers, dict) or not num_monomers:
+            raise ValueError("'number_of_monomers' must be a non-empty dict of monomer_id -> positive int.")
+     
+        for monomer_id, count in num_monomers.items():
+            # bool is subclass of int, so guard it explicitly
+            if isinstance(count, bool) or not isinstance(count, int) or count <= 0:
+                raise ValueError(
+                    f"Monomer count for {monomer_id!r} must be a positive integer. Got: {count!r}"
+               )
+
 
     def validate_smiles_rdkit(self, inputs: dict) -> None:
         if "monomers" not in inputs:
