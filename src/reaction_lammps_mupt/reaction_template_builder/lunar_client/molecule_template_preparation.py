@@ -77,7 +77,13 @@ def _col_int_list(col: str, df: pd.DataFrame) -> list[int]:
     seen = set()
     vals = []
     for x in s.tolist():
-        ix = int(x)
+        try:
+            fx = float(x)
+        except (TypeError, ValueError):
+            raise ValueError(f"{col} contains non-numeric value: {x!r}")
+        if not fx.is_integer():
+            raise ValueError(f"{col} contains non-integer value: {x!r}")
+        ix = int(fx)
         if ix not in seen:
             seen.add(ix)
             vals.append(ix)
