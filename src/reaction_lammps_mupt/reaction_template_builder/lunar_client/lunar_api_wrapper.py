@@ -376,9 +376,11 @@ def run_bond_react_merge(merge_input_file_path: Path,
     # Map input names to expected output filenames
     for name in molecule_files_all2lmp.keys():
         if name.startswith("data"):
-            # Data files generate merged .data files
-            molecule_files_bond_react_merge[name] = (
-                os.path.join(merge_input_file_path, f"{name}_typed_IFF_merged.data")
+            n = get_ending_integer(name)
+            # normalize to "data_<n>"
+            tag = f"data_{n}" if n is not None else name
+            molecule_files_bond_react_merge[name] = os.path.join(
+                merge_input_file_path, f"{tag}_typed_IFF_merged.data"
             )
         elif name.startswith("pre"):
             # Pre-reaction files generate .lmpmol files
