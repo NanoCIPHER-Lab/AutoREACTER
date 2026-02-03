@@ -1,4 +1,5 @@
 import json
+from typing import Dict, Any
 # Dictionary defining various polymerization reactions.
 # Each reaction includes metadata such as whether reactants are the same,
 # the types of reactants, the product type, whether to delete atoms,
@@ -378,9 +379,6 @@ def reaction_arranger(monomer_dictionary: dict) -> dict:
                     arranged_reactions[reaction_name_index]["monomer_2"] = monomer_2
 
     return arranged_reactions
-
-
-from typing import Dict, Any
 
 
 def reaction_selector(monomer_dictionary: Dict[str, Any]) -> Dict[int, Any]:
