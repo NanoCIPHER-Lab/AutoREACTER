@@ -23,9 +23,9 @@ from pathlib import Path
 import os
 
 try:
-    import config
-except ImportError:
     from . import config
+except ImportError:
+    import config
 # Global flag to determine whether to use GUI for input prompts. Defaults to False (CLI mode).
 USE_GUI = False
 
