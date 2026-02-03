@@ -18,7 +18,7 @@ Version: 0.1.0
 """
 
 from rdkit import Chem
-from rdkit.Chem import AllChem, rdmolops, Draw
+from rdkit.Chem import AllChem, rdmolops
 import pandas as pd
 from pathlib import Path
 import os
