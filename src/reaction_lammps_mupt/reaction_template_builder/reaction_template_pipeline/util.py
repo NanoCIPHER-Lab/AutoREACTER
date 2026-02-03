@@ -98,73 +98,55 @@ def format_detected_reactions_dict(detected_reactions, non_monomer_molecules_to_
               - "smart_references"
               - "mechanism_references"
     """
-    reactions_names = ""
-    smart_references = ""
-    mechanism_references = ""
+    reactions_names = []
+    smart_references = []
+    mechanism_references = []
+
+    seen_reactions = set()
+    seen_smarts = set()
+    seen_mechanisms = set()
+    
     formatted_dict = {}
     data_smiles_list = []
-
+    
     for key, reaction in detected_reactions.items():
-        # Extract and aggregate unique reaction names
+        # Deduplicate reaction names safely (no substring bugs)
         reactions_name = reaction.get("reaction_name")
-        if reactions_name in reactions_names:
-            continue
-            
-        if reactions_names == "":
-            reactions_names += reactions_name
-        else:
-            reactions_names += f", {reactions_name}"
-
-        # Extract reference data
-        reference = reaction.get("reference")
-        if reference is None:
-            continue
-
+        if reactions_name and reactions_name not in seen_reactions:
+            seen_reactions.add(reactions_name)
+            reactions_names.append(reactions_name)
+    
+        # Reference is optional; do not skip monomer processing if missing
+        reference = reaction.get("reference") or {}
         smarts_ref = reference.get("smarts")
         mech_refs = reference.get("reaction_and_mechanism")
-
-        # Aggregate unique SMARTS references
-        if smarts_ref:
-            if smarts_ref not in smart_references:
-                if smart_references == "":
-                    smart_references += smarts_ref
-                else:
-                    smart_references += f", {smarts_ref}"
-
-        # Aggregate unique mechanism references (joining list items if necessary)
+    
+        if smarts_ref and smarts_ref not in seen_smarts:
+            seen_smarts.add(smarts_ref)
+            smart_references.append(smarts_ref)
+    
         if mech_refs:
             mech_block = ", ".join(mech_refs)
-            if mech_block not in mechanism_references:
-                if mechanism_references == "":
-                    mechanism_references += mech_block
-                else:
-                    mechanism_references += f", {mech_block}"
-
+            if mech_block and mech_block not in seen_mechanisms:
+                seen_mechanisms.add(mech_block)
+                mechanism_references.append(mech_block)
+    
+        # Always process monomers (if present)
         m1 = reaction.get("monomer_1")
         m2 = reaction.get("monomer_2")
-
         m1_smiles = m1.get("smiles") if isinstance(m1, dict) else None
         m2_smiles = m2.get("smiles") if isinstance(m2, dict) else None
-
-        data_smiles_list, _ = compare_rdkit_molecules_canonical(data_smiles_list, m1_smiles)
-        if not m2_smiles:
-            continue
-        else:
+    
+        if m1_smiles:
+            data_smiles_list, _ = compare_rdkit_molecules_canonical(data_smiles_list, m1_smiles)
+        if m2_smiles:
             data_smiles_list, _ = compare_rdkit_molecules_canonical(data_smiles_list, m2_smiles)
-        
-        if non_monomer_molecules_to_retain:
-            for non_monomer in non_monomer_molecules_to_retain:
-                data_smiles_list, _ = compare_rdkit_molecules_canonical(data_smiles_list, non_monomer)
-
-        
-
-    # Construct the final summary dictionary
+    
     formatted_dict = {
-        "reactions_names": reactions_names,
-        "smart_references": smart_references,
-        "mechanism_references": mechanism_references,
+        "reactions_names": ", ".join(reactions_names),
+        "smart_references": ", ".join(smart_references),
+        "mechanism_references": ", ".join(mechanism_references),
     }
-
     return formatted_dict , data_smiles_list
 
 def prep_for_3d_molecule_generation(data_smiles_list, molecule_dict_csv_path_dict):
