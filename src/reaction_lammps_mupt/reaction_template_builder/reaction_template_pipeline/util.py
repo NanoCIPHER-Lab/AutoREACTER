@@ -167,6 +167,8 @@ def prep_for_3d_molecule_generation(data_smiles_list, molecule_dict_csv_path_dic
     for i, smiles in enumerate(data_smiles_list):
         key = f"data_{i+1}"
         molecule = Chem.MolFromSmiles(smiles)
+        if molecule is None:
+            raise ValueError(f"Invalid SMILES: {smiles}")
         molecule = Chem.AddHs(molecule)
         molecule_dict[key] = molecule
     for i, (key, value) in enumerate(molecule_dict_csv_path_dict.items()):
