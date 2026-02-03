@@ -57,10 +57,15 @@ def compare_rdkit_molecules_canonical(data_smiles_list, mol_smi_2):
     Returns:
         bool: True if molecules are chemically identical, False otherwise.
     """
+    if not mol_smi_2:
+        return data_smiles_list, False
+    mol2 = Chem.MolFromSmiles(mol_smi_2)
+    if mol2 is None:
+        return data_smiles_list, False
+        
     for mol_smi_1 in data_smiles_list:
         mol1 = Chem.MolFromSmiles(mol_smi_1)
-        mol2 = Chem.MolFromSmiles(mol_smi_2)
-
+        
         # Handle cases where SMILES might be invalid
         if mol1 is None or mol2 is None:
             return data_smiles_list, False  # or raise a ValueError
