@@ -1093,7 +1093,7 @@ def map_file_write(reactant_to_product, initiator_atoms, edge_atoms, delete_ids)
 
     # If delete IDs are present, output them prefixed with '#' on their own lines.
     if delete_ids:
-        map_file += f"\n#DeleteIDs\n\n"
+        map_file += "\n#DeleteIDs\n\n"
         for atom in delete_ids:
             map_file += f"#{atom+1}\n"
 
