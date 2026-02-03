@@ -49,31 +49,34 @@ def _is_wsl() -> bool:
 
 def normalize_path(p: str | Path) -> str:
     p = str(p).strip().strip('"').strip("'")
-    # Convert all backslashes to forward slashes for internal consistency
+
+    # normalize separators for parsing
     p = p.replace("\\", "/")
 
-    is_wsl = _is_wsl()
-
-    # 1. Convert Windows (C:/...) to WSL (/mnt/c/...)
-    if is_wsl:
+    # 1) WSL host: Windows drive path -> /mnt/<drive>/
+    if _is_wsl():
         m = re.match(r"^([A-Za-z]):/(.*)$", p)
         if m:
             drive = m.group(1).lower()
             rest = m.group(2)
             return f"/mnt/{drive}/{rest}"
-        return p
+        # already POSIX-ish on WSL
+        return os.path.normpath(p)
 
-    # 2. Convert WSL (/mnt/c/...) to Windows (C:/...)
-    else:
-        # Check for /mnt/c/ or mnt/c/
+    host = platform.system().lower()
+
+    # 2) Windows host: /mnt/<drive>/... -> <DRIVE>:\...
+    if host == "windows":
         m = re.match(r"^/?mnt/([A-Za-z])/(.*)$", p)
         if m:
             drive = m.group(1).upper()
             rest = m.group(2).replace("/", "\\")
             return f"{drive}:\\{rest}"
-        
-        # If it's already a Windows path, just fix backslashes
-        return p.replace("/", "\\")
+        # otherwise treat as Windows-ish path string
+        return os.path.normpath(p.replace("/", "\\"))
+
+    # 3) POSIX host (Linux/macOS, not WSL): keep POSIX
+    return os.path.normpath(p)
 
 def move_merge_outputs(src_dir: Path, dst_dir: Path):
     src_dir = Path(src_dir)
