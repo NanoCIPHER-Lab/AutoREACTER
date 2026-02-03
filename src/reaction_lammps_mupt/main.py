@@ -1,6 +1,4 @@
-import importlib
-import sys
-import pathlib
+import json
 from pathlib import Path
 from initialization import initialize
 from input_parser import InputParser
@@ -14,10 +12,14 @@ final_cache_dir = get_current_cache_dir()
 
 
 if __name__ == "__main__":
-    current_dir = Path(__file__).parent.parent.parent
+
+
+    current_dir = Path(__file__).resolve().parents[2]  # same as parent.parent.parent, but clearer
     input_file = current_dir / "inputs.json"
-    with open(input_file, "r") as f:
-        inputs = eval(f.read())
+
+    with input_file.open("r", encoding="utf-8") as f:
+        inputs = json.load(f)
+
     # modify this to a cmd line argument later and to support this way as well
     inputs = InputParser(inputs)
     print(inputs.validated_inputs)
