@@ -330,7 +330,7 @@ def reaction_arranger(monomer_dictionary: dict) -> dict:
               {reaction_name_index: {reaction_name: str, monomer_1: {...}, monomer_2: {... (if applicable)}, ...}}
     """
     detected_reactions = reaction_detector(monomer_dictionary)
-    arrenged_reactions = {}
+    arranged_reactions = {}
     reaction_name_index = 0
 
     for reaction_name, reaction_info in detected_reactions.items():
@@ -349,15 +349,15 @@ def reaction_arranger(monomer_dictionary: dict) -> dict:
                     monomer_1_smiles = monomer_1["smiles"]
                     print(f"{reaction_name_index}. {reaction_name} homomonomer identified: {monomer_1_smiles}")
 
-                    arrenged_reactions[reaction_name_index] = {}
-                    arrenged_reactions[reaction_name_index]["reaction_name"] = reaction_name
+                    arranged_reactions[reaction_name_index] = {}
+                    arranged_reactions[reaction_name_index]["reaction_name"] = reaction_name
 
                     # Copy metadata keys (non-int keys only)
                     for rx_index_meta, rx_info in reaction_info.items():
                         if not isinstance(rx_index_meta, int):
-                            arrenged_reactions[reaction_name_index][rx_index_meta] = rx_info
+                            arranged_reactions[reaction_name_index][rx_index_meta] = rx_info
 
-                    arrenged_reactions[reaction_name_index]["monomer_1"] = monomer_1
+                    arranged_reactions[reaction_name_index]["monomer_1"] = monomer_1
 
                 # Comonomer / two-monomer case
                 else:
@@ -366,18 +366,18 @@ def reaction_arranger(monomer_dictionary: dict) -> dict:
                     monomer_2_smiles = monomer_2["smiles"]
                     print(f"{reaction_name_index}. {reaction_name} comonomers identified: {monomer_1_smiles} and {monomer_2_smiles}.")
 
-                    arrenged_reactions[reaction_name_index] = {}
-                    arrenged_reactions[reaction_name_index]["reaction_name"] = reaction_name
+                    arranged_reactions[reaction_name_index] = {}
+                    arranged_reactions[reaction_name_index]["reaction_name"] = reaction_name
 
                     # Copy metadata keys (non-int keys only)
                     for rx_index_meta, rx_info in reaction_info.items():
                         if not isinstance(rx_index_meta, int):
-                            arrenged_reactions[reaction_name_index][rx_index_meta] = rx_info
+                            arranged_reactions[reaction_name_index][rx_index_meta] = rx_info
 
-                    arrenged_reactions[reaction_name_index]["monomer_1"] = monomer_1
-                    arrenged_reactions[reaction_name_index]["monomer_2"] = monomer_2
+                    arranged_reactions[reaction_name_index]["monomer_1"] = monomer_1
+                    arranged_reactions[reaction_name_index]["monomer_2"] = monomer_2
 
-    return arrenged_reactions
+    return arranged_reactions
 
 
 from typing import Dict, Any
