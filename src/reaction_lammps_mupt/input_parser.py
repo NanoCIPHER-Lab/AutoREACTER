@@ -99,11 +99,6 @@ class InputParser:
                 )
             seen[normalized] = monomer_number
 
-    def validate_inputs(self, inputs: dict) -> dict:
-        self.component_check(inputs)
-        self.validate_smiles_rdkit(inputs)
-        self.validate_no_duplicate_smiles(inputs)
-        return inputs
 
     def to_dict(self) -> dict:
         """Return the validated inputs dict (ready for main.py)."""
