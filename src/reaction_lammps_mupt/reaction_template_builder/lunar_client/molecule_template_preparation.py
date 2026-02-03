@@ -1076,8 +1076,11 @@ def map_file_write(reactant_to_product, initiator_atoms, edge_atoms, delete_ids)
     # exactly two atoms; we write them on separate lines.
     # The blank lines before and after are also part of the format and are
     # preserved to avoid changing function signature.
+    if len(initiator_atoms) != 2:
+        raise ValueError(
+            f"Expected exactly 2 initiator atoms (0-based) after filtering, got {len(initiator_atoms)}: {initiator_atoms}"
+        )
     map_file += f"\nInitiatorIDs\n\n{initiator_atoms[0]+1}\n{initiator_atoms[1]+1}\n\nEdgeIDs\n\n"
-
     # Edge atom indices are output as 1-based, one per line
     for atom in edge_atoms:
         map_file += f"{atom+1}\n"
