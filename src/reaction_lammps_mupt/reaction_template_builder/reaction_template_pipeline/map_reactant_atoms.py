@@ -257,11 +257,10 @@ def process_reactions(rxn, csv_cache, reaction_tuple, key=None,
             mapping_dict = {}     # Additional mapping dictionary
 
             # Apply atom mapping from reaction properties
+            num_total_atoms = 0
             for i, product in enumerate(product_set):
-                num_total_atoms = 0
-                if i == 1:
-                    num_total_atoms = product_set[0].GetNumAtoms()
-                
+                if i > 0:
+                    num_total_atoms += product_set[i - 1].GetNumAtoms()
                 for atom in product.GetAtoms():
                     if atom.HasProp("react_idx"):
                         r_idx = atom.GetIntProp("react_idx")
