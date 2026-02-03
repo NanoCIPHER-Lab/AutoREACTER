@@ -124,8 +124,11 @@ def cap_open_valences_with_fr(new_mol_fragment, francium_atomic_num=87):
     capped_mol = rw_mol.GetMol()
     try:
         Chem.SanitizeMol(capped_mol)
-    except:
-        pass
+    except Exception as e:
+        # Some fragments (e.g., highly unusual or intentionally "broken" structures)
+        # may fail RDKit sanitization. We keep the unsanitized molecule to preserve
+        # behavior, but log the issue for easier debugging.
+        print(f"Warning: RDKit sanitization failed for capped fragment: {e}")
 
     return {
         "object": capped_mol,
