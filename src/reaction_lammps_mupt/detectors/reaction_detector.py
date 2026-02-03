@@ -405,7 +405,7 @@ def reaction_selector(monomer_dictionary: Dict[str, Any]) -> Dict[int, Any]:
     arranged_reactions = reaction_arranger(monomer_dictionary)
     
     if not arranged_reactions:
-        raise ValueError("There is no possble reactions detected from the given monomers. Terminating program.")
+        raise ValueError("No possible reactions detected from the given monomers.")
 
     valid_indices = sorted(arranged_reactions.keys())
 

@@ -12,7 +12,6 @@ TODO (Input Parsing Layer)
 from rdkit import Chem
 
 
-from rdkit import Chem
 
 
 class InputParser:
