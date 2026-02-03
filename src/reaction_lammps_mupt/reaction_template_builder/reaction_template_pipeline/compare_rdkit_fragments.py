@@ -185,18 +185,28 @@ def compare_rdkit_fragments(processed_dict, combined_reactant_mol, combined_prod
     
     # Process Reactant Fragment
     raw_react_frag = extract_fragment_by_indices(react_mol, react_indices)
-    raw_react_info = {
-        "smiles": Chem.MolToSmiles(raw_react_frag) if raw_react_frag else "", 
-        "inchi": Chem.MolToInchi(raw_react_frag) if raw_react_frag else ""
-    }
+    try:
+        react_smiles = Chem.MolToSmiles(raw_react_frag) if raw_react_frag else ""
+    except Exception:
+        react_smiles = ""
+    try:
+        react_inchi = Chem.MolToInchi(raw_react_frag) if raw_react_frag else ""
+    except Exception:
+        react_inchi = ""
+    raw_react_info = {"smiles": react_smiles, "inchi": react_inchi}
     capped_react_info = cap_open_valences_with_fr(raw_react_frag)
     
     # Process Product Fragment
     raw_prod_frag = extract_fragment_by_indices(prod_mol, prod_indices)
-    raw_prod_info = {
-        "smiles": Chem.MolToSmiles(raw_prod_frag) if raw_prod_frag else "", 
-        "inchi": Chem.MolToInchi(raw_prod_frag) if raw_prod_frag else ""
-    }
+    try:
+        prod_smiles = Chem.MolToSmiles(raw_prod_frag) if raw_prod_frag else ""
+    except Exception:
+        prod_smiles = ""
+    try:
+        prod_inchi = Chem.MolToInchi(raw_prod_frag) if raw_prod_frag else ""
+    except Exception:
+        prod_inchi = ""
+    raw_prod_info = {"smiles": prod_smiles, "inchi": prod_inchi}
     capped_prod_info = cap_open_valences_with_fr(raw_prod_frag)
 
     # Compare against history
