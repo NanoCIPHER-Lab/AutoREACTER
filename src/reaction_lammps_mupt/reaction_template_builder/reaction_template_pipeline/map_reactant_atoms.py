@@ -370,7 +370,7 @@ def process_reactions(rxn, csv_cache, reaction_tuple, key=None,
 
             # Add any additional mappings from mapping_dict
             for r_idx, p_idx in mapping_dict.items():
-                new_row = pd.DataFrame([{"reactant_index": r_idx, "product_idx": p_idx}])
+                new_row = pd.DataFrame([{"reactant_idx": r_idx, "product_idx": p_idx}])
                 df = pd.concat([df, new_row], ignore_index=True)
 
             # Create comprehensive DataFrame with all analysis columns
