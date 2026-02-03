@@ -152,13 +152,14 @@ def compare_fragments(mol1_info, mol2_info):
         return False
     
     # Check SMILES identity
-    if mol1_info.get("smiles") == mol2_info.get("smiles"):
+    smiles1, smiles2 = mol1_info.get("smiles"), mol2_info.get("smiles")
+    if smiles1 and smiles2 and smiles1 == smiles2:
         return True
 
     # Check InChI identity (more robust for tautomers/stereoisomers in some cases)
-    if mol1_info.get("inchi") == mol2_info.get("inchi"):
+    inchi1, inchi2 = mol1_info.get("inchi"), mol2_info.get("inchi")
+    if inchi1 and inchi2 and inchi1 == inchi2:
         return True
-        
     return False
 
 def compare_rdkit_fragments(processed_dict, combined_reactant_mol, combined_product_mol, template_mapped_dict):
