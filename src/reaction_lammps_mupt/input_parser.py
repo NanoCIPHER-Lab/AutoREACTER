@@ -44,7 +44,7 @@ class InputParser:
             )
 
     def _validate_smiles(self, smiles: str) -> None:
-        mol = Chem.MolFromSmiles(smiles)
+        mol = Chem.MolFromSmiles(smiles.strip())
         if mol is None:
             raise ValueError(f"Invalid SMILES string: {smiles!r}. Terminating program.")
 
