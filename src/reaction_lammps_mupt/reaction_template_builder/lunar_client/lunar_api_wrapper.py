@@ -23,21 +23,12 @@ TODO:
 # Define cache directories for LUNAR steps
 # Base cache directory can be configured via the LUNAR_CACHE_DIR environment variable.
 # If not set, it falls back to the original hardcoded path to preserve existing behavior.
-LUNAR_CACHE_DIR = os.environ.get(
-    "LUNAR_CACHE_DIR",
-    r"C:\Users\Janitha\Documents\GitHub\reaction_lammps_mupt\cache\lunar",
-)
-test_cache = LUNAR_CACHE_DIR
-test_cache_atom_typing = os.path.join(test_cache, "atom_typing")
-test_cache_all2lmp = os.path.join(test_cache, "all2lmp")
-test_cache_bond_react_merge = os.path.join(test_cache, "bond_react_merge")
-
-for p in (test_cache, test_cache_atom_typing, test_cache_all2lmp, test_cache_bond_react_merge):
-    os.makedirs(p, exist_ok=True)
-# Ensure cache directory exists (redundant but safe)
 
 # Import LUNAR location detection module
-from locate_LUNAR import get_LUNAR_loc
+try:
+    from locate_lunar import get_LUNAR_loc
+except ImportError:
+    from .locate_lunar import get_LUNAR_loc
 
 # Get current working directory
 cwd = os.getcwd()
@@ -50,6 +41,51 @@ atom_typing_py = os.path.join(LUNAR_LOCATION, "atom_typing.py")
 all2lmp_py = os.path.join(LUNAR_LOCATION, "all2lmp.py")
 bond_react_merge_py = os.path.join(LUNAR_LOCATION, "bond_react_merge.py")
 
+import platform
+import shutil
+
+def _is_wsl() -> bool:
+    return ("microsoft" in platform.release().lower()) or ("WSL_INTEROP" in os.environ)
+
+def normalize_path(p: str | Path) -> str:
+    p = str(p).strip().strip('"').strip("'")
+
+    # normalize separators for parsing
+    p = p.replace("\\", "/")
+
+    # 1) WSL host: Windows drive path -> /mnt/<drive>/
+    if _is_wsl():
+        m = re.match(r"^([A-Za-z]):/(.*)$", p)
+        if m:
+            drive = m.group(1).lower()
+            rest = m.group(2)
+            return f"/mnt/{drive}/{rest}"
+        # already POSIX-ish on WSL
+        return os.path.normpath(p)
+
+    host = platform.system().lower()
+
+    # 2) Windows host: /mnt/<drive>/... -> <DRIVE>:\...
+    if host == "windows":
+        m = re.match(r"^/?mnt/([A-Za-z])/(.*)$", p)
+        if m:
+            drive = m.group(1).upper()
+            rest = m.group(2).replace("/", "\\")
+            return f"{drive}:\\{rest}"
+        # otherwise treat as Windows-ish path string
+        return os.path.normpath(p.replace("/", "\\"))
+
+    # 3) POSIX host (Linux/macOS, not WSL): keep POSIX
+    return os.path.normpath(p)
+
+def move_merge_outputs(src_dir: Path, dst_dir: Path):
+    src_dir = Path(src_dir)
+    dst_dir = Path(dst_dir)
+    dst_dir.mkdir(parents=True, exist_ok=True)
+
+    for pattern in ("*_merged.data", "*_merged.lmpmol", "force_field.data", "log.lammps", "*.log"):
+        for f in src_dir.glob(pattern):
+            shutil.move(str(f), str(dst_dir / f.name))
 
 def loading_screen(name: str = "LUNAR") -> None:
     """
@@ -126,7 +162,7 @@ def get_ending_integer(s: str) -> int | None:
         return None
     
 
-def run_LUNAR_atom_typing(molecule_files: dict[str, Path]) -> dict[str, list[Path]]:
+def run_LUNAR_atom_typing(molecule_files: dict[str, Path], cache_atom_typing: Path) -> dict[str, list[Path]]:
     """
     Run LUNAR atom typing on a set of molecule files.
     
@@ -159,7 +195,7 @@ def run_LUNAR_atom_typing(molecule_files: dict[str, Path]) -> dict[str, list[Pat
             sys.executable,          # Use the current Python interpreter
             atom_typing_py,          # Path to atom_typing.py script
             '-topo', str(file),      # Input topology file
-            '-dir', test_cache_atom_typing,  # Output directory
+            '-dir', cache_atom_typing,  # Output directory
             "-ff", "PCFF-IFF",       # Force field specification
             "-del-method", "mass",   # Deletion method (based on mass)
             "-del-crit", "0"         # Deletion criterion
@@ -168,8 +204,8 @@ def run_LUNAR_atom_typing(molecule_files: dict[str, Path]) -> dict[str, list[Pat
         # Store paths to generated files
         # LUNAR generates two files: <stem>_typed.data and <stem>_typed.nta
         molecule_files_typed[name] = [
-            Path(test_cache_atom_typing) / f"{file.stem}_typed.data",
-            Path(test_cache_atom_typing) / f"{file.stem}_typed.nta"
+            Path(cache_atom_typing) / f"{Path(file).stem}_typed.data",
+            Path(cache_atom_typing) / f"{Path(file).stem}_typed.nta"
         ]
 
     time.sleep(1)  # Ensure all files are written before returning
@@ -184,7 +220,7 @@ def run_LUNAR_atom_typing(molecule_files: dict[str, Path]) -> dict[str, list[Pat
     return molecule_files_typed
 
 
-def run_LUNAR_all2lmp(molecule_files_typed: dict[str, list[Path]]) -> dict[str, str]:
+def run_LUNAR_all2lmp(molecule_files_typed: dict[str, list[Path]], cache_all2lmp: Path) -> dict[str, str]:
     """
     Convert typed molecule files to LAMMPS data format using LUNAR's all2lmp utility.
     
@@ -221,7 +257,7 @@ def run_LUNAR_all2lmp(molecule_files_typed: dict[str, list[Path]]) -> dict[str, 
             '-topo', str(data_file), # Typed data file
             '-nta', str(nta_file),   # NTA file
             '-frc', frc_file,        # Force field file
-            '-dir', test_cache_all2lmp  # Output directory
+            '-dir', cache_all2lmp  # Output directory
         ])
         
         # Store the generated LAMMPS data filename
@@ -231,7 +267,7 @@ def run_LUNAR_all2lmp(molecule_files_typed: dict[str, list[Path]]) -> dict[str, 
     time.sleep(1)  # Ensure all files are written before returning
     for name, path in molecule_files_all2lmp.items():
         # Construct full path to the generated file
-        path = Path(test_cache_all2lmp) / path
+        path = Path(cache_all2lmp) / path
         if Path(path).is_file():
             print(f"[LUNAR bond_react_merge] Generated file for {name} at: {path}")
         else:
@@ -241,72 +277,57 @@ def run_LUNAR_all2lmp(molecule_files_typed: dict[str, list[Path]]) -> dict[str, 
     return molecule_files_all2lmp
 
 
-def write_bond_react_merge_input(molecule_files_all2lmp: dict[str, str]) -> Path:
-    """
-    Generate input file for LUNAR's bond_react_merge utility.
-    
-    This function creates a configuration file that specifies which LAMMPS data
-    files to merge and how to process them for reactive simulations.
-    
+def write_bond_react_merge_input(
+    molecule_files_all2lmp: dict[str, str],
+    cache_bond_react_merge: Path,
+    cache_all2lmp: Path
+) -> Path:
+    """Generate the merge input file used by Bond React Merge binaries.
+
     Args:
-        molecule_files_all2lmp (dict[str, str]): Dictionary mapping molecule 
-                                                names to LAMMPS data filenames.
-    
+        molecule_files_all2lmp: Mapping of file tags to their corresponding LAMMPS filenames.
+        cache_bond_react_merge: Target directory where the merge input and merge results will be written.
+        cache_all2lmp: Directory that holds the generated LAMMPS files referenced in the merge list.
+
     Returns:
-        Path: Path to the directory containing the generated merge input file.
-    
-    Note:
-        The generated file follows LUNAR's bond_react_merge input format with
-        sections for file tags, filenames, and comments.
+        Path to the directory containing the newly written merge_input.txt file.
     """
-    # Start building the merge input file content
-    # Header with format explanation
-    merge_files: str = f"""# anything following the "#" character will be ignored 
- 
-# Specify a desired path to append to the front of each filename (optional however if not present 
-# and the files are a path from LUNAR on your computer each file below must have that path 
-# specified in front of the filename) 
+    # Ensure the provided paths are normalized (resolving redundant separators, symlinks, etc.).
+    cache_bond_react_merge_normalized = Path(normalize_path(cache_bond_react_merge))
+    cache_all2lmp = Path(normalize_path(cache_all2lmp))
 
-path = "{test_cache_all2lmp}" 
+    # Create the output directory if it does not already exist.
+    os.makedirs(cache_bond_react_merge_normalized, exist_ok=True)
+    # Initialize the merge input file content with header comments and column titles.
+    merge_files = f"""# anything following the "#" character will be ignored
 
-{"# file-tag":<15}{"filename":<40}{"comment (required)"}  
+{"# file-tag":<10}{"filename":<150}{"comment (required)"}
 """
-    
-    # Add entries for each molecule file
+
+    # Append one line per molecule file describing the tag, absolute path, and reason comment.
     for name, lammps_file in molecule_files_all2lmp.items():
-        # Determine appropriate comment based on file type
         if name.startswith("data"):
-            # Data files contain all force field coefficients
             comment = "# This datafile will have all coeffs in it"
         else:
-            # Pre- and post-reaction files are associated with specific reactions
             rxn_number = get_ending_integer(name)
             comment = f"# for rxn{rxn_number}"
-        
-        # Add formatted line to the merge file
-        merge_files += f"{name:<15}{lammps_file:<40}{comment} file\n"
-    
-    # Add footer with output directory specification
-    merge_files += f""" 
-# Specify the parent_directory of where to write results (optional) 
-parent_directory = "{test_cache_bond_react_merge}"
-"""
-    
-    # Ensure the output directory exists
-    try:
-        os.makedirs(test_cache_bond_react_merge, exist_ok=True)
-    except FileExistsError:
-        # Directory already exists, continue without error
-        pass
 
-    # Write the merge input file
-    merge_input_path = os.path.join(test_cache_bond_react_merge, "merge_input.txt")
-    with open(merge_input_path, "w") as f:
-        f.write(merge_files)
-    
-    time.sleep(1)  # Ensure the merge input file is fully written before returning
-    # Return the directory containing the merge input file
-    return Path(test_cache_bond_react_merge)
+        full_file = normalize_path(Path(cache_all2lmp) / lammps_file)
+        merge_files += f"{name:<10}{full_file:<150}{comment}\n"
+
+    # Specify where the merge outputs should be written to within the merge_input file.
+    merge_files += f"""
+# Specify the parent_directory of where to write results (optional)
+"""
+    # Write the complete merge input text to the target file.
+    with open(cache_bond_react_merge_normalized / "merge_input.txt", "w") as merge_input_file:
+        merge_input_file.write(merge_files)
+
+    move_merge_outputs(cache_all2lmp, cache_bond_react_merge)
+
+    return cache_bond_react_merge
+
+
 
 def run_bond_react_merge(merge_input_file_path: Path, 
                          molecule_files_all2lmp: dict[str, str]) -> dict[str, Path]:
@@ -338,7 +359,7 @@ def run_bond_react_merge(merge_input_file_path: Path,
         python3 bond_react_merge.py -files infile:merge_input.txt -atomstyle full
     """
     molecule_files_bond_react_merge: dict[str, Path] = {}
-    
+    merge_input_file_path = Path(normalize_path(merge_input_file_path))
     # Construct and execute the bond_react_merge command
     # Command format: python bond_react_merge.py -files infile:<input_file> -atomstyle full
     subprocess.run(
@@ -357,29 +378,29 @@ def run_bond_react_merge(merge_input_file_path: Path,
         if name.startswith("data"):
             # Data files generate merged .data files
             molecule_files_bond_react_merge[name] = (
-                merge_input_file_path / f"{name}_typed_IFF_merged.data"
+                os.path.join(merge_input_file_path, f"{name}_typed_IFF_merged.data")
             )
         elif name.startswith("pre"):
             # Pre-reaction files generate .lmpmol files
             rxn_number = get_ending_integer(name)
             molecule_files_bond_react_merge[name] = (
-                merge_input_file_path / f"pre{rxn_number}_typed_IFF_merged.lmpmol"
+                os.path.join(merge_input_file_path, f"pre_{rxn_number}_typed_IFF_merged.lmpmol")
             )
         elif name.startswith("post"):
             # Post-reaction files generate .lmpmol files
             rxn_number = get_ending_integer(name)
             molecule_files_bond_react_merge[name] = (
-                merge_input_file_path / f"post{rxn_number}_typed_IFF_merged.lmpmol"
+                os.path.join(merge_input_file_path, f"post_{rxn_number}_typed_IFF_merged.lmpmol")
             )
     
     # Add the force field data file (generated by bond_react_merge)
     molecule_files_bond_react_merge["force_field_data"] = (
-        merge_input_file_path / "force_field.data"
+        os.path.join(merge_input_file_path, "force_field.data")
     )
     
     # Verify that all expected output files were created
     for name, path in molecule_files_bond_react_merge.items():
-        if path.is_file():
+        if os.path.isfile(path):
             print(f"[LUNAR bond_react_merge] Generated file for {name} at: {path}")
         else:
             raise FileNotFoundError(
@@ -389,7 +410,7 @@ def run_bond_react_merge(merge_input_file_path: Path,
     return molecule_files_bond_react_merge
 
 
-def lunar_workflow(molecule_files: dict[str, Path]) -> dict[str, Path]:
+def lunar_workflow(molecule_files: dict[str, Path], cache_dir: Path) -> dict[str, Path]:
     """
     Execute the complete LUNAR workflow for preparing molecules for LAMMPS simulations.
     
@@ -414,22 +435,35 @@ def lunar_workflow(molecule_files: dict[str, Path]) -> dict[str, Path]:
         3. Write bond_react_merge input file
         4. Run bond_react_merge utility
     """
+    lunar_cache = os.path.join(cache_dir, "lunar")
+    os.makedirs(lunar_cache, exist_ok=True)
+    LUNAR_CACHE_DIR = os.environ.get(
+        "LUNAR_CACHE_DIR",
+        lunar_cache
+    )
+    cache_atom_typing = os.path.join(LUNAR_CACHE_DIR, "atom_typing")
+    cache_all2lmp = os.path.join(LUNAR_CACHE_DIR, "all2lmp")
+    cache_bond_react_merge = os.path.join(LUNAR_CACHE_DIR, "bond_react_merge")
+
+    for p in (LUNAR_CACHE_DIR, cache_atom_typing, cache_all2lmp, cache_bond_react_merge):
+        os.makedirs(p, exist_ok=True)
+    # Ensure cache directory exists (redundant but safe)
     # Step 0: Show loading screen
     loading_screen("LUNAR Workflow")
     
     # Step 1: Run atom typing
-    typed_files = run_LUNAR_atom_typing(molecule_files)
+    typed_files = run_LUNAR_atom_typing(molecule_files, cache_atom_typing)
     
     # Step 2: Run all2lmp conversion
-    all2lmp_files = run_LUNAR_all2lmp(typed_files)
+    all2lmp_files = run_LUNAR_all2lmp(typed_files, cache_all2lmp)
     
     # Step 3: Write bond_react_merge input file
-    merge_input_path = write_bond_react_merge_input(all2lmp_files)
+    merge_input_path = write_bond_react_merge_input(all2lmp_files, cache_bond_react_merge, cache_all2lmp)
     
     # Step 4: Run bond_react_merge
-    final_files = run_bond_react_merge(merge_input_path, all2lmp_files)
+    lunar_files = run_bond_react_merge(merge_input_path, all2lmp_files)
     
-    return final_files
+    return lunar_files
     
 if __name__ == "__main__":
     """
@@ -441,7 +475,10 @@ if __name__ == "__main__":
     """
     # Import Path here to avoid circular imports if this module is imported elsewhere
     from pathlib import Path
-    from molecule_3d_preparation import prepare_3d_molecule
+    try:
+        from molecule_3d_preparation import prepare_3d_molecule
+    except ImportError:
+        from lunar_api_wrapper.molecule_3d_preparation import prepare_3d_molecule
     from rdkit import Chem
     from rdkit.Chem import AllChem
     # Example usage: construct reactants, run a SMARTS-based reaction, prepare 3D structures,
@@ -496,22 +533,22 @@ if __name__ == "__main__":
     # Define sample molecule files for testing
     # Note: These paths are specific to the original developer's system
     molecule_files: dict[str, Path] = {
-        "data1": Path(r"C:\Users\Janitha\Documents\GitHub\reaction_lammps_mupt\cache\lunar\data1.mol"),
-        "data2": Path(r"C:\Users\Janitha\Documents\GitHub\reaction_lammps_mupt\cache\lunar\data2.mol"),
-        "pre1":  Path(r"C:\Users\Janitha\Documents\GitHub\reaction_lammps_mupt\cache\lunar\pre1.mol"),
-        "post1": Path(r"C:\Users\Janitha\Documents\GitHub\reaction_lammps_mupt\cache\lunar\post1.mol"),
+        "data_1": Path(r"C:\Users\Janitha\Documents\GitHub\reaction_lammps_mupt\cache\lunar\data1.mol"),
+        "data_2": Path(r"C:\Users\Janitha\Documents\GitHub\reaction_lammps_mupt\cache\lunar\data2.mol"),
+        "pre_1":  Path(r"C:\Users\Janitha\Documents\GitHub\reaction_lammps_mupt\cache\lunar\pre1.mol"),
+        "post_1": Path(r"C:\Users\Janitha\Documents\GitHub\reaction_lammps_mupt\cache\lunar\post1.mol"),
     }
     
     # Execute the complete LUNAR workflow
-    final_files = lunar_workflow(molecule_files)
+    lunar_files = lunar_workflow(molecule_files)
     
     # Output summary of generated files
     print("\n" + "=" * 80)
     print("LUNAR Workflow Complete!")
     print("Generated files:")
-    for name, path in final_files.items():
+    for name, path in lunar_files.items():
         print(f"  {name}: {path}")
     print("=" * 80)
     import json
     with open(Path(test_cache) / "lunar_workflow_summary.txt", "w") as summary_file:
-        summary_file.write(json.dumps(final_files, indent=4, default=str))
+        summary_file.write(json.dumps(lunar_files, indent=4, default=str))

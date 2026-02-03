@@ -1,0 +1,13 @@
+{
+  "simulation_name": "MySimulation",
+  "temperature": [300, 400, 500],
+  "density": 0.8,
+  "monomers": {
+    "1": "OCCC(O)=O",
+    "2": "C1=CC=C(C(=C1)C(=O)O)O"
+  },
+  "number_of_monomers": {
+    "1": 500,
+    "2": 400
+  }
+}
