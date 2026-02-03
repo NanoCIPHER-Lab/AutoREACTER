@@ -460,25 +460,16 @@ def save_grid_image(mols, cache, key=None):
 
 def reaction_tuples(same_reactants, mol_reactant_1, mol_reactant_2):
     """
-    Generate reaction tuples based on whether reactants are the same or different.
-    
-    Args:
-        same_reactants (bool): Whether both reactants are the same molecule
-        mol_reactant_1 (Chem.Mol): First reactant molecule
-        mol_reactant_2 (Chem.Mol): Second reactant molecule (can be None)
-        
-    Returns:
-        list: List of reactant pairs for reaction processing
-        
-    Note:
-        For same reactants, returns both [A,B] and [B,A] to account for symmetry.
-        For different reactants, returns only [A,B].
+    Generate reactant pair orderings for reaction processing.
+
+    - For same reactants: only one unique ordering [A, A].
+    - For different reactants: return both [A, B] and [B, A] to avoid relying
+      on reactant ordering and to support order-dependent reaction definitions.
     """
     if same_reactants:
-        mol_reactant_2 = mol_reactant_1
+        return [[mol_reactant_1, mol_reactant_1]]
 
     return [[mol_reactant_1, mol_reactant_2], [mol_reactant_2, mol_reactant_1]]
-
 
 
 def process_reaction_dict(detected_reactions, cache):
