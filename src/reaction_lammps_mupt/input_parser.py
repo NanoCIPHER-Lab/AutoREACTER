@@ -9,7 +9,6 @@ TODO (Input Parsing Layer)
 - [ ] Output a clean, consistently-formatted dictionary to feed into main.py.
 """
 
-import sys
 import os
 from rdkit import Chem
 
