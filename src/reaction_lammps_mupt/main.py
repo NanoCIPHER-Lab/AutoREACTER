@@ -23,7 +23,7 @@ if __name__ == "__main__":
     # modify this to a cmd line argument later and to support this way as well
     inputs = InputParser(inputs)
     print(inputs.validated_inputs)
-    reactions = detect_reactions(inputs.validated_inputs)
+    reactions, non_reactants = detect_reactions(inputs.validated_inputs)
     print("Detected Reactions:", reactions)
 
 
