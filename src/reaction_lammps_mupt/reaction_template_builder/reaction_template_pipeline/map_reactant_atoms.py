@@ -322,14 +322,25 @@ def process_reactions(rxn, csv_cache, reaction_tuple, key=None,
                 )
 
             # Apply smart mapping to both reactants
-            sub_set1 = is_number_in_set(matches_1, r1)
-            smart_mapping(reactant=r1, smarts_template=rxn.GetReactants()[0], 
-                         match_tuple=sub_set1 if sub_set1 else ())
+            try:
+                sub_set1 = is_number_in_set(matches_1, r1)
+            except ValueError:
+                sub_set1 = ()
+            smart_mapping(
+                reactant=r1,
+                smarts_template=rxn.GetReactants()[0],
+                match_tuple=sub_set1 if sub_set1 else (),
+            )
             
-
-            sub_set2 = is_number_in_set(matches_2, r2)
-            smart_mapping(reactant=r2, smarts_template=rxn.GetReactants()[1], 
-                         match_tuple=sub_set2 if sub_set2 else ())
+            try:
+                sub_set2 = is_number_in_set(matches_2, r2)
+            except ValueError:
+                sub_set2 = ()
+            smart_mapping(
+                reactant=r2,
+                smarts_template=rxn.GetReactants()[1],
+                match_tuple=sub_set2 if sub_set2 else (),
+            )
 
             # Recombine reactants after mapping
             reactant_combined = Chem.CombineMols(r1, r2)
