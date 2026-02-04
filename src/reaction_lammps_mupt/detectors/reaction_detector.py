@@ -370,7 +370,11 @@ def reaction_arranger(monomer_dictionary: dict) -> dict:
                     reaction_name_index += 1
                     monomer_1_smiles = monomer_1["smiles"]
                     print(f"{reaction_name_index}. {reaction_name} homomonomer identified: {monomer_1_smiles}")
-
+                    # Optional comment display
+                    comment = reaction_info.get("comments", None)
+                    if comment:
+                        print(f"   Note: {comment}")
+                
                     arranged_reactions[reaction_name_index] = {}
                     arranged_reactions[reaction_name_index]["reaction_name"] = reaction_name
 
@@ -387,6 +391,11 @@ def reaction_arranger(monomer_dictionary: dict) -> dict:
                     monomer_1_smiles = monomer_1["smiles"]
                     monomer_2_smiles = monomer_2["smiles"]
                     print(f"{reaction_name_index}. {reaction_name} comonomers identified: {monomer_1_smiles} and {monomer_2_smiles}.")
+
+                    # Optional comment display
+                    comment = reaction_info.get("comments", None)
+                    if comment:
+                        print(f"   Note: {comment}")
 
                     arranged_reactions[reaction_name_index] = {}
                     arranged_reactions[reaction_name_index]["reaction_name"] = reaction_name
