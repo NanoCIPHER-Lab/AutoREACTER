@@ -15,6 +15,7 @@ Key features:
 Author: Janitha Mahanthe
 Date: 1/21/2026
 Version: 0.1.0
+# TODO: Return mols with mapped atoms for visualization for each reaction with highlighting
 """
 
 from rdkit import Chem
