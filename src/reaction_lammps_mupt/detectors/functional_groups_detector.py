@@ -105,27 +105,6 @@ import json
 # Note: Potential for monomers with mixed groups like COCl and COOH is unaddressed.
 # Can be many more functional groups added here
 monomer_types = {
-    # "vinyl_monomer": {
-    #     "functionality_type": "vinyl",
-    #     "smarts_1": "[C]=[C;D1]",
-    #     "group_name": "vinyl"
-    # },
-    # "hydroxy_carboxylic_acid_monomer": {
-    #     "functionality_type": "di_different",
-    #     "smarts_1": "[OX2H1;!$(OC=*):1]",
-    #     "smarts_2": "[CX3:2](=[O])[OX2H1]",
-    #     "group_name": "hydroxy_carboxylic_acid"
-    # },
-    # "cyclic_olefin_monomer": {
-    #     "functionality_type": "vinyl",
-    #     "smarts_1": "[CX3;R:1]=[CX3;R:2]",
-    #     "group_name": "cyclic_olefin"
-    # },
-    # "lactone_monomer": {
-    #     "functionality_type": "mono",
-    #     "smarts_1": "[CX3;R:1](=[OX1])[OX2;R:2]",
-    #     "group_name": "lactone"
-    # },
     "hydroxy_carboxylic_acid_monomer": {
         "functionality_type": "di_different",
         "smarts_1": "[OX2H1;!$(OC=*):1]",
@@ -139,20 +118,38 @@ monomer_types = {
         "group_name": "hydroxy_acid_halide",
         "comments": "Hydroxy acid halides are highly reactive and less commonly used monomers for polyesterification compared to hydroxy carboxylic acids."
     },  
-    # "di_carboxylic_acid_monomer": {
-    #     "functionality_type": "di_identical",
-    #     "smarts_1": "[CX3:1](=[O])[OX2H1]",
-    #     "group_name": "di_carboxylic_acid"
+    "diol_monomer": {
+        "functionality_type": "di_identical",
+        "smarts_1": "[O,S;X2;H1;!$([O,S]C=*):3]",
+        "group_name": "diol",
+        "comments": None,
+     },
+    "di_carboxylic_acid_halide_monomer": {
+        "functionality_type": "di_identical",
+        "smarts_1": "[CX3:1](=[O])[Cl,Br,I]",
+        "group_name": "di_carboxylic_acid_halide",
+        "comments": None,
+    },
+    "di_carboxylic_acid_monomer": {
+        "functionality_type": "di_identical",
+        "smarts_1": "[CX3:1](=[O])[OX2H1]",
+        "group_name": "di_carboxylic_acid",
+        "comments": None,
+    },
+    # "vinyl_monomer": {
+    #     "functionality_type": "vinyl",
+    #     "smarts_1": "[C]=[C;D1]",
+    #     "group_name": "vinyl"
     # },
-    # "di_carboxylic_acidhalide_monomer": {
-    #     "functionality_type": "di_identical",
-    #     "smarts_1": "[CX3:1](=[O])[Cl,Br]",
-    #     "group_name": "di_carboxylic_acidhalide"
+    # "cyclic_olefin_monomer": {
+    #     "functionality_type": "vinyl",
+    #     "smarts_1": "[CX3;R:1]=[CX3;R:2]",
+    #     "group_name": "cyclic_olefin"
     # },
-    # "diol_monomer": {
-    #     "functionality_type": "di_identical",
-    #     "smarts_1": "[O,S;X2;H1;!$([O,S]C=*):3]",
-    #     "group_name": "diol"
+    # "lactone_monomer": {
+    #     "functionality_type": "mono",
+    #     "smarts_1": "[CX3;R:1](=[OX1])[OX2;R:2]",
+    #     "group_name": "lactone"
     # },
     # "cyclic_anhydride_monomer": {
     #     "functionality_type": "mono",

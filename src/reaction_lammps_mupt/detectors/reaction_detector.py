@@ -91,6 +91,30 @@ reactions = {
                       "reaction_and_mechanism": ["https://pubs.acs.org/doi/10.1021/ed073pA312"]},
         "comments": "This is not a commonly documented reaction, but it is a possibke polyesterification between hydroxy acids and carboxylic acids. Since hydroxy acid halides are highly reactive,monomers are less known and not widely used in practice."
     },
+    "Diol and Di-Acid Halide Polycondensation(Polyesterification)": {
+        "same_reactants": False,
+        "reactant_1": "diol",
+        "reactant_2": "di_carboxylic_acid_halide",
+        "product": "polyester_chain",   
+        "delete_atom": True,
+        "reaction": "[CX3:1](=[O:3])[Cl,Br,I:4].[O,S;X2;H1;!$([O,S]C=*):2]-[H:5]>>[CX3:1](=[O:3])-[O,S;X2;!$([O,S]C=*):2].[Cl,Br,I:4]-[H:5]",
+        "reference": {"smarts": ["https://pubs.acs.org/doi/10.1021/acs.jcim.3c00329"],
+                      "reaction_and_mechanism": ["https://pubs.acs.org/doi/10.1021/ed048pA734.1", 
+                                                 "https://pubs.acs.org/doi/10.1021/ed073pA312"]},
+        "comments": None
+    },
+    "Diol and Di-Carboxylic Acid Polycondensation(Polyesterification)": {
+        "same_reactants": False,
+        "reactant_1": "diol",
+        "reactant_2": "di_carboxylic_acid",
+        "product": "polyester_chain",   
+        "delete_atom": True,
+        "reaction": "[CX3:1](=[O:3])[OX2H1:4].[O,S;X2;H1;!$([O,S]C=*):2]-[H:5]>>[CX3:1](=[O:3])-[O,S;X2;!$([O,S]C=*):2].[O:4]-[H:5]",
+        "reference": {"smarts": ["https://pubs.acs.org/doi/10.1021/acs.jcim.3c00329"],
+                      "reaction_and_mechanism": ["https://pubs.acs.org/doi/10.1021/ed048pA734.1", 
+                                                 "https://pubs.acs.org/doi/10.1021/ed073pA312"]},
+        "comments": None
+    },
     # "Diol and Di-Carboxylic Acid Polycondensation(Polyesterification)": {
     #     "same_reactants": False,
     #     "reactant_1": "diol",
@@ -371,7 +395,10 @@ def reaction_arranger(monomer_dictionary: dict) -> dict:
                     monomer_1_smiles = monomer_1["smiles"]
                     print(f"{reaction_name_index}. {reaction_name} homomonomer identified: {monomer_1_smiles}")
                     # Optional comment display
-                    comment = reaction_info.get("comments", None)
+                    try:
+                        comment = reaction_info.get("comments", None)
+                    except Exception:
+                        comment = None
                     if comment:
                         print(f"   Note: {comment}")
                 
@@ -393,7 +420,10 @@ def reaction_arranger(monomer_dictionary: dict) -> dict:
                     print(f"{reaction_name_index}. {reaction_name} comonomers identified: {monomer_1_smiles} and {monomer_2_smiles}.")
 
                     # Optional comment display
-                    comment = reaction_info.get("comments", None)
+                    try:
+                        comment = reaction_info.get("comments", None)
+                    except Exception:
+                        comment = None
                     if comment:
                         print(f"   Note: {comment}")
 
