@@ -70,10 +70,10 @@ reactions = {
                       "reaction_and_mechanism": ["https://pubs.acs.org/doi/10.1021/ed048pA734.1", 
                                                  "https://pubs.acs.org/doi/10.1021/ed073pA312"]}
     },
-    "Hydroxy Acyl Chlorides Hydroxy Acyl Chlorides Polycondensation(Polyesterification)": {
+    "Hydroxy Acid Halides Hydroxy Acid Halides Polycondensation(Polyesterification)": {
         "same_reactants": False,
-        "reactant_1": "hydroxy_acyl_chlorides_monomer",
-        "reactant_2": "hydroxy_acyl_chlorides_monomer",
+        "reactant_1": "hydroxy_acid_halides_monomer",
+        "reactant_2": "hydroxy_acid_halides_monomer",
         "product": "polyester_chain",
         "delete_atom": True,
         "reaction": "[O;!$(OC=*):1]-[H:3].[CX3:2](=[O:5])[Cl,Br,I:4]>>[OX2:1]-[CX3:2](=[O:5]).[Cl,Br,I:4]-[H:3]",
@@ -81,12 +81,12 @@ reactions = {
                       "reaction_and_mechanism": ["https://pubs.acs.org/doi/10.1021/ed073pA312"]},
         "comments": "This is not a commonly documented reaction, but it is a possibke polyesterification between hydroxy acids and carboxylic acids. Since hydroxy acid halides are highly reactive,monomers are less known and not widely used in practice.",
     },
-    " Hydroxy Acyl Chlorides Polycondensation(Polyesterification)": {
+    "Hydroxy Acid Halides Polycondensation(Polyesterification)": {
         "same_reactants": True,
-        "reactant_1": "hydroxy_acyl_chlorides_monomer",
+        "reactant_1": "hydroxy_acid_halides_monomer",
         "product": "polyester_chain",
         "delete_atom": True,
-        "reaction": "[O;!$(OC=*):1]-[H:3].[CX3:2](=[O:5])[OX2H1:4]>>[OX2:1]-[CX3:2](=[O:5]).[O:4]-[H:3]",
+        "reaction": "[O;!$(OC=*):1]-[H:3].[CX3:2](=[O:5])[Cl,Br,I:4]>>[OX2:1]-[CX3:2](=[O:5]).[Cl,Br,I:4]-[H:3]",
         "reference": {"smarts": None,
                       "reaction_and_mechanism": ["https://pubs.acs.org/doi/10.1021/ed073pA312"]},
         "comments": "This is not a commonly documented reaction, but it is a possibke polyesterification between hydroxy acids and carboxylic acids. Since hydroxy acid halides are highly reactive,monomers are less known and not widely used in practice."

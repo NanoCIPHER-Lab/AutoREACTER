@@ -132,11 +132,11 @@ monomer_types = {
         "smarts_2": "[CX3:2](=[O])[OX2H1]",
         "group_name": "hydroxy_carboxylic_acid"
     },
-    "hydroxy_acyl_chlorides_monomer": {
+    "hydroxy_acid_halides_monomer": {
         "functionality_type": "di_different",
         "smarts_1": "[OX2H1;!$(OC=*):1]",
         "smarts_2": "[CX3:2](=[O])[Cl,Br,I]",
-        "group_name": "hydroxy_acyl_chloride",
+        "group_name": "hydroxy_acid_halide",
         "comments": "Hydroxy acid halides are highly reactive and less commonly used monomers for polyesterification compared to hydroxy carboxylic acids."
     },  
     # "di_carboxylic_acid_monomer": {
