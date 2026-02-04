@@ -7,7 +7,7 @@ name = "reaction_lammps_mupt"
 version = "0.1.0"
 description = "A toolkit for LAMMPS reaction modeling within MuPT"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.13"
 dependencies = [
     "numpy",
     "pandas",
