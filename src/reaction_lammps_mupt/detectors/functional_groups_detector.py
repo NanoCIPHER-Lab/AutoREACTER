@@ -132,6 +132,8 @@ monomer_types = {
         "smarts_2": "[CX3:2](=[O])[OX2H1]",
         "group_name": "hydroxy_carboxylic_acid"
     },
+
+    
     # "di_carboxylic_acid_monomer": {
     #     "functionality_type": "di_identical",
     #     "smarts_1": "[CX3:1](=[O])[OX2H1]",
@@ -227,7 +229,6 @@ def detect_monomer_functionality(smiles: str, functionality_type: str, smarts_1:
     if patt1 is None:
         return 0, None, None
 
-    # has to fix di identical case
     if smarts_2:
         # Handle 'di_different' types with two distinct patterns
         patt2 = Chem.MolFromSmarts(smarts_2)
@@ -242,17 +243,20 @@ def detect_monomer_functionality(smiles: str, functionality_type: str, smarts_1:
             return 2, functional_count_1, functional_count_2
         else:
             return 0, functional_count_1, functional_count_2
+        
     else:
         # Count occurrences of primary pattern
         functional_count_1 = len(mol.GetSubstructMatches(patt1))
 
+        if functionality_type == "di_identical":
+            # Check if the match occurs more than once for di_identical functionality
+            if functional_count_1 >= 2:
+                return 2, functional_count_1, None
+            else:
+                return 0, functional_count_1, None
+        
+        # For vinyl or mono
         if functional_count_1 >= 1:
-            if functionality_type == "di_identical":
-                # Check if the match occurs more than once for di_identical functionality
-                if functional_count_1 >= 2:
-                    return 2, functional_count_1, None
-                else:
-                    return 0, functional_count_1, None
             return 1, functional_count_1, None
         else:
             return 0, 0, None
@@ -292,8 +296,10 @@ def functional_groups_detector(monomer_dictionary: dict) -> dict:
                     functional_group["functionality_type"],
                     functional_group["smarts_1"],
                 )
-                if functionality == 1:
+                if functionality >= 1:
                     functional_group_index += 1
+                    if functional_group["comments"]:
+                        print(f"Note: Monomer {indexm} ({smiles}) - {functional_group['comments']}")
                     print(f"Monomer {indexm} ({smiles}) has functionality: {functional_group['group_name']}")
                     if indexm not in selected_monomers:
                         selected_monomers[indexm] = {"smiles": smiles}
@@ -311,7 +317,9 @@ def functional_groups_detector(monomer_dictionary: dict) -> dict:
                     functional_group["functionality_type"],
                     functional_group["smarts_1"],
                 )
-                if functionality == 1:
+                if functionality >= 1:
+                    if functional_group["comments"]:
+                        print(f"Note: Monomer {indexm} ({smiles}) - {functional_group['comments']}")
                     functional_group_index += 1
                     print(f"Monomer {indexm} ({smiles}) has functionality: {functional_group['group_name']}")
                     if indexm not in selected_monomers:
@@ -322,6 +330,7 @@ def functional_groups_detector(monomer_dictionary: dict) -> dict:
                         "functional_group_smarts_1": functional_group["smarts_1"],
                         "functional_count_1": functional_count_1
                     }
+                
 
             # Handle 'di_different' functionality (matches for both smarts_1 and smarts_2 required)
             if functional_group["functionality_type"] == "di_different":
@@ -331,7 +340,9 @@ def functional_groups_detector(monomer_dictionary: dict) -> dict:
                     functional_group["smarts_1"],
                     functional_group["smarts_2"],
                 )
-                if functionality == 2:
+                if functionality >= 2:
+                    if functional_group["comments"]:
+                        print(f"Note: Monomer {indexm} ({smiles}) - {functional_group['comments']}")
                     functional_group_index += 1
                     print(f"Monomer {indexm} ({smiles}) has functionality: {functional_group['group_name']}")
                     if indexm not in selected_monomers:
@@ -352,7 +363,11 @@ def functional_groups_detector(monomer_dictionary: dict) -> dict:
                     functional_group["functionality_type"],
                     functional_group["smarts_1"],
                 )
-                if functionality == 2:
+
+                if functionality >= 2:
+                    # Print comments if available
+                    if functional_group["comments"]:
+                        print(f"Note: Monomer {indexm} ({smiles}) - {functional_group['comments']}")
                     functional_group_index += 1
                     print(f"Monomer {indexm} ({smiles}) has functionality: {functional_group['group_name']}")
                     if indexm not in selected_monomers:
