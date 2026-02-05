@@ -5,6 +5,26 @@ from typing import Dict, Any
 # the types of reactants, the product type, whether to delete atoms,
 # and the SMARTS string for the reaction pattern using RDKit syntax.
 
+"""
+TODO: Missing Polymerization Mechanisms
+- Polycarbonates: Diols + Phosgene or Diphenyl Carbonate
+- Polyureas: Diamines + Diisocyanates
+- Aromatic Polyethers (PEEK/Sulfones): Activated dihalides + Bisphenols
+- Aromatic Polyimides: Dianhydrides + Diamines
+- Polybenzimidazoles (PBI): Tetraamines + Dicarboxylates
+- Phenol-Formaldehyde (Bakelite): Phenol + Formaldehyde
+- Polysiloxanes (Silicones): Hydrolysis/Condensation of Dichlorosilanes
+- Polysulfides: Dihalides + Sodium Sulfide
+- Thiol-Ene Click Polymerizations
+- Ring-Opening Metathesis Polymerization (ROMP)
+- Dendritic Polymers: Random Hyperbranched and Dendrimers
+- Enzymatic Polymerizations: In Vivo / In Vitro biocatalysis
+- Cycloaddition (Four-Center) Reactions
+- Spiro Polymers
+- Pseudopolyrotaxanes and Polyrotaxanes
+- Polymerization in Supercritical Carbon Dioxide
+"""
+
 reactions = {
     # "Vinyl Addition Polymerization": {
     #     "same_reactants": True,
@@ -234,7 +254,6 @@ reactions = {
 #     }
 # }
 }
-
 
 def reaction_detector(monomer_dictionary: dict) -> dict:
     """
