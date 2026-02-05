@@ -323,8 +323,6 @@ def write_bond_react_merge_input(
     with open(cache_bond_react_merge_normalized / "merge_input.txt", "w") as merge_input_file:
         merge_input_file.write(merge_files)
 
-    move_merge_outputs(cache_all2lmp, cache_bond_react_merge)
-
     return cache_bond_react_merge
 
 
@@ -360,6 +358,7 @@ def run_bond_react_merge(merge_input_file_path: Path,
     """
     molecule_files_bond_react_merge: dict[str, Path] = {}
     merge_input_file_path = Path(normalize_path(merge_input_file_path))
+    cache_all2lmp = merge_input_file_path.parent / "all2lmp"
     # Construct and execute the bond_react_merge command
     # Command format: python bond_react_merge.py -files infile:<input_file> -atomstyle full
     subprocess.run(
@@ -372,7 +371,7 @@ def run_bond_react_merge(merge_input_file_path: Path,
         cwd=merge_input_file_path,              # Run in the directory with input file
         check=True                              # Raise exception if command fails
     )
-    
+    move_merge_outputs(cache_all2lmp, merge_input_file_path)
     # Map input names to expected output filenames
     for name in molecule_files_all2lmp.keys():
         if name.startswith("data"):
