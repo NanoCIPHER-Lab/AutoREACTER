@@ -335,7 +335,7 @@ def functional_groups_detector(monomer_dictionary: dict) -> dict:
                 )
                 if functionality >= 1:
                     functional_group_index += 1
-                    if functional_group["comments"]:
+                    if "comments" in functional_group and functional_group["comments"]:
                         print(f"Note: Monomer {indexm} ({smiles}) - {functional_group['comments']}")
                     print(f"Monomer {indexm} ({smiles}) has functionality: {functional_group['group_name']}")
                     if indexm not in selected_monomers:
@@ -355,7 +355,7 @@ def functional_groups_detector(monomer_dictionary: dict) -> dict:
                     functional_group["smarts_1"],
                 )
                 if functionality >= 1:
-                    if functional_group["comments"]:
+                    if "comments" in functional_group and functional_group["comments"]:
                         print(f"Note: Monomer {indexm} ({smiles}) - {functional_group['comments']}")
                     functional_group_index += 1
                     print(f"Monomer {indexm} ({smiles}) has functionality: {functional_group['group_name']}")
@@ -378,7 +378,7 @@ def functional_groups_detector(monomer_dictionary: dict) -> dict:
                     functional_group["smarts_2"],
                 )
                 if functionality >= 2:
-                    if functional_group["comments"]:
+                    if "comments" in functional_group and functional_group["comments"]:
                         print(f"Note: Monomer {indexm} ({smiles}) - {functional_group['comments']}")
                     functional_group_index += 1
                     print(f"Monomer {indexm} ({smiles}) has functionality: {functional_group['group_name']}")
@@ -403,7 +403,7 @@ def functional_groups_detector(monomer_dictionary: dict) -> dict:
 
                 if functionality >= 2:
                     # Print comments if available
-                    if functional_group["comments"]:
+                    if "comments" in functional_group and functional_group["comments"]:
                         print(f"Note: Monomer {indexm} ({smiles}) - {functional_group['comments']}")
                     functional_group_index += 1
                     print(f"Monomer {indexm} ({smiles}) has functionality: {functional_group['group_name']}")
