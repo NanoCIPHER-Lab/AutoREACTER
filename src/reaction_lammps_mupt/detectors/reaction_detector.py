@@ -135,16 +135,30 @@ reactions = {
                                                  "https://pubs.acs.org/doi/10.1021/ed073pA312"]},
         "comments": None
     },
-    # "Diol and Di-Carboxylic Acid Polycondensation(Polyesterification)": {
-    #     "same_reactants": False,
-    #     "reactant_1": "diol",
-    #     "reactant_2": "di_carboxylic_acid",
-    #     "product": "polyester_chain",   
-    #     "delete_atom": True,
-    #     "reaction": "[CX3:2](=[O])[OX2H1,Cl,Br].[O,S;X2;H1;!$([O,S]C=*):3]>>[CX3:2](=[O])-[O,S;X2;!$([O,S]C=*):3]"
-    #     # "[CX3:2](=[O])[OX2H1,Cl,Br:1].[O,S;X2;H1;!$([O,S]C=*):3]>>[CX3:2](=[O])-[O,S;X2;!$([O,S]C=*):3].[OX2H1,Cl,Br:1]"
-    #     # by product not working properly for now 
-    # },
+    "Amino Acid Polycondensation (Polyamidation)": {
+        "same_reactants": True,
+        "reactant_1": "amino_acid_monomer",
+        "product": "polyamide_chain",   
+        "delete_atom": True,
+        "reaction": "[NX3;H2,H1;!$(OC=*):1]-[H:3].[CX3:2](=[O:4])[OX2H1:5]>>[NX3:1]-[CX3:2](=[O:4]).[O:5]-[H:3]",
+        "reference": {"smarts": ["https://pubs.acs.org/doi/10.1021/acs.jcim.3c00329"],
+                      "reaction_and_mechanism": ["https://pubs.acs.org/doi/10.1021/ed048pA734.1", 
+                                                 "https://pubs.acs.org/doi/10.1021/ed073pA312"]},
+        "comments": None
+    },
+    "Amino Acid and Amino Acid Polycondensation (Polyamidation)": {
+        "same_reactants": False,
+        "reactant_1": "amino_acid_monomer",
+        "reactant_2": "amino_acid_monomer",
+        "product": "polyamide_chain",   
+        "delete_atom": True,
+        "reaction": "[NX3;H2,H1;!$(OC=*):1]-[H:3].[CX3:2](=[O:4])[OX2H1:5]>>[NX3:1]-[CX3:2](=[O:4]).[O:5]-[H:3]",
+        "reference": {"smarts": ["https://pubs.acs.org/doi/10.1021/acs.jcim.3c00329"],
+                      "reaction_and_mechanism": ["https://pubs.acs.org/doi/10.1021/ed048pA734.1", 
+                                                 "https://pubs.acs.org/doi/10.1021/ed073pA312"]},
+        "comments": None
+    },
+
     # "Cyclic Anhydride and Epoxide Polyesterification": {
     #     "same_reactants": False,
     #     "reactant_1": "cyclic_anhydride",
@@ -205,21 +219,6 @@ reactions = {
     #     "reactant_1": "lactam",
     #     "product": "polyamide_chain",
     #     "delete_atom": False
-    # },
-    # "Amino Acid Polycondensation (Polyamidation)": {
-    #     "same_reactants": True,
-    #     "reactant_1": "amino_acid",
-    #     "product": "polyamide_chain",
-    #     "delete_atom": True,
-    #     "reaction": "[NX3;H2,H1;!$(OC=*):1].[CX3:2](=[O])[OX2H1]>>[NX3:1]-[CX3:2](=[O]).O"
-    # },
-    # "Amino Acid and Amino Acid Polycondensation (Polyamidation)": {
-    #     "same_reactants": False,
-    #     "reactant_1": "amino_acid",
-    #     "reactant_2": "amino_acid",
-    #     "product": "polyamide_chain",
-    #     "delete_atom": True,
-    #     "reaction": "[NX3;H2,H1;!$(OC=*):1].[CX3:2](=[O])[OX2H1]>>[NX3:1]-[CX3:2](=[O]).O"
     # },
     # "Di-Amine and Di-Carboxylic Acid Polycondensation (Polyamidation)": {
     #     "same_reactants": False,

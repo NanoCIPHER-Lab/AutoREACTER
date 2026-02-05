@@ -136,6 +136,13 @@ monomer_types = {
         "group_name": "di_carboxylic_acid",
         "comments": None,
     },
+    "amino_acid_monomer": {
+        "functionality_type": "di_different",
+        "smarts_1": "[NX3;H2,H1;!$(OC=*):1]",
+        "smarts_2": "[CX3:2](=[O])[OX2H1]",
+        "group_name": "amino_acid",
+        "comments": None,
+     },
     # "vinyl_monomer": {
     #     "functionality_type": "vinyl",
     #     "smarts_1": "[C]=[C;D1]",
@@ -165,12 +172,6 @@ monomer_types = {
     #     "functionality_type": "mono",
     #     "smarts_1": "[CX3;R:1](=[OX1])[NX3;R:2]",
     #     "group_name": "lactam"
-    # },
-    # "amino_acid_monomer": {
-    #     "functionality_type": "di_different",
-    #     "smarts_1": "[NH2;!$(NC=O)]",
-    #     "smarts_2": "[CX3:2](=[O])[OX2H1]",
-    #     "group_name": "amino_acid"
     # },
     # "di_amine_monomer": {
     #     "functionality_type": "di_identical",
