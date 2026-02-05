@@ -143,6 +143,39 @@ monomer_types = {
         "group_name": "amino_acid",
         "comments": None,
      },
+    "di_amine_monomer": {
+        "functionality_type": "di_identical",
+        "smarts_1": "[N&X3;H2,H1;!$(NC=*):3]",
+        "group_name": "di_amine",
+        "comments": None,
+    },
+    "di_carboxylic_acid_monomer": {
+        "functionality_type": "di_identical",
+        "smarts_1": "[CX3:2](=[O])[OX2H1:1]",
+        "group_name": "di_carboxylic_acid",
+        "comments": None,
+    },
+    "di_carboxylic_acid_halide_monomer": {
+        "functionality_type": "di_identical",
+        "smarts_1": "[CX3:2](=[O])[Cl,Br,I:1]",
+        "group_name": "di_carboxylic_acid_halide",
+        "comments": None,
+    },
+    # "di_cyclic_anhydride_monomer": {
+    #     "functionality_type": "di_identical",
+    #     "smarts_1": "[CX3,c;R:1](=[OX1])[OX2,o;R][CX3,c;R:2](=[OX1])",
+    #     "group_name": "di_cyclic_anhydride"
+    # },
+    # "di_isocyanate_monomer": {
+    #     "functionality_type": "di_identical",
+    #     "smarts_1": "[NX2:1]=[CX2]=[OX1,SX1:2]",
+    #     "group_name": "di_isocyanate"
+    # },
+    # "di_epoxide_monomer": {
+    #     "functionality_type": "di_identical",
+    #     "smarts_1": "[CX4;H2,H1,H0;R:1]1[OX2;R:2][CX4;H1,H0;R:3]1",
+    #     "group_name": "di_epoxide"
+    # }
     # "vinyl_monomer": {
     #     "functionality_type": "vinyl",
     #     "smarts_1": "[C]=[C;D1]",
@@ -176,6 +209,7 @@ monomer_types = {
     # "di_amine_monomer": {
     #     "functionality_type": "di_identical",
     #     "smarts_1": "[N&X3;H2,H1;!$(NC=*):3]",
+
     #     "group_name": "di_amine"
     # },
     # "primery_di_amine_monomer": {

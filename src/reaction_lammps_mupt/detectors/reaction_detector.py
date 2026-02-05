@@ -26,49 +26,6 @@ TODO: Missing Polymerization Mechanisms
 """
 
 reactions = {
-    # "Vinyl Addition Polymerization": {
-    #     "same_reactants": True,
-    #     "reactant_1": "vinyl",
-    #     "product": "polyvinyl_chain",
-    #     "delete_atom": False,
-    #     "reaction" : "[CH2:1]=[CH;H1,H0;!R:2].[CH2:3]=[CH;H1,H0;!R:4]>>[CH2:1]-[CH:2]-[CH2:3]-[CH:4]" 
-    # },
-    # "Cyclic Olefin Addition Polymerization": {
-    #     "same_reactants": True,
-    #     "reactant_1": "cyclic_olefin",   
-    #     "product": "polycyclic_chain",
-    #     "delete_atom": False,
-    #     "reaction": "[CX3;R:1]=[CX3;R:2].[CX3;R:3]=[CX3;R:4]>>[CX4:1]-[CX4:2]-[CX4:3]-[CX4:4]"
-    # },
-    # "Vinyl Copolymerization": {
-    #     "same_reactants": False,
-    #     "reactant_1": "vinyl",
-    #     "reactant_2": "vinyl",
-    #     "product": "copolyvinyl_chain",
-    #     "delete_atom": False,
-    #     "reaction" : "[CH2:1]=[CH;H1,H0;!R:2].[CH2:3]=[CH;H1,H0;!R:4]>>[CH2:1]-[CH:2]-[CH2:3]-[CH:4]"
-    # },
-    # "Cyclic Olefin and Vinyl Copolymerization": {
-    #     "same_reactants": False,
-    #     "reactant_1": "vinyl",
-    #     "reactant_2": "cyclic_olefin",
-    #     "product": "copolycyclicvinyl_chain",
-    #     "delete_atom": False,
-    #     "reaction": "[CH2:1]=[CH;H1,H0;!R:2].[CX3;R:3]=[CX3;R:4]>>[CX4:1]-[CX4:2]-[CH2:3]-[CH:4]" # has to give reactants as in the order 
-    # },
-    # "Cyclic Olefin Copolymerization": {
-    #     "same_reactants": False,
-    #     "reactant_1": "cyclic_olefin",
-    #     "reactant_2": "cyclic_olefin",
-    #     "product": "copolycyclic_chain",
-    #     "delete_atom": False,
-    #     "reaction": "[CX3;R:1]=[CX3;R:2].[CX3;R:3]=[CX3;R:4]>>[CX4:1]-[CX4:2]-[CX4:3]-[CX4:4]"
-    # },
-    # "Lactone Ring-Opening Polyesterification": { # does not work yet
-    #     "reactant_1": "lactone",
-    #     "reactant_2": "initiator",
-    #     "product": "polyester_chain"
-    # },
     "Hydroxy Carboxylic Acid Polycondensation(Polyesterification)": {
         "same_reactants": True,
         "reactant_1": "hydroxy_carboxylic_acid",
@@ -158,10 +115,105 @@ reactions = {
                                                  "https://pubs.acs.org/doi/10.1021/ed073pA312"]},
         "comments": None
     },
+    "Di-Amine and Di-Carboxylic Acid Polycondensation (Polyamidation)": {
+         "same_reactants": False,
+         "reactant_1": "di_amine_monomer",
+         "reactant_2": "di_carboxylic_acid_monomer",
+         "product": "polyamide_chain",
+         "delete_atom": True,
+        "reaction": "[CX3:1](=[O:3])[OX2:4].[N;H2,H1;!$(NC=*):2][H:5]>>[CX3:1](=[O:3])[NX3;!$(NC=*):2].[OX2:4]([H:5])",
+         "reference": {"smarts": ["https://pubs.acs.org/doi/10.1021/acs.jcim.3c00329"],
+                       "reaction_and_mechanism": ["https://pubs.acs.org/doi/10.1021/ed048pA734"]},
+    },
+    "Di-Amine and Di-Carboxylic Acid Halide Polycondensation (Polyamidation)": {
+         "same_reactants": False,
+         "reactant_1": "di_amine_monomer",
+         "reactant_2": "di_carboxylic_acid_halide_monomer",
+         "product": "polyamide_chain",
+         "delete_atom": True,
+        "reaction": "[CX3:1](=[O:3])[Cl,Br,I:4].[N;H2,H1;!$(NC=*):2][H:5]>>[CX3:1](=[O:3])[NX3;!$(NC=*):2].[Cl,Br,I:4]([H:5])",
+         "reference": {"smarts": ["https://pubs.acs.org/doi/10.1021/acs.jcim.3c00329"],
+                       "reaction_and_mechanism": ["https://pubs.acs.org/doi/10.1021/ed048pA734"]},
+    }
+    # "Di-Amine and Di-Carboxylic Acid Polycondensation (Polyamidation)": {
+    #     "same_reactants": False,
+    #     "reactant_1": "di_amine_monomer",
+    #     "reactant_2": "di_carboxylic_acid_monomer",
+    #     "product": "polyamide_chain",
+    #     "delete_atom": True,
+    #     "reaction": "[CX3:2](=[O])[OX2H1,Cl,Br:1].[N&X3;H2,H1;!$(NC=*):3]>>[CX3:2](=[O])-[NX3;!$(NC=*):3].[OX2H1,Cl,Br:1]" # same product issue as above in polyesterification
+    # },
+    # "Di-cyclic Anhydride and Di-Primery ammine Polycondensation (Polyimidation)": { # Do not have a clear idea about this reaction yet
+    #     "same_reactants": False,
+    #     "reactant_1": "di_cyclic_anhydride_monomer",
+    #     "reactant_2": "di_isocyanate_monomer",
+    #     "product": "polyurethane_chain",
+    #     "delete_atom": True
+    # },
+#     "Di-Isocyanate and Diol Polyurethane Formation": {
+#         "same_reactants": False,
+#         "reactant_1": "di_isocyanate_monomer",
+#         "reactant_2": "diol_monomer",
+#         "product": "polyurethane_chain",
+#         "delete_atom": True,
+#         "reaction": "[NX3;H1,H0;!$(N[C,S]=*):1].[CX4;H2,H1;!$([CX4](=O)):2]>>[NX3:1]-[CX4:2](=O)"
+#     },
+#     "Di-Epoxide and Di-Isocyanate Polyamination": {
+#         "same_reactants": False,
+#         "reactant_1": "di_epoxide_monomer",
+#         "reactant_2": "di_isocyanate_monomer",
+#         "product": "polyamine_chain",
+#         "delete_atom": False,
+#         "reaction": "[NX2:3]=[CX2:4]=[OX1,SX1:5].[OX2,SX2;H1;!$([O,S]C=*):6]>>[NX3:3][CX3:4](=[OX1,SX1:5])[OX2,SX2;!$([O,S]C=*):6]"
+#     }
+# }
+# "Vinyl Addition Polymerization": {
+    #     "same_reactants": True,
+    #     "reactant_1": "vinyl",
+    #     "product": "polyvinyl_chain",
+    #     "delete_atom": False,
+    #     "reaction" : "[CH2:1]=[CH;H1,H0;!R:2].[CH2:3]=[CH;H1,H0;!R:4]>>[CH2:1]-[CH:2]-[CH2:3]-[CH:4]" 
+    # },
+    # "Cyclic Olefin Addition Polymerization": {
+    #     "same_reactants": True,
+    #     "reactant_1": "cyclic_olefin",   
+    #     "product": "polycyclic_chain",
+    #     "delete_atom": False,
+    #     "reaction": "[CX3;R:1]=[CX3;R:2].[CX3;R:3]=[CX3;R:4]>>[CX4:1]-[CX4:2]-[CX4:3]-[CX4:4]"
+    # },
+    # "Vinyl Copolymerization": {
+    #     "same_reactants": False,
+    #     "reactant_1": "vinyl",
+    #     "reactant_2": "vinyl",
+    #     "product": "copolyvinyl_chain",
+    #     "delete_atom": False,
+    #     "reaction" : "[CH2:1]=[CH;H1,H0;!R:2].[CH2:3]=[CH;H1,H0;!R:4]>>[CH2:1]-[CH:2]-[CH2:3]-[CH:4]"
+    # },
+    # "Cyclic Olefin and Vinyl Copolymerization": {
+    #     "same_reactants": False,
+    #     "reactant_1": "vinyl",
+    #     "reactant_2": "cyclic_olefin",
+    #     "product": "copolycyclicvinyl_chain",
+    #     "delete_atom": False,
+    #     "reaction": "[CH2:1]=[CH;H1,H0;!R:2].[CX3;R:3]=[CX3;R:4]>>[CX4:1]-[CX4:2]-[CH2:3]-[CH:4]" # has to give reactants as in the order 
+    # },
+    # "Cyclic Olefin Copolymerization": {
+    #     "same_reactants": False,
+    #     "reactant_1": "cyclic_olefin",
+    #     "reactant_2": "cyclic_olefin",
+    #     "product": "copolycyclic_chain",
+    #     "delete_atom": False,
+    #     "reaction": "[CX3;R:1]=[CX3;R:2].[CX3;R:3]=[CX3;R:4]>>[CX4:1]-[CX4:2]-[CX4:3]-[CX4:4]"
+    # },
+    # "Lactone Ring-Opening Polyesterification": { # does not work yet
+    #     "reactant_1": "lactone",
+    #     "reactant_2": "initiator",
+    #     "product": "polyester_chain"
+    # },
     # "Cyclic Anhydride and Epoxide Polyesterification": {
     #     "same_reactants": False,
-    #     "reactant_1": "cyclic_anhydride",
-    #     "reactant_2": "diol",
+    #     "reactant_1": "cyclic_anhydride_monomer",
+    #     "reactant_2": "diol_monomer",
     #     "product": "polyester_chain",
     #     "delete_atom": False # Not sure about this
     # },
