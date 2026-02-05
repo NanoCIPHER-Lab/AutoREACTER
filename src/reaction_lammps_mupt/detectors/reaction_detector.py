@@ -158,7 +158,6 @@ reactions = {
                                                  "https://pubs.acs.org/doi/10.1021/ed073pA312"]},
         "comments": None
     },
-
     # "Cyclic Anhydride and Epoxide Polyesterification": {
     #     "same_reactants": False,
     #     "reactant_1": "cyclic_anhydride",
@@ -202,51 +201,51 @@ reactions = {
     # },
     # "Bis(bis(p-fluoroaryl)ketone Diol (without thiol) polycondensation": { # Same as above
     #     "same_reactants": False,
-    #     "reactant_1": "(bis(p-fluoroaryl)ketone",
-    #     "reactant_2": "diol",
+    #     "reactant_1": "bis(p-fluoroaryl)ketone_monomer",
+    #     "reactant_2": "diol_monomer",
     #     "product": "polyether_chain",
     #     "delete_atom": True
     # },
     # "Bis(bis(p-fluoroaryl)ketone Diol (without thiol) polycondensation": { # Same as above
     #     "same_reactants": False,
-    #     "reactant_1": "(bis(p-fluoroaryl)ketone",
-    #     "reactant_2": "diol",
+    #     "reactant_1": "bis(p-fluoroaryl)ketone_monomer",
+    #     "reactant_2": "diol_monomer",
     #     "product": "polyether_chain",
     #     "delete_atom": True
     # },
     # "Lactam Ring-Opening Polyamidation": { # does not work yet
     #     "same_reactants": True,
-    #     "reactant_1": "lactam",
+    #     "reactant_1": "lactam_monomer",
     #     "product": "polyamide_chain",
     #     "delete_atom": False
     # },
     # "Di-Amine and Di-Carboxylic Acid Polycondensation (Polyamidation)": {
     #     "same_reactants": False,
-    #     "reactant_1": "di_amine",
-    #     "reactant_2": "di_carboxylic_acid",
+    #     "reactant_1": "di_amine_monomer",
+    #     "reactant_2": "di_carboxylic_acid_monomer",
     #     "product": "polyamide_chain",
     #     "delete_atom": True,
     #     "reaction": "[CX3:2](=[O])[OX2H1,Cl,Br:1].[N&X3;H2,H1;!$(NC=*):3]>>[CX3:2](=[O])-[NX3;!$(NC=*):3].[OX2H1,Cl,Br:1]" # same product issue as above in polyesterification
     # },
     # "Di-cyclic Anhydride and Di-Primery ammine Polycondensation (Polyimidation)": { # Do not have a clear idea about this reaction yet
     #     "same_reactants": False,
-    #     "reactant_1": "di_cyclic_anhydride",
-    #     "reactant_2": "di_isocyanate",
+    #     "reactant_1": "di_cyclic_anhydride_monomer",
+    #     "reactant_2": "di_isocyanate_monomer",
     #     "product": "polyurethane_chain",
     #     "delete_atom": True
     # },
 #     "Di-Isocyanate and Diol Polyurethane Formation": {
 #         "same_reactants": False,
-#         "reactant_1": "di_isocyanate",
-#         "reactant_2": "diol",
+#         "reactant_1": "di_isocyanate_monomer",
+#         "reactant_2": "diol_monomer",
 #         "product": "polyurethane_chain",
 #         "delete_atom": True,
 #         "reaction": "[NX3;H1,H0;!$(N[C,S]=*):1].[CX4;H2,H1;!$([CX4](=O)):2]>>[NX3:1]-[CX4:2](=O)"
 #     },
 #     "Di-Epoxide and Di-Isocyanate Polyamination": {
 #         "same_reactants": False,
-#         "reactant_1": "di_epoxide",
-#         "reactant_2": "di_isocyanate",
+#         "reactant_1": "di_epoxide_monomer",
+#         "reactant_2": "di_isocyanate_monomer",
 #         "product": "polyamine_chain",
 #         "delete_atom": False,
 #         "reaction": "[NX2:3]=[CX2:4]=[OX1,SX1:5].[OX2,SX2;H1;!$([O,S]C=*):6]>>[NX3:3][CX3:4](=[OX1,SX1:5])[OX2,SX2;!$([O,S]C=*):6]"
