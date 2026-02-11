@@ -20,11 +20,13 @@ class InputParser:
     - Validate and preprocess the user 'inputs' dictionary
     - Return a clean dict ready for main.py
     """
-
-    def __init__(self, inputs_dict: dict) -> None:
-        self.inputs = inputs_dict
-        self.validated_inputs = self.validate_inputs(inputs_dict)
-
+    def validate_inputs(self, inputs: dict) -> dict:
+        self.component_check(inputs)
+        self._validate_numeric_fields(inputs)
+        self.validate_smiles_rdkit(inputs)
+        self.validate_no_duplicate_smiles(inputs)
+        return inputs
+    
     def component_check(self, inputs: dict) -> None:
         required_keys = ["simulation_name", "temperature", "density", "monomers", "number_of_monomers"]
         for key in required_keys:
@@ -43,12 +45,7 @@ class InputParser:
                 f"but 'number_of_monomers' has {len(inputs['number_of_monomers'])} entries. They must match."
             )
 
-    def validate_inputs(self, inputs: dict) -> dict:
-        self.component_check(inputs)
-        self._validate_numeric_fields(inputs)
-        self.validate_smiles_rdkit(inputs)
-        self.validate_no_duplicate_smiles(inputs)
-        return inputs
+
     
     def _validate_smiles(self, smiles: str) -> str:
         """
