@@ -21,11 +21,21 @@ class InputParser:
     - Return a clean dict ready for main.py
     """
     def validate_inputs(self, inputs: dict) -> dict:
+        """
+        Validate and preprocess the user 'inputs' dictionary.
+        Fails with informative exceptions if any required keys are missing or if values are invalid.
+        :param self: The instance of the InputParser class.
+        :param inputs: The dictionary of user inputs to validate.
+        :type inputs: dict
+        :return: The validated and preprocessed inputs dictionary.
+        :rtype: dict
+        """
         self.component_check(inputs)
         self._validate_numeric_fields(inputs)
         self.validate_smiles_rdkit(inputs)
         self.validate_no_duplicate_smiles(inputs)
         return inputs
+    
     
     def component_check(self, inputs: dict) -> None:
         required_keys = ["simulation_name", "temperature", "density", "monomers", "number_of_monomers"]
@@ -46,7 +56,6 @@ class InputParser:
             )
 
 
-    
     def _validate_smiles(self, smiles: str) -> str:
         """
         Validate a SMILES string with RDKit and return a canonical SMILES.
