@@ -13,11 +13,11 @@ import json
 # Attempt to import detector modules. Handles different import paths depending on
 # whether the script is run as a module, part of a package, or standalone.
 try:
-    from functional_groups_detector import functional_groups_detector
-    from reaction_detector import reaction_selector
+    from functional_groups_detector import FunctionalGroupsDetector
+    from reaction_detector import ReactionDetector
 except (ImportError, ModuleNotFoundError):
-    from .functional_groups_detector import functional_groups_detector
-    from .reaction_detector import reaction_selector
+    from .functional_groups_detector import FunctionalGroupsDetector
+    from .reaction_detector import ReactionDetector
 
 
 class Detector:
@@ -28,7 +28,7 @@ class Detector:
     to identify non-reactant monomers. It serves as a structured way to organize
     the detection logic and can be extended in the future for additional functionality.
     """
-    def __init__(self, input_dict: dict, interactive: bool = True):
+    def __init__(self, interactive: bool = True):
         """
         Initializes the Detector with the given input dictionary.
 
@@ -37,12 +37,13 @@ class Detector:
                                monomer IDs (int/str) to SMILES strings (str).
             interactive (bool): If False, automatically retain all non-reactants without prompting.
         """
-        self.input_dict = input_dict
-        self.interactive = interactive
+        self.interactive = True
         self.reactions = {}
         self.non_reactants_list = []
+        self.reactions_detector = ReactionDetector()
+        self.functional_groups_detector = FunctionalGroupsDetector()
 
-    def find_non_reactant_monomers(self) -> list:
+    def find_non_reactant_monomers(self, reactions, input_dict) -> list:
         """
         Identifies monomers from the input that are not participating in any detected reactions
         and prompts the user to decide whether to retain them in the simulation.
@@ -158,13 +159,13 @@ class Detector:
             raise ValueError("Input dictionary must contain a 'monomers' key with monomer data.")
         
         # Step 1: Detect functional groups within the monomers
-        fg_results = functional_groups_detector(monomer_dict)
+        fg_results = self.functional_groups_detector.functional_groups_detector(monomer_dict)
         
         # Step 2: Select reactions based on the detected functional groups
-        reactions = reaction_selector(fg_results)
+        reactions = self.reactions_detector.reaction_detector(fg_results)
         
         # Step 3: Identify and handle monomers that are not part of any detected reaction
-        non_reactants_list = self.find_non_reactant_monomers(reactions, self.input_dict, interactive=self.interactive)
+        non_reactants_list = self.find_non_reactant_monomers(reactions, self.input_dict)
         
         return reactions, non_reactants_list
 
