@@ -28,7 +28,7 @@ class Detector:
     to identify non-reactant monomers. It serves as a structured way to organize
     the detection logic and can be extended in the future for additional functionality.
     """
-    def __init__(self, interactive: bool = True):
+    def __init__(self, input_dict: dict, interactive: bool = True):
         """
         Initializes the Detector with the given input dictionary.
 
@@ -37,11 +37,12 @@ class Detector:
                                monomer IDs (int/str) to SMILES strings (str).
             interactive (bool): If False, automatically retain all non-reactants without prompting.
         """
-        self.interactive = True
+        self.input_dict = input_dict
         self.reactions = {}
         self.non_reactants_list = []
         self.reactions_detector = ReactionDetector()
         self.functional_groups_detector = FunctionalGroupsDetector()
+        self.reactions_dict, self.non_reactants_list = self.detect_reactions(self.input_dict)
 
     def find_non_reactant_monomers(self, reactions, input_dict) -> list:
         """
@@ -181,10 +182,9 @@ if __name__ == "__main__":
     }
     
     # Run the detection workflow
-    detector = Detector()
-    detected_reactions, non_monomers = detector.detect_reactions(sample_inputs)
+    detector = Detector(sample_inputs)
     
     # Output results
-    print("Detected Reactions:", json.dumps(detected_reactions, indent=2))
-    if non_monomers:
-        print("Non-monomer molecules to retain:", non_monomers)
+    print("Detected Reactions:", json.dumps(detector.reactions_dict, indent=2))
+    if detector.non_reactants_list:
+        print("Non-monomer molecules to retain:", detector.non_reactants_list)
