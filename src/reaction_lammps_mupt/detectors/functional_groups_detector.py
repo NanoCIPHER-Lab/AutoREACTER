@@ -232,7 +232,6 @@ class FunctionalGroupsDetector:
     def __init__(self):
         self.functional_group_library = FunctionalGroupsLibrary()
         self.monomer_types = self.functional_group_library.monomer_types
-        self.selected_monomers = self.functional_groups_detector(monomer_dictionary)
 
     def detect_monomer_functionality(self, smiles: str, functionality_type: str, smarts_1: str, smarts_2: str = None) -> tuple:
         """
