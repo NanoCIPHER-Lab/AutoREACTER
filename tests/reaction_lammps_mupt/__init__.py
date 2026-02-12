@@ -1,1 +1,0 @@
-# Tests for reaction_lammps_mupt package
