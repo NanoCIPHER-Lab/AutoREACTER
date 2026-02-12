@@ -425,6 +425,7 @@ def process_reactions(rxn, csv_cache, reaction_tuple, key=None,
             sub_dict["delete_atoms"] = delete_atoms
             sub_dict["reaction_dataframe"] = df_combined
 
+
     return mols, molecule_and_csv_path_dict
 
 

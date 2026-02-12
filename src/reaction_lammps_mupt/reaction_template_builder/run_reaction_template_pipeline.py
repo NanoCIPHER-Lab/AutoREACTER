@@ -42,16 +42,8 @@ class ReactionDefinition:
     monomer_2: MonomerRole | None = None
 """
 
-r"""
-class InsufficientFundsError(Exception):
-    """Exception raised for insufficient funds in a bank account."""
-    pass
-class InsufficientFundsError(Exception):
-    """Exception raised for insufficient funds, with an additional attribute for the required amount."""
-    def __init__(self, required_amount, message="Insufficient funds"):
-        super().__init__(message)
-        self.required_amount = required_amount # Store the required amount
 
+"""
 def withdraw(balance, amount):
     if amount > balance:
         raise InsufficientFundsError(amount - balance, f"Cannot withdraw {amount}, only {balance} available.")
@@ -317,10 +309,10 @@ class ReactionTemplatePipeline:
         self.detected_reactions_dict = detected_reactions_dict
         self.cache = cache
         self.non_monomer_molecules_to_retain = non_monomer_molecules_to_retain
-        self.formatted_dict, self.molecule_template_files = self.execute_pipeline(self.detected_reactions_dict, self.non_monomer_molecules_to_retain, self.cache)
+        self.formatted_dict, self.molecule_template_files, self.molecule_images = self.execute_pipeline(self.detected_reactions_dict, self.non_monomer_molecules_to_retain, self.cache)
 
 
-    def run_reaction_template_pipeline(self):
+    def run_reaction_template_pipeline(self, detected_reactions, cache):
         """
         Main execution pipeline for mapping reactions, identifying templates, 
         and saving results to CSV.
@@ -336,10 +328,10 @@ class ReactionTemplatePipeline:
             cache (str): Path to the cache directory for processing.
 
         Returns:
-            tuple: (updated_molecule_dict, formatted_summary_dict)
+            tuple: (updated_molecule_dict, formatted_summary_dict, molecule_images)
         """
         # Initial processing: atom mapping and basic dictionary formatting
-        molecule_dict_csv_path_dict, detected_reactions = process_reaction_dict(self.detected_reactions_dict, self.cache)
+        molecule_dict_csv_path_dict, detected_reactions, molecule_images = process_reaction_dict(self.detected_reactions_dict, self.cache)
         formatted_dict = format_detected_reactions_dict(detected_reactions)
         
         # Iterate through each detected reaction to perform template analysis
@@ -389,7 +381,7 @@ class ReactionTemplatePipeline:
         # For debugging: print the final molecule dictionary with CSV paths
         # print("Formatted Detected Reactions Summary:")
         # print(molecule_dict_csv_path_dict)
-        return molecule_dict_csv_path_dict, formatted_dict
+        return molecule_dict_csv_path_dict, formatted_dict, molecule_images
 
 
     def execute_pipeline(self, detected_reactions, non_monomer_molecules_to_retain, cache):
@@ -406,7 +398,7 @@ class ReactionTemplatePipeline:
             tuple: (formatted_dict, molecule_template_files)
         """
         # 1. Run the core reaction template mapping and walking pipeline
-        molecule_dict_csv_path_dict, formatted_dict = self.run_reaction_template_pipeline(
+        molecule_dict_csv_path_dict, formatted_dict, molecule_images = self.run_reaction_template_pipeline(
             detected_reactions, 
             cache
         )
@@ -462,7 +454,7 @@ class ReactionTemplatePipeline:
             for ref in references:
                 f.write(f"{ref}\n")
 
-        return formatted_dict, molecule_template_files
+        return formatted_dict, molecule_template_files, molecule_images
         # TODO: If duplicates were found and skipped, re-index the dictionary and files to be continuous
         # if duplicated:
         #     molecule_dict_csv_path_dict = molecule_dict_csv_path_dict_rearrange(molecule_dict_csv_path_dict)
