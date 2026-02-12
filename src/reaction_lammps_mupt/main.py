@@ -40,4 +40,3 @@ if __name__ == "__main__":
     detected_reactions = detector.reactions_dict
     non_monomers = detector.non_reactants_list
     RunDirectoryManager.copy_into_run(cache_dir, dated_cache_dir)
-
