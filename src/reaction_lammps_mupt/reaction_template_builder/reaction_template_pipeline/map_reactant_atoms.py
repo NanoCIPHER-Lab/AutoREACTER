@@ -509,6 +509,7 @@ def process_reaction_dict(detected_reactions, cache):
     """
     molecule_and_csv_path_dict = {}
     csv_cache = prepare_paths(cache)
+    molecule_images =  []
 
     # TODO: Add function to compare products if products are identicals drop the duplicates
     
@@ -541,8 +542,9 @@ def process_reaction_dict(detected_reactions, cache):
         
         # Save outputs
         save_grid_image(mols, cache, key)
-    
-    return molecule_and_csv_path_dict, detected_reactions
+        molecule_images.append(mols)
+
+    return molecule_and_csv_path_dict, detected_reactions, molecule_images
 
 
 def run_all(cache, rxn_smarts, reactant_smiles_1, reactant_smiles_2):
@@ -693,7 +695,7 @@ if __name__ == "__main__":
     # run_all(cache, rxn_smarts, reactant_smiles_1, reactant_smiles_2)
     
     # Process all reactions in the dictionary
-    molecule_dict_csv_path_dict, detected_reactions = process_reaction_dict(detected_reactions, cache)
+    molecule_dict_csv_path_dict, detected_reactions, molecule_images = process_reaction_dict(detected_reactions, cache)
     
     # Display results
     import pprint

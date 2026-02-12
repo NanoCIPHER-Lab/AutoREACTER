@@ -320,7 +320,7 @@ class ReactionTemplatePipeline:
         self.formatted_dict, self.molecule_template_files = self.execute_pipeline(self.detected_reactions_dict, self.non_monomer_molecules_to_retain, self.cache)
 
 
-    def run_reaction_template_pipeline(self, detected_reactions_dict, cache):
+    def run_reaction_template_pipeline(self):
         """
         Main execution pipeline for mapping reactions, identifying templates, 
         and saving results to CSV.
