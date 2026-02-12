@@ -9,8 +9,11 @@ from detectors.detector import Detector
 Main script for initializing the reaction LAMMPS MUPT pipeline.
 """
 initialize()
-cache_dir = GetCacheDir().staging_dir
-dated_cache_dir = RunDirectoryManager.make_dated_run_dir(cache_dir, chdir_to="none")
+get_cache_dir = GetCacheDir()
+cache_dir = get_cache_dir.staging_dir
+print(f"Base cache directory: {cache_dir}")
+dated_cache_dir = RunDirectoryManager.make_dated_run_dir(get_cache_dir.cache_base_dir, chdir_to="none")
+print(f"Staging directory created at: {dated_cache_dir}")
 
 # optional use
 """
