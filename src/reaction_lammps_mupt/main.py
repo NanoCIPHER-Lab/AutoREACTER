@@ -2,13 +2,17 @@ import json
 from pathlib import Path
 from initialization import initialize
 from input_parser import InputParser
-from cache import get_default_cache_dir, retention_cleanup, get_current_cache_dir
+from cache import GetCacheDir, RunDirectoryManager
 from cache import delete_default_cache_files as delete_cache_dir
 from cache import copy_to_date_folder as Copy
 
 initialize()
-cache_dir = get_default_cache_dir()
-final_cache_dir = get_current_cache_dir()
+cache_dir = GetCacheDir().staging_dir
+dated_cache_dir = RunDirectoryManager.make_dated_run_dir(cache_dir, chdir_to="none")
+
+# #future use
+# RunDirectoryManager.copy_into_run(cache_dir, dated_cache_dir)
+
 
 
 if __name__ == "__main__":

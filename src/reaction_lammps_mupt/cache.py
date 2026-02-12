@@ -54,209 +54,249 @@ class GetCacheDir:
         os.makedirs(d, exist_ok=True)
         return d
 
-# class RunDirectoryManager:
-
-
-
-
-def delete_files_in_directory(directory_path: Path) -> None:
+@dataclass(slots=True, frozen=True)
+class RunDirectoryManager:
     """
-    Delete only files/symlinks directly inside directory_path.
-    (Does NOT delete subfolders.)
+    Creates dated run folders and copies artifacts into an existing run folder.
+
+    Key behavior:
+    - You create a run folder ONCE (make_dated_run_dir).
+    - You can copy into that same run folder unlimited times (copy_into_run).
+    - Copy semantics are REPLACE:
+        * files overwrite
+        * directories are deleted then copied fresh
+        * symlinks are replaced
     """
-    directory_path = Path(directory_path)
 
-    if not directory_path.is_dir():
-        print(f"Error: Directory not found at {directory_path}")
-        return
+    @staticmethod
+    def make_dated_run_dir(
+        base_dir: Path,
+        *,
+        date: dt.date | None = None,
+        chdir_to: Literal["run", "date", "none"] = "none",
+    ) -> Path:
+        """
+        Create:
+            base_dir/YYYY-MM-DD/<N>/
 
-    for entry in directory_path.iterdir(): 
-        if entry.is_file() or entry.is_symlink():
+        Where <N> is the next integer run folder (1, 2, 3, ...).
+
+        chdir_to:
+          - "run":  chdir into the new run folder
+          - "date": chdir into the date folder
+          - "none": do not change cwd
+        """
+        base_dir = Path(base_dir)
+        base_dir.mkdir(parents=True, exist_ok=True)
+
+        target_date = date or dt.date.today()
+        date_dir = base_dir / target_date.isoformat()
+        date_dir.mkdir(parents=True, exist_ok=True)
+
+        max_run_number = 0
+        for p in date_dir.iterdir():
+            if p.is_dir() and p.name.isdigit():
+                max_run_number = max(max_run_number, int(p.name))
+
+        next_run_number = max_run_number + 1
+        while True:
+            run_dir = date_dir / str(next_run_number)
             try:
-                entry.unlink()
-            except OSError:
-                pass
+                run_dir.mkdir()
+                break
+            except FileExistsError:
+                next_run_number += 1
 
+        if chdir_to == "run":
+            os.chdir(run_dir)
+        elif chdir_to == "date":
+            os.chdir(date_dir)
 
-def delete_default_cache_files() -> None:
-    """
-    Convenience: clear out files from <git_root>/cache/0_cache.
-    """
-    repo_ctx = RepoContext()
-    staging_dir = repo_ctx.staging_dir
-    delete_files_in_directory(staging_dir)
+        return run_dir
 
+    @staticmethod
+    def _remove_path(path: Path) -> None:
+        """Remove file/dir/symlink at path if it exists."""
+        if not path.exists() and not path.is_symlink():
+            return
 
-def make_dated_run_dir(
-    base_dir: Path,
-    *,
-    date: dt.date | None = None,
-    chdir_to: Literal["run", "date", "none"] = "run",
-) -> Path:
-    """
-    Create:
-        base_dir/YYYY-MM-DD/<N>/
+        # symlink must be checked before is_dir() in some cases
+        if path.is_symlink():
+            path.unlink()
+            return
 
-    Where <N> is the next integer run folder (1, 2, 3, ...).
+        if path.is_file():
+            path.unlink()
+            return
 
-    chdir_to:
-      - "run":  chdir into the new run folder
-      - "date": chdir into the date folder
-      - "none": do not change cwd
-    """
-    base_dir = Path(base_dir)
-    base_dir.mkdir(parents=True, exist_ok=True)
+        if path.is_dir():
+            shutil.rmtree(path)
+            return
 
-    target_date = date or dt.date.today()
-    date_dir = base_dir / target_date.isoformat()
-    date_dir.mkdir(parents=True, exist_ok=True)
-
-    # Find max existing run folder number under this date folder
-    max_run_number = 0
-    for p in date_dir.iterdir():
-        if p.is_dir() and p.name.isdigit():
-            max_run_number = max(max_run_number, int(p.name))
-
-    # Attempt to create the next run folder; handle rare race condition
-    next_run_number = max_run_number + 1
-    while True:
-        run_dir = date_dir / str(next_run_number)
+        # Fallback for odd filesystem types
         try:
-            run_dir.mkdir()
-            break
-        except FileExistsError:
-            next_run_number += 1
+            path.unlink()
+        except Exception:
+            shutil.rmtree(path, ignore_errors=True)
 
-    if chdir_to == "run":
-        os.chdir(run_dir)
-    elif chdir_to == "date":
-        os.chdir(date_dir)
+    @staticmethod
+    def copy_into_run(
+        source_dir: Path,
+        dest_run_dir: Path,
+        *,
+        overwrite: bool = True,
+        preserve_symlinks: bool = True,
+        preserve_metadata: bool = True,
+    ) -> Path:
+        """
+        Copy everything from source_dir into an EXISTING dest_run_dir.
 
-    return run_dir
+        overwrite=True means:
+          - if target exists, it is deleted first (dirs removed entirely),
+            then copied fresh.
+
+        Returns dest_run_dir for convenience.
+        """
+        source_dir = Path(source_dir)
+        dest_run_dir = Path(dest_run_dir)
+
+        if not source_dir.is_dir():
+            raise NotADirectoryError(f"source_dir is not a directory: {source_dir}")
+
+        dest_run_dir.mkdir(parents=True, exist_ok=True)
+
+        for item in source_dir.iterdir():
+            target = dest_run_dir / item.name
+
+            if overwrite and (target.exists() or target.is_symlink()):
+                RunDirectoryManager._remove_path(target)
+
+            if item.is_symlink():
+                if not preserve_symlinks:
+                    # If you don't want symlinks, copy the linked contents instead
+                    resolved = item.resolve()
+                    if resolved.is_dir():
+                        shutil.copytree(resolved, target)
+                    else:
+                        shutil.copy2(resolved, target) if preserve_metadata else shutil.copy(resolved, target)
+                else:
+                    target.symlink_to(item.readlink())
+
+            elif item.is_file():
+                if preserve_metadata:
+                    shutil.copy2(item, target)
+                else:
+                    shutil.copy(item, target)
+
+            elif item.is_dir():
+                # copytree requires target not exist (we already removed it if overwrite)
+                shutil.copytree(
+                    item,
+                    target,
+                    symlinks=preserve_symlinks,
+                    copy_function=shutil.copy2 if preserve_metadata else shutil.copy,
+                )
+
+            else:
+                # Ignore special files (sockets, devices, etc.)
+                # If you want, raise here instead.
+                continue
+
+        return dest_run_dir
+
+@dataclass(slots=True)
+class RetentionCleanup:
+    @staticmethod
+    def run(base_dir: Path | None = None) -> None:
+        """
+        Interactive cleanup of dated cache folders under base_dir (default: <git_root>/cache).
+
+        Deletes folders whose names match YYYY-MM-DD and are older than chosen retention.
+        """
+        base_dir = Path(base_dir) if base_dir is not None else ()
+
+        print(
+            f"\nNOTE: Cached files are stored in {base_dir}, organized by date. "
+            "You can clear old folders here to save space."
+        )
+
+        while True:
+            choice = input(
+                "\nDo you want to clear old files?\n"
+                "1. 1 week\n"
+                "2. 1 month\n"
+                "3. 3 months\n"
+                "4. 6 months\n"
+                "5. Custom (enter number of days)\n"
+                "6. Delete ALL cache folders\n"
+                "7. No cleanup\n"
+                "Enter choice (1-7): "
+            ).strip()
+            if choice in {"1", "2", "3", "4", "5", "6", "7"}:
+                break
+            print("Invalid choice. Please enter a number between 1 and 7.")
+
+        retention_map: dict[str, dt.timedelta | str | None] = {
+            "1": dt.timedelta(weeks=1),
+            "2": dt.timedelta(days=30),
+            "3": dt.timedelta(days=90),
+            "4": dt.timedelta(days=180),
+            "5": "custom",
+            "6": "all",
+            "7": None,
+        }
+        retention = retention_map[choice]
+
+        if retention is None:
+            print("Skipping cleanup.")
+            return
+
+        if retention == "custom":
+            while True:
+                try:
+                    days = int(input("Enter number of days to retain: ").strip())
+                    if days < 0:
+                        print("Days must be >= 0.")
+                        continue
+                    retention = dt.timedelta(days=days)
+                    break
+                except ValueError:
+                    print("Invalid number. Please enter an integer.")
+
+        today = dt.date.today()
+
+        for folder in base_dir.iterdir():
+            if not folder.is_dir():
+                continue
+
+            # Only operate on folders named like YYYY-MM-DD
+            try:
+                folder_date = dt.datetime.strptime(folder.name, "%Y-%m-%d").date()
+            except ValueError:
+                continue
+
+            should_delete = (retention == "all") or (today - folder_date > retention)
+            if should_delete:
+                shutil.rmtree(folder)
+                print(f"Deleted old folder: {folder}")
 
 
-# def get_current_cache_dir() -> Path:
-#     """
-#     Create (or pick next) dated run folder under <git_root>/cache and return it.
-#     Does NOT change cwd.
-#     """
-#     return make_dated_run_dir(get_cache_base_dir(), chdir_to="none")
-
-
-# def retention_cleanup(base_dir: Path | None = None) -> None:
-#     """
-#     Interactive cleanup of dated cache folders under base_dir (default: <git_root>/cache).
-
-#     Deletes folders whose names match YYYY-MM-DD and are older than chosen retention.
-#     """
-#     base_dir = Path(base_dir) if base_dir is not None else get_cache_base_dir()
-
-#     print(
-#         f"\nNOTE: Cached files are stored in {base_dir}, organized by date. "
-#         "You can clear old folders here to save space."
-#     )
-
-#     while True:
-#         choice = input(
-#             "\nDo you want to clear old files?\n"
-#             "1. 1 week\n"
-#             "2. 1 month\n"
-#             "3. 3 months\n"
-#             "4. 6 months\n"
-#             "5. Custom (enter number of days)\n"
-#             "6. Delete ALL cache folders\n"
-#             "7. No cleanup\n"
-#             "Enter choice (1-7): "
-#         ).strip()
-#         if choice in {"1", "2", "3", "4", "5", "6", "7"}:
-#             break
-#         print("Invalid choice. Please enter a number between 1 and 7.")
-
-#     retention_map: dict[str, dt.timedelta | str | None] = {
-#         "1": dt.timedelta(weeks=1),
-#         "2": dt.timedelta(days=30),
-#         "3": dt.timedelta(days=90),
-#         "4": dt.timedelta(days=180),
-#         "5": "custom",
-#         "6": "all",
-#         "7": None,
-#     }
-#     retention = retention_map[choice]
-
-#     if retention is None:
-#         print("Skipping cleanup.")
-#         return
-
-#     if retention == "custom":
-#         while True:
-#             try:
-#                 days = int(input("Enter number of days to retain: ").strip())
-#                 if days < 0:
-#                     print("Days must be >= 0.")
-#                     continue
-#                 retention = dt.timedelta(days=days)
-#                 break
-#             except ValueError:
-#                 print("Invalid number. Please enter an integer.")
-
-#     today = dt.date.today()
-
-#     for folder in base_dir.iterdir():
-#         if not folder.is_dir():
-#             continue
-
-#         # Only operate on folders named like YYYY-MM-DD
-#         try:
-#             folder_date = dt.datetime.strptime(folder.name, "%Y-%m-%d").date()
-#         except ValueError:
-#             continue
-
-#         should_delete = (retention == "all") or (today - folder_date > retention)
-#         if should_delete:
-#             shutil.rmtree(folder)
-#             print(f"Deleted old folder: {folder}")
-
-# def copy_to_date_folder(source_dir: Path) -> Path:
-#     """
-#     Copy everything from source_dir (e.g., cache/0_cache) into a newly created
-#     dated run folder under cache/YYYY-MM-DD/N.
-
-#     Returns the destination run folder path.
-#     """
-#     source_dir = Path(source_dir)
-#     dest_dir = get_current_cache_dir()
-
-#     for item in source_dir.iterdir():
-#         target = dest_dir / item.name
-
-#         if item.is_file():
-#             # copy2 preserves metadata (mtime, etc.) which is often desirable
-#             shutil.copy2(item, target)
-
-#         elif item.is_dir():
-#             # shutil.copytree is the correct way to copy a directory
-#             shutil.copytree(item, target)
-
-#         elif item.is_symlink():
-#             # Preserve symlinks as symlinks (not the file contents)
-#             target.symlink_to(item.readlink())
-
-#     return dest_dir
 
 if __name__ == "__main__":
-    # Optional: clean up old dated cache folders interactively
-    # retention_cleanup()
 
     # Staging cache directory where your code dumps temporary outputs
     get_cache_dir = GetCacheDir()
     cache_dir = get_cache_dir.staging_dir
     print(f"Default cache directory: {cache_dir}")
+    dated_cache_dir = RunDirectoryManager.make_dated_run_dir(get_cache_dir.cache_base_dir, chdir_to="none")
+    print(f"Created dated run directory: {dated_cache_dir}")
 
     # # Example: create some test files in staging
-    # for i in range(5):
-    #     (cache_dir / f"test_file_{i}.txt").write_text(f"This is test file {i}\n")
+    for i in range(5):
+        (cache_dir / f"test_file_{i}.txt").write_text(f"This is test file {i}\n")
+    run_dir = RunDirectoryManager.copy_into_run(cache_dir, dated_cache_dir)
+    print(f"Created run directory: {run_dir}")
 
-    # # Copy staging contents into a fresh dated run folder
-    # current_cache_dir = copy_to_date_folder(default_cache_dir)
-    # print(f"Copied from [{default_cache_dir}] to [{current_cache_dir}]")
+    RetentionCleanup.run(get_cache_dir.cache_base_dir)
+
 
