@@ -172,7 +172,18 @@ class Detector:
 
         # Debug: Print detected reactions
         # print("Detected Reactions:", json.dumps(reactions, indent=2))
-        
+
+        # Print detected reactions
+        print("\nDetected Reactions:")
+        for reaction_name, reaction_data in reactions.items():
+            print(f"\n{reaction_name}:")
+            monomer_1 = reaction_data.get("reactant_1", {})
+            monomer_2 = reaction_data.get("reactant_2", {})
+            if monomer_2:
+                print(f"Reaction between {monomer_1} and {monomer_2}")
+            else:
+                print(f"Reaction involving {monomer_1}")
+                
         # Step 3: Identify and handle monomers that are not part of any detected reaction
         non_reactants_list = self.find_non_reactant_monomers(reactions, self.input_dict)
         
@@ -183,9 +194,9 @@ if __name__ == "__main__":
     # Example usage of the module with sample monomer data
     sample_inputs = {
         "monomers": {
-            1: "ClC(=O)c1cc(cc(c1)C(Cl)=O)C(Cl)=O",
-            2: "C1=CC(=CC(=C1)N)N",
-            3: "CCO"                       # Example monomer 3 - Ethanol
+            1: "ClC(=O)c1cc(cc(c1)C(Cl)=O)C(Cl)=O", # Example monomer 1 - Trimesoyl chloride (TMC)
+            2: "C1=CC(=CC(=C1)N)N",                 # Example monomer 2 - m-Phenylenediamine (MPD)
+            3: "CCO"                                # Example Non - monomer - Ethanol
         }
     }
     
