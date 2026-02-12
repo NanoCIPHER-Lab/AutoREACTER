@@ -9,6 +9,32 @@ TODO (Input Parsing Layer)
 - [ ] Output a clean, consistently-formatted dictionary to feed into main.py.
 """
 
+"""
+TODO (Input Parsing Layer)
+from dataclasses import dataclass
+from typing import Literal
+
+@dataclass(slots=True, frozen=True)
+class MonomerRole:
+    spec: MoleculeSpec
+    functionality_type: str
+    fg_name: str
+    fg_smarts_1: str
+    fg_count_1: int
+    fg_smarts_2: str | None = None
+    fg_count_2: int | None = None
+
+@dataclass(slots=True, frozen=True)
+class ReactionDefinition:
+    reaction_name: str
+    reaction_smarts: str
+    same_reactants: bool
+    delete_atom: bool
+    references: dict
+    monomer_1: MonomerRole
+    monomer_2: MonomerRole | None = None
+"""
+
 from rdkit import Chem
 import logging
 logger = logging.getLogger(__name__)
