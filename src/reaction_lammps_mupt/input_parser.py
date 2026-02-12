@@ -196,12 +196,14 @@ if __name__ == "__main__":
         "temperature": [300, 400, 500],
         "density": 0.8,
         "monomers": {
-            1: "CCO",
-            2: "CCN",
-        },
+            1: "ClC(=O)c1cc(cc(c1)C(Cl)=O)C(Cl)=O",  # Example monomer 1 - Trimesoyl chloride (TMC)
+            2: "C1=CC(=CC(=C1)N)N",          # Example monomer 2 - m-Phenylenediamine (MPD)
+            3: "CCO",   # Example monomer 3 - Ethanol
+        },  
         "number_of_monomers": {
             1: 1000,
             2: 1000,
+            3: 500,
         },  # or
         "stoichiometric_ratio": {
             1: 1,

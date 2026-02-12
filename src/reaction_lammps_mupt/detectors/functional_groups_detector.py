@@ -135,7 +135,7 @@ class FunctionalGroupsLibrary:
                 "group_name": "amino_acid",
                 "comments": None,
             },
-            "di_amine_monomer": {
+            "di_amine_monomer": { 
                 "functionality_type": "di_identical",
                 "smarts_1": "[N&X3;H2,H1;!$(NC=*):3]",
                 "group_name": "di_amine",

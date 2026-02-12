@@ -40,16 +40,16 @@ class Detector:
         self.input_dict = input_dict
         self.reactions = {}
         self.non_reactants_list = []
-        self.reactions_detector = ReactionDetector()
         self.functional_groups_detector = FunctionalGroupsDetector()
+        self.reactions_detector = ReactionDetector()
         self.reactions_dict, self.non_reactants_list = self.detect_reactions(self.input_dict)
 
-    def find_non_reactant_monomers(self, reactions, input_dict) -> list:
+    def find_non_reactant_monomers(self, reactions_dict, input_dict) -> list:
         """
         Identifies monomers from the input that are not participating in any detected reactions
         and prompts the user to decide whether to retain them in the simulation.
     Args:
-        reactions (dict): A dictionary containing detected reaction data. Expected keys
+        reactions_dict (dict): A dictionary containing detected reaction data. Expected keys
             include 'monomer_1', 'monomer_2', and 'smiles' for each reaction entry.
         input_dict (dict): The original input dictionary containing a 'monomers' key
             mapping monomer IDs to SMILES strings.
@@ -63,22 +63,24 @@ class Detector:
     # 1) Collect all unique SMILES strings that participate in detected reactions
         reactant_smiles = set()
 
-        for reaction_data in self.reactions.values():
+        for reaction_data in reactions_dict.values():
             # Extract SMILES for monomer 1, monomer 2, and the reaction itself
-            m1 = reaction_data.get("monomer_1", {}).get("smiles")
-            m2 = reaction_data.get("monomer_2", {}).get("smiles")
-            rxn_smiles = reaction_data.get("smiles")
+            for k, v in reaction_data.items():
+                if not str(k).isdigit():
+                    continue
+                if not isinstance(v, dict):
+                    continue
 
-            # Add valid strings to the set of reactants
-            if isinstance(m1, str):
-                reactant_smiles.add(m1)
-            if isinstance(m2, str):
-                reactant_smiles.add(m2)
-            if isinstance(rxn_smiles, str):
-                reactant_smiles.add(rxn_smiles)
+                m1 = v.get("monomer_1", {}).get("smiles")
+                m2 = v.get("monomer_2", {}).get("smiles")
+
+                if isinstance(m1, str):
+                    reactant_smiles.add(m1)
+                if isinstance(m2, str):
+                    reactant_smiles.add(m2)
 
         # 2) Build a dictionary of monomers that are not found in the reactant set
-        monomers = self.input_dict.get("monomers", {})
+        monomers = input_dict.get("monomers", {})
         self.non_reactants = {}
 
         # Re-index non-reactants starting from ID 1
@@ -161,9 +163,15 @@ class Detector:
         
         # Step 1: Detect functional groups within the monomers
         fg_results = self.functional_groups_detector.functional_groups_detector(monomer_dict)
+
+        # Debug: Print detected functional groups
+        # print("Detected Functional Groups:", json.dumps(fg_results, indent=2))
         
         # Step 2: Select reactions based on the detected functional groups
         reactions = self.reactions_detector.reaction_detector(fg_results)
+
+        # Debug: Print detected reactions
+        # print("Detected Reactions:", json.dumps(reactions, indent=2))
         
         # Step 3: Identify and handle monomers that are not part of any detected reaction
         non_reactants_list = self.find_non_reactant_monomers(reactions, self.input_dict)
@@ -175,15 +183,15 @@ if __name__ == "__main__":
     # Example usage of the module with sample monomer data
     sample_inputs = {
         "monomers": {
-            1: "O=C(O)c1cc(O)cc(C(=O)O)c1",  # Example monomer 1
-            2: "O=C(O)CCCC(O)CCCO",          # Example monomer 2
-            3: "CCO",                        # Example monomer 3 (Ethanol)
+            1: "ClC(=O)c1cc(cc(c1)C(Cl)=O)C(Cl)=O",
+            2: "C1=CC(=CC(=C1)N)N",
+            3: "CCO"                       # Example monomer 3 - Ethanol
         }
     }
     
     # Run the detection workflow
     detector = Detector(sample_inputs)
-    
+    print("Detected Reactions:", json.dumps(detector.reactions_dict, indent=2))
     # Output results
     print("Detected Reactions:", json.dumps(detector.reactions_dict, indent=2))
     if detector.non_reactants_list:

@@ -2,15 +2,21 @@ import json
 from pathlib import Path
 from initialization import initialize
 from input_parser import InputParser
-from cache import GetCacheDir, RunDirectoryManager
-from cache import delete_default_cache_files as delete_cache_dir
-from cache import copy_to_date_folder as Copy
+from cache import GetCacheDir, RunDirectoryManager, RetentionCleanup
+from detectors.detector import Detector
 
+"""
+Main script for initializing the reaction LAMMPS MUPT pipeline.
+"""
 initialize()
 cache_dir = GetCacheDir().staging_dir
 dated_cache_dir = RunDirectoryManager.make_dated_run_dir(cache_dir, chdir_to="none")
 
-# #future use
+# optional use
+"""
+TODO: Use this in CMD line interface and in the future when we want to support both ways
+    of running the code (with a json file or with cmd line arguments)"""
+
 # RunDirectoryManager.copy_into_run(cache_dir, dated_cache_dir)
 
 
@@ -26,21 +32,9 @@ if __name__ == "__main__":
     parser = InputParser()
     validated_inputs = parser.validate_inputs(inputs)
     print(validated_inputs)
+    # RetentionCleanup.run(GetCacheDir().cache_base_dir)  # Optional: Clean up old cache files based on retention policy.
+    detector = Detector(inputs)
+    detected_reactions = detector.reactions_dict
+    non_monomers = detector.non_reactants_list
+    RunDirectoryManager.copy_into_run(cache_dir, dated_cache_dir)
 
-
-
-# then will go to the reaction detector part 
-# if we failed to generate reactions we say "No reactions detected with given monomers"
-# we generate scripts without automatic reactions we request for templates from user and the map file -> we say this to lunar and The INPUT Script Generator
-
-# then will come back to main.py file 
-
-# Next part will be to go to the LUNAR for parameterization
-
-# then will come back to main.py file 
-
-# Then with all the data will go to INPUT Script Generator
-
-# and finally will result in OUTPUT files as a ready Folder
-
-# MAIN.PY name will changed in the future to another name 

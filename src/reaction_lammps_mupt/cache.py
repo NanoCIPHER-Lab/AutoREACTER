@@ -283,7 +283,6 @@ class RetentionCleanup:
 
 
 if __name__ == "__main__":
-
     # Staging cache directory where your code dumps temporary outputs
     get_cache_dir = GetCacheDir()
     cache_dir = get_cache_dir.staging_dir
