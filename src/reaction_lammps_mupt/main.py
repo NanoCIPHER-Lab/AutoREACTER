@@ -5,15 +5,13 @@ from input_parser import InputParser
 from cache import get_default_cache_dir, retention_cleanup, get_current_cache_dir
 from cache import delete_default_cache_files as delete_cache_dir
 from cache import copy_to_date_folder as Copy
-from detectors.detector import detect_reactions
+
 initialize()
 cache_dir = get_default_cache_dir()
 final_cache_dir = get_current_cache_dir()
 
 
 if __name__ == "__main__":
-
-
     current_dir = Path(__file__).resolve().parents[2]  # same as parent.parent.parent, but clearer
     input_file = current_dir / "inputs.json"
 
@@ -21,10 +19,10 @@ if __name__ == "__main__":
         inputs = json.load(f)
 
     # modify this to a cmd line argument later and to support this way as well
-    inputs = InputParser(inputs)
-    print(inputs.validated_inputs)
-    reactions, non_reactants = detect_reactions(inputs.validated_inputs)
-    print("Detected Reactions:", reactions)
+    parser = InputParser()
+    validated_inputs = parser.validate_inputs(inputs)
+    print(validated_inputs)
+
 
 
 # then will go to the reaction detector part 
