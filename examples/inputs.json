@@ -3,8 +3,8 @@
   "temperature": [300, 400, 500],
   "density": 0.8,
   "monomers": {
-    "1": "OCCC(O)=O",
-    "2": "C1=CC=C(C(=C1)C(=O)O)O",
+    "1": "O=C(O)CCCCO",
+    "2": "O=C(O)c1ccc(O)cc1",
     "3": "CCO"
   },
   "number_of_monomers": {
