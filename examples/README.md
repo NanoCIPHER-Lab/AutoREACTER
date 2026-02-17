@@ -14,7 +14,7 @@ conda activate autoRX
 ## 2. Install the Project (Editable Mode)
 
 ```bash
-cd ....../reaction_lammps_mupt
+cd ....../AutoREACTER
 python -m pip install -U pip
 python -m pip install -e .
 ```
