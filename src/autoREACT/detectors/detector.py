@@ -16,12 +16,10 @@ try:
     from functional_groups_detector import functional_groups_detector
     from reaction_detector import reaction_selector
 except (ImportError, ModuleNotFoundError):
-    try:
-        from detectors.functional_groups_detector import functional_groups_detector
-        from detectors.reaction_detector import reaction_selector
-    except (ImportError, ModuleNotFoundError):
-        from reaction_lammps_mupt.detectors.functional_groups_detector import functional_groups_detector
-        from reaction_lammps_mupt.detectors.reaction_detector import reaction_selector
+    
+    from .functional_groups_detector import functional_groups_detector
+    from .reaction_detector import reaction_selector
+
 
 
 def find_non_reactant_monomers(reactions: dict, input_dict: dict, interactive: bool = True) -> list:
