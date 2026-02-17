@@ -33,45 +33,19 @@ try:
     from .lunar_client.molecule_template_preparation import molecule_template_preparation
 
 except (ImportError, ModuleNotFoundError):
-    try:
-        # Case 2 (works if running as a loose script from inside reaction_template_builder/)
-        from reaction_template_pipeline.map_reactant_atoms import process_reaction_dict
-        from reaction_template_pipeline.util import (
+
+    # Case 2 (works if running as a loose script from inside reaction_template_builder/)
+    from reaction_template_pipeline.map_reactant_atoms import process_reaction_dict
+    from reaction_template_pipeline.util import (
             format_detected_reactions_dict,
             prep_for_3d_molecule_generation,
         )
-        from reaction_template_pipeline.walker import reaction_atom_walker
-        from reaction_template_pipeline.compare_rdkit_fragments import compare_rdkit_fragments
+    from reaction_template_pipeline.walker import reaction_atom_walker
+    from reaction_template_pipeline.compare_rdkit_fragments import compare_rdkit_fragments
 
-        from lunar_client.molecule_3d_preparation import prepare_3d_molecule
-        from lunar_client.lunar_api_wrapper import lunar_workflow
-        from lunar_client.molecule_template_preparation import molecule_template_preparation
-
-    except (ImportError, ModuleNotFoundError):
-        # Case 3 (fully-qualified import from repo root / installed package)
-        from reaction_lammps_mupt.reaction_template_builder.reaction_template_pipeline.map_reactant_atoms import (
-            process_reaction_dict,
-        )
-        from reaction_lammps_mupt.reaction_template_builder.reaction_template_pipeline.util import (
-            format_detected_reactions_dict,
-            prep_for_3d_molecule_generation,
-        )
-        from reaction_lammps_mupt.reaction_template_builder.reaction_template_pipeline.walker import (
-            reaction_atom_walker,
-        )
-        from reaction_lammps_mupt.reaction_template_builder.reaction_template_pipeline.compare_rdkit_fragments import (
-            compare_rdkit_fragments,
-        )
-
-        from reaction_lammps_mupt.reaction_template_builder.lunar_client.molecule_3d_preparation import (
-            prepare_3d_molecule,
-        )
-        from reaction_lammps_mupt.reaction_template_builder.lunar_client.lunar_api_wrapper import (
-            lunar_workflow,
-        )
-        from reaction_lammps_mupt.reaction_template_builder.lunar_client.molecule_template_preparation import (
-            molecule_template_preparation,
-        )
+    from lunar_client.molecule_3d_preparation import prepare_3d_molecule
+    from lunar_client.lunar_api_wrapper import lunar_workflow
+    from lunar_client.molecule_template_preparation import molecule_template_preparation
 
 
 # standard libs / third-party
