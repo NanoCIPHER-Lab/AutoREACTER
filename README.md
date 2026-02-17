@@ -6,9 +6,9 @@ This repository is currently in beta and under active development. APIs and func
 ## Quick Start
 
 ### Installation
-Clone the repository and install in editable mode:
+Clone the repository and install:
 
 ```bash
-git clone https://github.com/janitha1996/reaction_lammps_mupt
-cd reaction_lammps_mupt
+git clone https://github.com/janitha1996/AutoREACTER
+cd AutoREACTER
 pip install -e .
