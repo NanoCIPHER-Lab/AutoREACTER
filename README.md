@@ -9,5 +9,5 @@ Clone the repository and install:
 
 ```bash
 git clone https://github.com/janitha1996/AutoREACTER
-cd reaction_lammps_mupt
+cd AutoREACTER
 pip install -e .
