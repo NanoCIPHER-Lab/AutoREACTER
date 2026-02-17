@@ -9,6 +9,6 @@ This repository is currently in beta and under active development. APIs and func
 Clone the repository and install:
 
 ```bash
-git clone https://github.com/janitha1996/AutoREACTER
+git clone https://github.com/NanoCIPHER-Lab/AutoREACTER
 cd AutoREACTER
 pip install -e .
