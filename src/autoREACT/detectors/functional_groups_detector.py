@@ -105,16 +105,81 @@ import json
 # Note: Potential for monomers with mixed groups like COCl and COOH is unaddressed.
 # Can be many more functional groups added here
 monomer_types = {
+    "hydroxy_carboxylic_acid_monomer": {
+        "functionality_type": "di_different",
+        "smarts_1": "[OX2H1;!$(OC=*):1]",
+        "smarts_2": "[CX3:2](=[O])[OX2H1]",
+        "group_name": "hydroxy_carboxylic_acid"
+    },
+    "hydroxy_acid_halides_monomer": {
+        "functionality_type": "di_different",
+        "smarts_1": "[OX2H1;!$(OC=*):1]",
+        "smarts_2": "[CX3:2](=[O])[Cl,Br,I]",
+        "group_name": "hydroxy_acid_halide",
+        "comments": "Hydroxy acid halides are highly reactive and less commonly used monomers for polyesterification compared to hydroxy carboxylic acids."
+    },  
+    "diol_monomer": {
+        "functionality_type": "di_identical",
+        "smarts_1": "[O,S;X2;H1;!$([O,S]C=*):3]",
+        "group_name": "diol",
+        "comments": None,
+     },
+    "di_carboxylic_acid_halide_monomer": {
+        "functionality_type": "di_identical",
+        "smarts_1": "[CX3:1](=[O])[Cl,Br,I]",
+        "group_name": "di_carboxylic_acid_halide",
+        "comments": None,
+    },
+    "di_carboxylic_acid_monomer": {
+        "functionality_type": "di_identical",
+        "smarts_1": "[CX3:1](=[O])[OX2H1]",
+        "group_name": "di_carboxylic_acid",
+        "comments": None,
+    },
+    "amino_acid_monomer": {
+        "functionality_type": "di_different",
+        "smarts_1": "[NX3;H2,H1;!$(OC=*):1]",
+        "smarts_2": "[CX3:2](=[O])[OX2H1]",
+        "group_name": "amino_acid",
+        "comments": None,
+     },
+    "di_amine_monomer": {
+        "functionality_type": "di_identical",
+        "smarts_1": "[N&X3;H2,H1;!$(NC=*):3]",
+        "group_name": "di_amine",
+        "comments": None,
+    },
+    "di_carboxylic_acid_monomer": {
+        "functionality_type": "di_identical",
+        "smarts_1": "[CX3:2](=[O])[OX2H1:1]",
+        "group_name": "di_carboxylic_acid",
+        "comments": None,
+    },
+    "di_carboxylic_acid_halide_monomer": {
+        "functionality_type": "di_identical",
+        "smarts_1": "[CX3:2](=[O])[Cl,Br,I:1]",
+        "group_name": "di_carboxylic_acid_halide",
+        "comments": None,
+    },
+    # "di_cyclic_anhydride_monomer": {
+    #     "functionality_type": "di_identical",
+    #     "smarts_1": "[CX3,c;R:1](=[OX1])[OX2,o;R][CX3,c;R:2](=[OX1])",
+    #     "group_name": "di_cyclic_anhydride"
+    # },
+    # "di_isocyanate_monomer": {
+    #     "functionality_type": "di_identical",
+    #     "smarts_1": "[NX2:1]=[CX2]=[OX1,SX1:2]",
+    #     "group_name": "di_isocyanate"
+    # },
+    # "di_epoxide_monomer": {
+    #     "functionality_type": "di_identical",
+    #     "smarts_1": "[CX4;H2,H1,H0;R:1]1[OX2;R:2][CX4;H1,H0;R:3]1",
+    #     "group_name": "di_epoxide"
+    # }
     # "vinyl_monomer": {
     #     "functionality_type": "vinyl",
     #     "smarts_1": "[C]=[C;D1]",
     #     "group_name": "vinyl"
-    # },
-    # "hydroxy_carboxylic_acid_monomer": {
-    #     "functionality_type": "di_different",
-    #     "smarts_1": "[OX2H1;!$(OC=*):1]",
-    #     "smarts_2": "[CX3:2](=[O])[OX2H1]",
-    #     "group_name": "hydroxy_carboxylic_acid"
     # },
     # "cyclic_olefin_monomer": {
     #     "functionality_type": "vinyl",
@@ -125,27 +190,6 @@ monomer_types = {
     #     "functionality_type": "mono",
     #     "smarts_1": "[CX3;R:1](=[OX1])[OX2;R:2]",
     #     "group_name": "lactone"
-    # },
-    "hydroxy_carboxylic_acid_monomer": {
-        "functionality_type": "di_different",
-        "smarts_1": "[OX2H1;!$(OC=*):1]",
-        "smarts_2": "[CX3:2](=[O])[OX2H1]",
-        "group_name": "hydroxy_carboxylic_acid"
-    },
-    # "di_carboxylic_acid_monomer": {
-    #     "functionality_type": "di_identical",
-    #     "smarts_1": "[CX3:1](=[O])[OX2H1]",
-    #     "group_name": "di_carboxylic_acid"
-    # },
-    # "di_carboxylic_acidhalide_monomer": {
-    #     "functionality_type": "di_identical",
-    #     "smarts_1": "[CX3:1](=[O])[Cl,Br]",
-    #     "group_name": "di_carboxylic_acidhalide"
-    # },
-    # "diol_monomer": {
-    #     "functionality_type": "di_identical",
-    #     "smarts_1": "[O,S;X2;H1;!$([O,S]C=*):3]",
-    #     "group_name": "diol"
     # },
     # "cyclic_anhydride_monomer": {
     #     "functionality_type": "mono",
@@ -162,15 +206,10 @@ monomer_types = {
     #     "smarts_1": "[CX3;R:1](=[OX1])[NX3;R:2]",
     #     "group_name": "lactam"
     # },
-    # "amino_acid_monomer": {
-    #     "functionality_type": "di_different",
-    #     "smarts_1": "[NH2;!$(NC=O)]",
-    #     "smarts_2": "[CX3:2](=[O])[OX2H1]",
-    #     "group_name": "amino_acid"
-    # },
     # "di_amine_monomer": {
     #     "functionality_type": "di_identical",
     #     "smarts_1": "[N&X3;H2,H1;!$(NC=*):3]",
+
     #     "group_name": "di_amine"
     # },
     # "primery_di_amine_monomer": {
@@ -227,7 +266,6 @@ def detect_monomer_functionality(smiles: str, functionality_type: str, smarts_1:
     if patt1 is None:
         return 0, None, None
 
-    # has to fix di identical case
     if smarts_2:
         # Handle 'di_different' types with two distinct patterns
         patt2 = Chem.MolFromSmarts(smarts_2)
@@ -242,17 +280,20 @@ def detect_monomer_functionality(smiles: str, functionality_type: str, smarts_1:
             return 2, functional_count_1, functional_count_2
         else:
             return 0, functional_count_1, functional_count_2
+        
     else:
         # Count occurrences of primary pattern
         functional_count_1 = len(mol.GetSubstructMatches(patt1))
 
+        if functionality_type == "di_identical":
+            # Check if the match occurs more than once for di_identical functionality
+            if functional_count_1 >= 2:
+                return 2, functional_count_1, None
+            else:
+                return 0, functional_count_1, None
+        
+        # For vinyl or mono
         if functional_count_1 >= 1:
-            if functionality_type == "di_identical":
-                # Check if the match occurs more than once for di_identical functionality
-                if functional_count_1 >= 2:
-                    return 2, functional_count_1, None
-                else:
-                    return 0, functional_count_1, None
             return 1, functional_count_1, None
         else:
             return 0, 0, None
@@ -292,8 +333,10 @@ def functional_groups_detector(monomer_dictionary: dict) -> dict:
                     functional_group["functionality_type"],
                     functional_group["smarts_1"],
                 )
-                if functionality == 1:
+                if functionality >= 1:
                     functional_group_index += 1
+                    if "comments" in functional_group and functional_group["comments"]:
+                        print(f"Note: Monomer {indexm} ({smiles}) - {functional_group['comments']}")
                     print(f"Monomer {indexm} ({smiles}) has functionality: {functional_group['group_name']}")
                     if indexm not in selected_monomers:
                         selected_monomers[indexm] = {"smiles": smiles}
@@ -311,7 +354,9 @@ def functional_groups_detector(monomer_dictionary: dict) -> dict:
                     functional_group["functionality_type"],
                     functional_group["smarts_1"],
                 )
-                if functionality == 1:
+                if functionality >= 1:
+                    if "comments" in functional_group and functional_group["comments"]:
+                        print(f"Note: Monomer {indexm} ({smiles}) - {functional_group['comments']}")
                     functional_group_index += 1
                     print(f"Monomer {indexm} ({smiles}) has functionality: {functional_group['group_name']}")
                     if indexm not in selected_monomers:
@@ -322,6 +367,7 @@ def functional_groups_detector(monomer_dictionary: dict) -> dict:
                         "functional_group_smarts_1": functional_group["smarts_1"],
                         "functional_count_1": functional_count_1
                     }
+                
 
             # Handle 'di_different' functionality (matches for both smarts_1 and smarts_2 required)
             if functional_group["functionality_type"] == "di_different":
@@ -331,7 +377,9 @@ def functional_groups_detector(monomer_dictionary: dict) -> dict:
                     functional_group["smarts_1"],
                     functional_group["smarts_2"],
                 )
-                if functionality == 2:
+                if functionality >= 2:
+                    if "comments" in functional_group and functional_group["comments"]:
+                        print(f"Note: Monomer {indexm} ({smiles}) - {functional_group['comments']}")
                     functional_group_index += 1
                     print(f"Monomer {indexm} ({smiles}) has functionality: {functional_group['group_name']}")
                     if indexm not in selected_monomers:
@@ -352,7 +400,11 @@ def functional_groups_detector(monomer_dictionary: dict) -> dict:
                     functional_group["functionality_type"],
                     functional_group["smarts_1"],
                 )
-                if functionality == 2:
+
+                if functionality >= 2:
+                    # Print comments if available
+                    if "comments" in functional_group and functional_group["comments"]:
+                        print(f"Note: Monomer {indexm} ({smiles}) - {functional_group['comments']}")
                     functional_group_index += 1
                     print(f"Monomer {indexm} ({smiles}) has functionality: {functional_group['group_name']}")
                     if indexm not in selected_monomers:

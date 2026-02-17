@@ -3,14 +3,19 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "reaction_lammps_mupt"
-version = "0.1.0"
+name = "autoREACT"
+version = "0.1.0b1"
 description = "A toolkit for LAMMPS reaction modeling within MuPT"
+authors = [
+    {name = "Janitha Mahanthe", email = "jmahanth@stevens.edu"},
+    ]
+license = "MIT"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.13"
 dependencies = [
     "numpy",
     "pandas",
+    "networkx"
 ]
 
 [tool.setuptools.packages.find]
