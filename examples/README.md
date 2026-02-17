@@ -14,7 +14,7 @@ conda activate autoRX
 ## 2. Install the Project (Editable Mode)
 
 ```bash
-cd ....../AutoREACTER
+cd AutoREACTER
 python -m pip install -U pip
 python -m pip install -e .
 ```
