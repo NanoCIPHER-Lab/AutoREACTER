@@ -3,11 +3,12 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "autoREACT"
+name = "AutoREACTER"
 version = "0.1.0b1"
 description = "A toolkit for LAMMPS reaction modeling within MuPT"
 authors = [
     {name = "Janitha Mahanthe", email = "jmahanth@stevens.edu"},
+
     ]
 license = "MIT"
 readme = "README.md"

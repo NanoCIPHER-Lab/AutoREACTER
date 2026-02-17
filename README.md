@@ -1,13 +1,13 @@
-# reaction_lammps_mupt
+# AutoREACTER
 
 A Python-based toolkit for managing and automating reaction modeling in LAMMPS, designed as a component of the **Multiscale Polymer Toolkit (MuPT)**.
 
 ## Quick Start
 
 ### Installation
-Clone the repository and install in editable mode:
+Clone the repository and install:
 
 ```bash
-git clone https://github.com/janitha1996/reaction_lammps_mupt
+git clone https://github.com/janitha1996/AutoREACTER
 cd reaction_lammps_mupt
 pip install -e .
