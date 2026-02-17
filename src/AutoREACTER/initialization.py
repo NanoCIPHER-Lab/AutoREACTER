@@ -8,23 +8,13 @@ except ImportError:  # for running as a script
 
 def ASCII_Mupt_reaction_LAMMPS():
     ascii_art = r"""                                                                                                                                                                                                                                                       
-                                                                                                                                                                                                                                                       
-               AAA                                     tttt                                RRRRRRRRRRRRRRRRR   EEEEEEEEEEEEEEEEEEEEEE               AAA                  CCCCCCCCCCCCCTTTTTTTTTTTTTTTTTTTTTTTEEEEEEEEEEEEEEEEEEEEEERRRRRRRRRRRRRRRRR   
-              A:::A                                 ttt:::t                                R::::::::::::::::R  E::::::::::::::::::::E              A:::A              CCC::::::::::::CT:::::::::::::::::::::TE::::::::::::::::::::ER::::::::::::::::R  
-             A:::::A                                t:::::t                                R::::::RRRRRR:::::R E::::::::::::::::::::E             A:::::A           CC:::::::::::::::CT:::::::::::::::::::::TE::::::::::::::::::::ER::::::RRRRRR:::::R 
-            A:::::::A                               t:::::t                                RR:::::R     R:::::REE::::::EEEEEEEEE::::E            A:::::::A         C:::::CCCCCCCC::::CT:::::TT:::::::TT:::::TEE::::::EEEEEEEEE::::ERR:::::R     R:::::R
-           A:::::::::A        uuuuuu    uuuuuuttttttt:::::ttttttt       ooooooooooo          R::::R     R:::::R  E:::::E       EEEEEE           A:::::::::A       C:::::C       CCCCCCTTTTTT  T:::::T  TTTTTT  E:::::E       EEEEEE  R::::R     R:::::R
-          A:::::A:::::A       u::::u    u::::ut:::::::::::::::::t     oo:::::::::::oo        R::::R     R:::::R  E:::::E                       A:::::A:::::A     C:::::C                      T:::::T          E:::::E               R::::R     R:::::R
-         A:::::A A:::::A      u::::u    u::::ut:::::::::::::::::t    o:::::::::::::::o       R::::RRRRRR:::::R   E::::::EEEEEEEEEE            A:::::A A:::::A    C:::::C                      T:::::T          E::::::EEEEEEEEEE     R::::RRRRRR:::::R 
-        A:::::A   A:::::A     u::::u    u::::utttttt:::::::tttttt    o:::::ooooo:::::o       R:::::::::::::RR    E:::::::::::::::E           A:::::A   A:::::A   C:::::C                      T:::::T          E:::::::::::::::E     R:::::::::::::RR  
-       A:::::A     A:::::A    u::::u    u::::u      t:::::t          o::::o     o::::o       R::::RRRRRR:::::R   E:::::::::::::::E          A:::::A     A:::::A  C:::::C                      T:::::T          E:::::::::::::::E     R::::RRRRRR:::::R 
-      A:::::AAAAAAAAA:::::A   u::::u    u::::u      t:::::t          o::::o     o::::o       R::::R     R:::::R  E::::::EEEEEEEEEE         A:::::AAAAAAAAA:::::A C:::::C                      T:::::T          E::::::EEEEEEEEEE     R::::R     R:::::R
-     A:::::::::::::::::::::A  u::::u    u::::u      t:::::t          o::::o     o::::o       R::::R     R:::::R  E:::::E                  A:::::::::::::::::::::AC:::::C                      T:::::T          E:::::E               R::::R     R:::::R
-    A:::::AAAAAAAAAAAAA:::::A u:::::uuuu:::::u      t:::::t    tttttto::::o     o::::o       R::::R     R:::::R  E:::::E       EEEEEE    A:::::AAAAAAAAAAAAA:::::AC:::::C       CCCCCC        T:::::T          E:::::E       EEEEEE  R::::R     R:::::R
-   A:::::A             A:::::Au:::::::::::::::uu    t::::::tttt:::::to:::::ooooo:::::o     RR:::::R     R:::::REE::::::EEEEEEEE:::::E   A:::::A             A:::::AC:::::CCCCCCCC::::C      TT:::::::TT      EE::::::EEEEEEEE:::::ERR:::::R     R:::::R
-  A:::::A               A:::::Au:::::::::::::::u    tt::::::::::::::to:::::::::::::::o     R::::::R     R:::::RE::::::::::::::::::::E  A:::::A               A:::::ACC:::::::::::::::C      T:::::::::T      E::::::::::::::::::::ER::::::R     R:::::R
- A:::::A                 A:::::Auu::::::::uu:::u      tt:::::::::::tt oo:::::::::::oo      R::::::R     R:::::RE::::::::::::::::::::E A:::::A                 A:::::A CCC::::::::::::C      T:::::::::T      E::::::::::::::::::::ER::::::R     R:::::R
-AAAAAAA                   AAAAAAA uuuuuuuu  uuuu        ttttttttttt     ooooooooooo        RRRRRRRR     RRRRRRREEEEEEEEEEEEEEEEEEEEEEAAAAAAA                   AAAAAAA   CCCCCCCCCCCCC      TTTTTTTTTTT      EEEEEEEEEEEEEEEEEEEEEERRRRRRRR     RRRRRRR
+      .o.                       .                  ooooooooo.   oooooooooooo       .o.         .oooooo.   ooooooooooooo oooooooooooo ooooooooo.   
+     .888.                    .o8                  `888   `Y88. `888'     `8      .888.       d8P'  `Y8b  8'   888   `8 `888'     `8 `888   `Y88. 
+    .8"888.     oooo  oooo  .o888oo  .ooooo.        888   .d88'  888             .8"888.     888               888       888          888   .d88' 
+   .8' `888.    `888  `888    888   d88' `88b       888ooo88P'   888oooo8       .8' `888.    888               888       888oooo8     888ooo88P'  
+  .88ooo8888.    888   888    888   888   888       888`88b.     888    "      .88ooo8888.   888               888       888    "     888`88b.    
+ .8'     `888.   888   888    888 . 888   888       888  `88b.   888       o  .8'     `888.  `88b    ooo       888       888       o  888  `88b.  
+o88o     o8888o  `V88V"V8P'   "888" `Y8bod8P'      o888o  o888o o888ooooood8 o88o     o8888o  `Y8bood8P'      o888o     o888ooooood8 o888o  o888o 
 """
     print(ascii_art)
 
