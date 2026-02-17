@@ -1,9 +1,9 @@
 import importlib
 import sys
-try: # for running as a package
-    from cache import delete_default_cache_files as delete_cache_dir
-except ImportError: # for running as a script
+try:  # for running as a package
     from autoREACT.cache import delete_default_cache_files as delete_cache_dir
+except ImportError:  # for running as a script
+    from cache import delete_default_cache_files as delete_cache_dir
 
 
 def ASCII_Mupt_reaction_LAMMPS():
