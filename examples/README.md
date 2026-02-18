@@ -8,8 +8,6 @@ Clone the repository and install:
 
 ```bash
 git clone https://github.com/NanoCIPHER-Lab/AutoREACTER
-cd AutoREACTER
-pip install -e .
 ```
 
 ## 2. Create and Activate the Conda Environment
