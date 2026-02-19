@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from initialization import initialize
+from initialization import Initialization
 from input_parser import InputParser
 from cache import GetCacheDir, RunDirectoryManager, RetentionCleanup
 from detectors.detector import Detector
@@ -8,7 +8,7 @@ from detectors.detector import Detector
 """
 Main script for initializing the reaction LAMMPS MUPT pipeline.
 """
-initialize()
+Initialization()
 get_cache_dir = GetCacheDir()
 cache_dir = get_cache_dir.staging_dir
 print(f"Base cache directory: {cache_dir}")
@@ -26,8 +26,9 @@ TODO: Use this in CMD line interface and in the future when we want to support b
 
 if __name__ == "__main__":
     current_dir = Path(__file__).resolve().parents[2]  # same as parent.parent.parent, but clearer
-    input_file = current_dir / "inputs.json"
+    input_file = Path( current_dir / "examples" / "example_1_inputs.json")
 
+    # Read and validate inputs
     with input_file.open("r", encoding="utf-8") as f:
         inputs = json.load(f)
 

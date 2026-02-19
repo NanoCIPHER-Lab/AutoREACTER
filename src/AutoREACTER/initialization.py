@@ -1,13 +1,35 @@
+"""
+Author: "Janitha Mahanthe"
+Version: v0.1-beta.1
+"""
+version = "v0.1-beta.1"
 import importlib
-import sys
-try:  # for running as a package
-    from .cache import delete_default_cache_files as delete_cache_dir
-except ImportError:  # for running as a script
-    from cache import delete_default_cache_files as delete_cache_dir
 
 
-def ASCII_Mupt_reaction_LAMMPS():
-    ascii_art = r"""                                                                                                                                                                                                                                                       
+class Initialization:
+    def __init__(self):
+        self.moldule_imports()
+        self.ASCII_Mupt_reaction_LAMMPS()
+        self.print_version()
+        
+
+    @classmethod
+    def moldule_imports(cls):
+        try:
+            for module in ['rdkit', 'pandas', 'numpy', 'networkx']:
+                importlib.import_module(module)
+            print("All required modules are successfully imported.")
+        except ModuleNotFoundError as e:
+            message = (
+                f"ERROR: Required module not found: {e.name}\n\n"
+                "👉 Please install the missing module and try again.\n\n"
+                "Exiting program..."
+            )
+            raise RuntimeError(message)
+        
+    @classmethod
+    def ASCII_Mupt_reaction_LAMMPS(cls):
+        ascii_art = r"""                                                                                                                                                                                                                                                       
       .o.                       .                  ooooooooo.   oooooooooooo       .o.         .oooooo.   ooooooooooooo oooooooooooo ooooooooo.   
      .888.                    .o8                  `888   `Y88. `888'     `8      .888.       d8P'  `Y8b  8'   888   `8 `888'     `8 `888   `Y88. 
     .8"888.     oooo  oooo  .o888oo  .ooooo.        888   .d88'  888             .8"888.     888               888       888          888   .d88' 
@@ -16,24 +38,11 @@ def ASCII_Mupt_reaction_LAMMPS():
  .8'     `888.   888   888    888 . 888   888       888  `88b.   888       o  .8'     `888.  `88b    ooo       888       888       o  888  `88b.  
 o88o     o8888o  `V88V"V8P'   "888" `Y8bod8P'      o888o  o888o o888ooooood8 o88o     o8888o  `Y8bood8P'      o888o     o888ooooood8 o888o  o888o 
 """
-    print(ascii_art)
-
-
-def initialize():
-    try:
-        for module in ['rdkit', 'pandas', 'numpy']:
-            importlib.import_module(module)
-        print("All required modules are successfully imported.")
-        ASCII_Mupt_reaction_LAMMPS()
-    except ModuleNotFoundError as e:
-        message = (
-            f"ERROR: Required module not found: {e.name}\n\n"
-            "👉 Please install the missing module and try again.\n\n"
-            "Exiting program..."
-        )
-        sys.exit(message)  
+        print(ascii_art)
     
-    delete_cache_dir()
+    @classmethod
+    def print_version(cls):
+        print(f"AutoREACTER version: {version}")
 
 if __name__ == "__main__":
-    initialize()
+    Initialization()
