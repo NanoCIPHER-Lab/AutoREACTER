@@ -14,9 +14,9 @@ For now, the package supports **only the reaction types below** and their releva
 4. Diol + di-carboxylic acid polycondensation  
 
 ### Polyamidation (Polycondensation)
-6. Amino acid polycondensation *(including amino acid self-/co-polycondensation)*  
-7. Diamine + di-carboxylic acid polycondensation  
-8. Diamine + di-carboxylic acid halide polycondensation  
+5. Amino acid polycondensation *(including amino acid self-/co-polycondensation)*  
+6. Diamine + di-carboxylic acid polycondensation  
+7. Diamine + di-carboxylic acid halide polycondensation  
 
 ## Quick Start
 
