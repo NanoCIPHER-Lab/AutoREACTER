@@ -8,7 +8,7 @@ This repository is in **beta** and under active development — APIs and functio
 For now, the package supports **only the reaction types below** and their relevant functional groups.
 
 ### Polyesterification (Polycondensation)
-1. Hydroxy–carboxylic acid polycondensation *(including amino acid self-/co-polycondensation)*   
+1. Hydroxy–carboxylic acid polycondensation *(including hydroxy–carboxylic acid self-/co-polycondensation)*   
 2. Hydroxy acid halide polycondensation *(including self-condensation and mixed halide cases)*  
 3. Diol + di-acid halide polycondensation  
 4. Diol + di-carboxylic acid polycondensation  
