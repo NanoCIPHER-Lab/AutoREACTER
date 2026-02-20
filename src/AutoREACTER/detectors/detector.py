@@ -21,6 +21,27 @@ except (ImportError, ModuleNotFoundError):
     from .reaction_detector import reaction_selector
 
 
+def _extract_smiles_dict(monomers: dict) -> dict:
+    """
+    Extract a flat ``{name: smiles}`` mapping from the unified monomer schema.
+
+    Supports the new unified schema where each entry is ``{"smiles": ..., "count": ...}``.
+
+    Args:
+        monomers (dict): Monomer dictionary from the validated inputs.
+
+    Returns:
+        dict: A flat mapping of monomer name to SMILES string.
+    """
+    result = {}
+    for name, entry in monomers.items():
+        if isinstance(entry, dict):
+            result[name] = entry["smiles"]
+        else:
+            # Fallback for plain name->smiles format (legacy / internal use)
+            result[name] = entry
+    return result
+
 
 def find_non_reactant_monomers(reactions: dict, input_dict: dict, interactive: bool = True) -> list:
     """
@@ -31,7 +52,7 @@ def find_non_reactant_monomers(reactions: dict, input_dict: dict, interactive: b
         reactions (dict): A dictionary containing detected reaction data. Expected keys
             include 'monomer_1', 'monomer_2', and 'smiles' for each reaction entry.
         input_dict (dict): The original input dictionary containing a 'monomers' key
-            mapping monomer IDs to SMILES strings.
+            mapping monomer names to ``{"smiles": ..., "count": ...}`` entries.
         interactive (bool): If False, automatically retain all non-reactants without prompting.
 
     Returns:
@@ -57,12 +78,12 @@ def find_non_reactant_monomers(reactions: dict, input_dict: dict, interactive: b
             reactant_smiles.add(rxn_smiles)
 
     # 2) Build a dictionary of monomers that are not found in the reactant set
-    monomers = input_dict.get("monomers", {})
+    smiles_dict = _extract_smiles_dict(input_dict.get("monomers", {}))
     non_reactants = {}
 
     # Re-index non-reactants starting from ID 1
     new_id = 1
-    for _, smi in monomers.items():
+    for _, smi in smiles_dict.items():
         if smi not in reactant_smiles:
             non_reactants[new_id] = smi
             new_id += 1
@@ -121,7 +142,7 @@ def detect_reactions(input_dict, interactive=True) -> tuple:
 
     Args:
         input_dict (dict): A dictionary containing the 'monomers' key, which maps
-                           monomer IDs (int/str) to SMILES strings (str).
+                           monomer names to ``{"smiles": str, "count": int}`` entries.
 
     Returns:
         tuple: A tuple containing:
@@ -135,9 +156,12 @@ def detect_reactions(input_dict, interactive=True) -> tuple:
     monomer_dict = input_dict.get("monomers", {})
     if not monomer_dict:
         raise ValueError("Input dictionary must contain a 'monomers' key with monomer data.")
-    
+
+    # Build a flat {name: smiles} dict for functional group detection
+    smiles_dict = _extract_smiles_dict(monomer_dict)
+
     # Step 1: Detect functional groups within the monomers
-    fg_results = functional_groups_detector(monomer_dict)
+    fg_results = functional_groups_detector(smiles_dict)
     
     # Step 2: Select reactions based on the detected functional groups
     reactions = reaction_selector(fg_results)
@@ -149,12 +173,12 @@ def detect_reactions(input_dict, interactive=True) -> tuple:
 
 
 if __name__ == "__main__":
-    # Example usage of the module with sample monomer data
+    # Example usage of the module with sample monomer data (new unified schema)
     sample_inputs = {
         "monomers": {
-            1: "O=C(O)c1cc(O)cc(C(=O)O)c1",  # Example monomer 1
-            2: "O=C(O)CCCC(O)CCCO",          # Example monomer 2
-            3: "CCO",                        # Example monomer 3 (Ethanol)
+            "monomer_1": {"smiles": "O=C(O)c1cc(O)cc(C(=O)O)c1", "count": 100},
+            "monomer_2": {"smiles": "O=C(O)CCCC(O)CCCO", "count": 100},
+            "ethanol":   {"smiles": "CCO", "count": 50},
         }
     }
     
