@@ -35,6 +35,28 @@ class ReactionDefinition:
     monomer_2: MonomerRole | None = None
 """
 
+
+"""
+NOTE: Use this method to store monomers
+
+class MyClass:
+    def __init__(self, name):
+        self.name = name
+    
+    def __repr__(self):
+        return f"<{self.name}>"
+
+# Create 5 instances in a loop and store them in a list
+instance_list = []
+for i in range(1, 6):
+    instance_list.append(MyClass(f"name_{i}"))
+
+# Accessing the objects
+print(instance_list)
+print(instance_list[0].name)
+
+"""
+
 from dataclasses import dataclass
 from rdkit import Chem
 import logging
