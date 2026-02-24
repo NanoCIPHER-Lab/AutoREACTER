@@ -8,7 +8,7 @@ version = "0.1-beta.0"
 description = "A toolkit for LAMMPS reaction modeling within MuPT"
 authors = [
     {name = "Janitha Mahanthe", email = "jmahanth@stevens.edu"},
-
+    
     ]
 license = "MIT"
 readme = "README.md"
@@ -20,4 +20,3 @@ dependencies = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["src"]
