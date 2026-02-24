@@ -5,7 +5,6 @@
 
   "composition": {
     "method": "stoichiometric_ratio",
-    "ratio_basis": "molecule_count",
     "targets": [
       {"tag": "10k", "total_atoms": 10000},
       {"tag": "100k", "total_atoms": 100000}
