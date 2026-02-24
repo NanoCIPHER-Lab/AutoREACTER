@@ -1,0 +1,40 @@
+{
+  "simulation_name": "Example_Count_Mode",
+  "temperature": [300, 400, 500],
+  "density": 0.8,
+
+  "composition": {
+    "method": "counts",
+    "targets": [
+      {"tag": "10k"},
+      {"tag": "100k"}
+    ]
+  },
+  
+  "monomers": [ 
+    {
+      "name": "tmc",
+      "smiles": "ClC(=O)c1cc(cc(c1)C(Cl)=O)C(Cl)=O",
+      "count": {
+        "10k": 220,
+        "100k": 2200
+      }
+    },
+    {
+      "name": "mpd",
+      "smiles": "C1=CC(=CC(=C1)N)N",
+      "count": {
+        "10k": 220,
+        "100k": 2200
+      }
+    },
+    {
+      "name": "ethanol",
+      "smiles": "CCO",
+      "count": {
+        "10k": 110,
+        "100k": 1100
+      }
+    }
+  ]
+}
