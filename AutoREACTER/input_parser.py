@@ -187,6 +187,23 @@ class InputParser:
             composition=composition_dict
         )
 
+    def molecule_representation_of_initial_molecules(self, simulation_setup: SimulationSetup) -> list[Chem.Mol]:
+        """
+        Extracts RDKit Mol objects for all monomers in the simulation setup.
+        
+        This method can be used for downstream processing that requires direct access
+        to the molecular structures, such as reaction definition or advanced analysis.
+
+        Args:
+            simulation_setup: The validated SimulationSetup object.
+
+        Returns:
+            A list of RDKit Mol objects corresponding to each monomer entry.
+        """
+        initial_molecules = [monomer.rdkit_mol for monomer in simulation_setup.monomers if monomer.rdkit_mol is not None]
+        initial_molecules_legends = [monomer.name for monomer in simulation_setup.monomers]
+        return initial_molecules, initial_molecules_legends
+
     def validate_basic_format(self, inputs: dict) -> None:
         """
         Validates the top-level structure of the input dictionary.
