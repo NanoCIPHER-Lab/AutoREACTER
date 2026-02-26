@@ -25,12 +25,57 @@ TODO: Missing Polymerization Mechanisms
 """
 
 import json
-from typing import Dict, Any
+from typing import Dict, Any, Tuple, Optional
+from dataclasses import dataclass
 
 try:
     from reactions_library import ReactionLibrary
 except (ImportError, ModuleNotFoundError):
     from .reactions_library import ReactionLibrary
+
+try:
+    from .functional_groups_detector import FunctionalGroupInfo, MonomerRole
+except (ImportError, ModuleNotFoundError):
+    from functional_groups_detector import FunctionalGroupInfo, MonomerRole
+
+
+@dataclass(slots=True, frozen=True)
+class FunctionalGroupInfo:
+    functionality_type: str
+    fg_name: str
+    fg_smarts_1: str
+    fg_count_1: int
+    fg_smarts_2: Optional[str] = None
+    fg_count_2: Optional[int] = None
+
+@dataclass(slots=True, frozen=True)
+class MonomerRole:
+    smiles: str
+    name: str
+    functionalities: Tuple[FunctionalGroupInfo, ...]
+
+@dataclass(slots=True, frozen=True)
+class ReactionTemplate:
+    reaction_name: str
+    reactant_1: str                 # functional group name
+    reactant_2: Optional[str]       # functional group name or None
+    reaction_smarts: str
+    same_reactants: bool
+    delete_atom: bool
+    references: dict
+
+@dataclass(slots=True, frozen=True)
+class ReactionInstance:
+    reaction_name: str
+    reaction_smarts: str
+    delete_atom: bool
+    references: dict
+
+    monomer_1: MonomerRole
+    fg_1: FunctionalGroupInfo
+
+    monomer_2: Optional[MonomerRole] = None
+    fg_2: Optional[FunctionalGroupInfo] = None
 
 
 class ReactionDetector:
