@@ -19,6 +19,7 @@ except (ImportError, ModuleNotFoundError):
     from .functional_groups_detector import FunctionalGroupsDetector
     from .reaction_detector import ReactionDetector
 
+from AutoREACTER.input_parser import MonomerEntry
 
 class Detector:
     """
@@ -177,7 +178,7 @@ class Detector:
         return input_dict
 
 
-    def detect_reactions(self, input_dict, interactive=True) -> tuple:
+    def detect_reactions(self, monomer_entry: MonomerEntry, interactive=True) -> tuple:
         """
         Detects chemical reactions and identifies non-reactant monomers based on the provided input.
 
@@ -186,8 +187,7 @@ class Detector:
         monomers that did not participate in the detected reactions.
 
         Args:
-            input_dict (dict): A dictionary containing the 'monomers' key, which maps
-                            monomer IDs (int/str) to SMILES strings (str).
+            monomer_entry (MonomerEntry): A MonomerEntry object containing the monomers data.
 
         Returns:
             tuple: A tuple containing:
@@ -197,15 +197,9 @@ class Detector:
         Raises:
             ValueError: If the input dictionary is missing the 'monomers' key or if it is empty.
         """
-        self.input_dict = input_dict
-        self.interactive = interactive
-        # Extract monomers from input and validate presence
-        monomer_dict = self.input_dict.get("monomers", {})
-        if not monomer_dict:
-            raise ValueError("Input dictionary must contain a 'monomers' key with monomer data.")
         
         # Step 1: Detect functional groups within the monomers
-        fg_results = self.functional_groups_detector.functional_groups_detector(monomer_dict)
+        fg_results = self.functional_groups_detector.functional_groups_detector(monomer_entry)
 
         # Debug: Print detected functional groups
         # print("Detected Functional Groups:", json.dumps(fg_results, indent=2))
@@ -240,10 +234,9 @@ if __name__ == "__main__":
     # Example usage of the module with sample monomer data
     sample_inputs = {
         "monomers": {
-            1: "ClC(=O)c1cc(cc(c1)C(Cl)=O)C(Cl)=O", # Example monomer 1 - Trimesoyl chloride (TMC)
-            2: "C1=CC(=CC(=C1)N)N",                 # Example monomer 2 - m-Phenylenediamine (MPD)
-            3: "CCO",                                # Example Non - monomer - Ethanol                       # Example Non - monomer - Acetic acid
-            4: "OCCC"                           # Example Non - monomer - 2-Hydroxypropanoic acid (Lactic acid)
+            1: "ClC(=O)c1cc(cc(c1)C(Cl)=O)C(Cl)=O",  # Example monomer 1 - Trimesoyl chloride (TMC)
+            2: "C1=CC(=CC(=C1)N)N",                  # Example monomer 2 - m-Phenylenediamine (MPD)
+            3: "CCO",                                # Example Non - monomer - Ethanol                       
         }
     }
     
