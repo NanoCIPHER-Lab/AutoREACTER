@@ -1,8 +1,11 @@
+"""
+Polymerization Reaction Detector and Visualizer.
 
-# Dictionary defining various polymerization reactions.
-# Each reaction includes metadata such as whether reactants are the same,
-# the types of reactants, the product type, whether to delete atoms,
-# and the SMARTS string for the reaction pattern using RDKit syntax.
+This module provides tools to identify potential polymerization reactions between 
+monomers based on their functional groups using SMARTS patterns and RDKit. 
+It includes functionality to detect homo-polymerization and co-polymerization, 
+and generates visual grids of the resulting chemical reactions.
+"""
 
 """
 TODO: Missing Polymerization Mechanisms
@@ -25,12 +28,14 @@ TODO: Missing Polymerization Mechanisms
 """
 
 import pathlib
-from typing import Dict, Any, Tuple, Optional
+import os
+from typing import Dict, Any, Tuple, Optional, List, Set
 from dataclasses import dataclass
 from PIL import Image, ImageDraw, ImageFont
 from rdkit import Chem
 from rdkit.Chem import Draw, rdChemReactions
 
+# Attempt to import internal library components
 try:
     from reactions_library import ReactionLibrary
 except (ImportError, ModuleNotFoundError):
@@ -41,14 +46,26 @@ try:
 except (ImportError, ModuleNotFoundError):
     from functional_groups_detector import FunctionalGroupInfo, MonomerRole
 
-class SMARTSERROR(Exception):
+class SMARTSerror(Exception):
     """Error from developer-defined SMARTS patterns not producing expected products.
-    Please contact the developer to resolve this issue. Raise a GitHub issue if you encounter this error.
+    Please contact the developer to resolve this issue. 
+    Raise a GitHub issue if you encounter this error.
     at <https://github.com/NanoCIPHER-Lab/AutoREACTER/issues>"""
     pass
 
 @dataclass(slots=True, frozen=True)
 class FunctionalGroupInfo:
+    """
+    Stores metadata about a specific functional group detected in a molecule.
+    
+    Attributes:
+        functionality_type: Category of the group (e.g., 'vinyl', 'diol').
+        fg_name: Human-readable name of the functional group.
+        fg_smarts_1: Primary SMARTS pattern for detection.
+        fg_count_1: Number of occurrences of the primary pattern.
+        fg_smarts_2: Secondary SMARTS pattern (optional).
+        fg_count_2: Number of occurrences of the secondary pattern (optional).
+    """
     functionality_type: str
     fg_name: str
     fg_smarts_1: str
@@ -58,12 +75,23 @@ class FunctionalGroupInfo:
 
 @dataclass(slots=True, frozen=True)
 class MonomerRole:
+    """
+    Represents a monomer and its associated functional groups.
+    
+    Attributes:
+        smiles: SMILES string of the monomer.
+        name: Identifier or name of the monomer.
+        functionalities: A tuple of FunctionalGroupInfo objects present in this monomer.
+    """
     smiles: str
     name: str
     functionalities: Tuple[FunctionalGroupInfo, ...]
 
 @dataclass(slots=True, frozen=True)
 class ReactionTemplate:
+    """
+    Defines a generic template for a polymerization reaction.
+    """
     reaction_name: str
     reactant_1: str                 # functional group name
     reactant_2: Optional[str]       # functional group name or None
@@ -74,26 +102,49 @@ class ReactionTemplate:
 
 @dataclass(slots=True, frozen=True)
 class ReactionInstance:
+    """
+    Represents a specific instance of a reaction between identified monomers.
+    
+    Attributes:
+        reaction_name: Name of the polymerization type.
+        reaction_smarts: The SMARTS string used to perform the reaction.
+        delete_atom: Flag indicating if specific atoms should be removed post-reaction.
+        references: Dictionary containing literature references.
+        monomer_1: The first monomer involved.
+        functional_group_1: The specific FG on monomer 1 participating.
+        monomer_2: The second monomer (None for homo-polymerization).
+        functional_group_2: The specific FG on monomer 2 participating.
+    """
     reaction_name: str
     reaction_smarts: str
     delete_atom: bool
     references: dict
-
     monomer_1: MonomerRole
     functional_group_1: FunctionalGroupInfo
     monomer_2: Optional[MonomerRole] = None
     functional_group_2: Optional[FunctionalGroupInfo] = None
 
 class ReactionDetector:
+    """
+    Detects valid chemical reactions between a list of monomers based on a 
+    predefined library of polymerization mechanisms.
+    """
     def __init__(self):
+        """Initializes the detector by loading the reaction library."""
         self.reactions = ReactionLibrary().reactions
     
-    def _matching_fgs(self, monomer_entry: MonomerRole, target_group_name: str) -> list:
-            fg_hits = []
-            for fg in monomer_entry.functionalities:
-                if fg.fg_name == target_group_name:
-                    fg_hits.append(fg)
-            return fg_hits
+    def _matching_fgs(self, monomer_entry: MonomerRole, target_group_name: str) -> List[FunctionalGroupInfo]:
+        """
+        Filters functional groups in a monomer that match a target name.
+        
+        Args:
+            monomer_entry: The monomer to search.
+            target_group_name: The name of the FG to look for.
+            
+        Returns:
+            A list of matching FunctionalGroupInfo objects.
+        """
+        return [fg for fg in monomer_entry.functionalities if fg.fg_name == target_group_name]
 
     def _seen_pair_key(
             self,
@@ -103,100 +154,82 @@ class ReactionDetector:
             monomer_role_2: Optional[MonomerRole] = None,
             fg_2: Optional[FunctionalGroupInfo] = None,
         ) -> Tuple:
-
+        """
+        Generates a unique, order-independent key for a reaction pair to avoid duplicates.
+        
+        Args:
+            reaction_name: Name of the reaction.
+            monomer_role_1: First monomer.
+            fg_1: First functional group.
+            monomer_role_2: Second monomer (optional).
+            fg_2: Second functional group (optional).
+            
+        Returns:
+            A tuple representing the unique state of this reaction instance.
+        """
         if monomer_role_2 is None or fg_2 is None:
             return (reaction_name, monomer_role_1, fg_1)
 
-        # symmetric case
+        # Sort reactants by memory ID to ensure (A, B) and (B, A) produce the same key
         ordered = tuple(sorted(
             [(monomer_role_1, fg_1), (monomer_role_2, fg_2)],
             key=lambda x: (id(x[0]), id(x[1]))
         ))
         return (reaction_name, ordered[0], ordered[1])
 
-    def reaction_detector(self, monomer_roles: list[MonomerRole]) -> list[ReactionInstance]:
+    def reaction_detector(self, monomer_roles: List[MonomerRole]) -> List[ReactionInstance]:
         """
-        Detects possible polymerization reactions based on the functional groups in the provided monomer dictionary.
-
-        This function iterates through predefined reactions and matches them against the functional groups
-        in the monomers. It supports homopolymerization (same reactants) and copolymerization (different reactants).
-        For each match, it records the monomer details and reaction index.
-
+        Scans a list of monomers to find all possible polymerization reactions.
+        
         Args:
-            monomer_dictionary (dict): A dictionary where keys are monomer indices or IDs,
-                                    and values are dictionaries containing monomer details,
-                                    including 'smiles' and functional groups with 'functional_group_name'.
-
+            monomer_roles: List of monomers with their detected functional groups.
+            
         Returns:
-            dict: A dictionary of detected reactions, structured as:
-                {reaction_name: {<reaction metadata keys>, rx_index: {monomer_1: {...}, monomer_2: {... (if applicable)}}}}
-
-        Note:
-            This logic matches functional_group_name against reaction reactant types.
-            It does not validate the reaction SMARTS against the exact monomer structures (RDKit reaction execution is later).
+            A list of ReactionInstance objects representing valid matches.
         """
-
-        # create a new list to hold reaction instances
         reaction_instances = []
-        seen_pairs = set()  # to track unique reactant pairs and avoid duplicates
+        seen_pairs: Set[Tuple] = set()
 
-        # Iterate over each predefined reaction
         for reaction_name, reaction_info in self.reactions.items():
             reactant_1_name = reaction_info.get("reactant_1")
-            reactant_2_name = reaction_info.get("reactant_2")  # may be None
+            reactant_2_name = reaction_info.get("reactant_2")
             same_reactants = reaction_info.get("same_reactants", False)
             
-            # HOMO CASE
+            # CASE 1: HOMO-POLYMERIZATION (e.g., A + A)
             if same_reactants and reactant_2_name is None:
                 for monomer_role in monomer_roles: 
                     fg_hits = self._matching_fgs(monomer_role, reactant_1_name)
-                    if not fg_hits:
-                        continue
                     for fg in fg_hits:
-                        pair_key = self._seen_pair_key(
-                            reaction_name,
-                            monomer_role,
-                            fg
-                        )
-
-                        if pair_key in seen_pairs:
-                            continue
-
-                        seen_pairs.add(pair_key)
-                        reaction_instances.append(
-                            ReactionInstance(
-                                reaction_name=reaction_name,
-                                reaction_smarts=reaction_info["reaction"],
-                                delete_atom=reaction_info["delete_atom"],
-                                references=reaction_info["reference"],
-                                monomer_1=monomer_role,
-                                functional_group_1=fg,
-                                monomer_2=None,
-                                functional_group_2=None
+                        pair_key = self._seen_pair_key(reaction_name, monomer_role, fg)
+                        if pair_key not in seen_pairs:
+                            seen_pairs.add(pair_key)
+                            reaction_instances.append(
+                                ReactionInstance(
+                                    reaction_name=reaction_name,
+                                    reaction_smarts=reaction_info["reaction"],
+                                    delete_atom=reaction_info["delete_atom"],
+                                    references=reaction_info["reference"],
+                                    monomer_1=monomer_role,
+                                    functional_group_1=fg
+                                )
                             )
-                        )
-            # COMONOMER CASE
+            # CASE 2: CO-POLYMERIZATION (e.g., A + B)
             else:
                 for monomer_role_i in monomer_roles:
                     fg_hits_i = self._matching_fgs(monomer_role_i, reactant_1_name)
-                    if not fg_hits_i:
-                        continue
+                    if not fg_hits_i: continue
+                    
                     for fg_i in fg_hits_i:
                         for monomer_role_j in monomer_roles:
+                            # Prevent a monomer reacting with itself in a co-monomer definition
                             if monomer_role_i == monomer_role_j:
-                                continue  # skip same monomer
+                                continue 
+                            
                             fg_hits_j = self._matching_fgs(monomer_role_j, reactant_2_name)
-                            if not fg_hits_j:
-                                continue
                             for fg_j in fg_hits_j:
-                                # Create a unique pair identifier to avoid duplicates
                                 pair_key = self._seen_pair_key(
-                                            reaction_name,
-                                            monomer_role_i,
-                                            fg_i,
-                                            monomer_role_j,
-                                            fg_j
-                                        )
+                                    reaction_name, monomer_role_i, fg_i, monomer_role_j, fg_j
+                                )
                                 if pair_key not in seen_pairs:
                                     seen_pairs.add(pair_key)
                                     reaction_instances.append(
@@ -210,35 +243,46 @@ class ReactionDetector:
                                             monomer_2=monomer_role_j,
                                             functional_group_2=fg_j
                                         )
-                                        )
-
+                                    )
         return reaction_instances
 
-    def create_reaction_image(self, reactant_a_smiles, reactant_b_smiles, reaction_smarts, reaction_name):
-
-        reactant_a = Chem.MolFromSmiles(reactant_a_smiles)
-        reactant_b = Chem.MolFromSmiles(reactant_b_smiles)
-        reactant_a = Chem.AddHs(reactant_a)
-        reactant_b = Chem.AddHs(reactant_b)
-        # debug prints
-        # print(Chem.MolToSmiles(reactant_a))
-        # print(Chem.MolToSmiles(reactant_b))
+    def create_reaction_image(self, reactant_a_smiles: str, reactant_b_smiles: str, 
+                              reaction_smarts: str, reaction_name: str) -> Image.Image:
+        """
+        Simulates a reaction using RDKit and generates a 2D image of the transformation.
+        
+        Args:
+            reactant_a_smiles: SMILES for the first reactant.
+            reactant_b_smiles: SMILES for the second reactant.
+            reaction_smarts: SMARTS pattern defining the reaction.
+            reaction_name: Name of the reaction for metadata.
+            
+        Returns:
+            A PIL Image object of the reaction.
+            
+        Raises:
+            SMARTSerror: If the reaction SMARTS fails to produce products.
+        """
+        reactant_a = Chem.AddHs(Chem.MolFromSmiles(reactant_a_smiles))
+        reactant_b = Chem.AddHs(Chem.MolFromSmiles(reactant_b_smiles))
+        
         rxn_engine = rdChemReactions.ReactionFromSmarts(reaction_smarts)
+        
+        # Try reacting A + B
         products_sets = rxn_engine.RunReactants((reactant_a, reactant_b))
-        # debug print
-        # print(f"Products sets for {reaction_smarts}")
 
+        # Fallback: Try reacting B + A if the first order failed
         if not products_sets:
             products_sets = rxn_engine.RunReactants((reactant_b, reactant_a))
             if not products_sets:
-                print(f"No products generated for {reaction_smarts} with either reactant order.")
-                raise SMARTSERROR(f"Reaction SMARTS '{reaction_smarts}' did not produce any products for reactants '{reactant_a_smiles}' and '{reactant_b_smiles}' in either order.")
+                raise SMARTSerror(f"Reaction SMARTS '{reaction_smarts}' failed for {reactant_a_smiles} + {reactant_b_smiles}")
 
-
+        # Prepare the reaction for visualization
         display_rxn = rdChemReactions.ChemicalReaction()
         display_rxn.AddReactantTemplate(reactant_a)
         display_rxn.AddReactantTemplate(reactant_b)
 
+        # Sanitize and add the first set of products found
         for prod in products_sets[0]:
             try:
                 Chem.SanitizeMol(prod)
@@ -248,36 +292,37 @@ class ReactionDetector:
 
         return Draw.ReactionToImage(display_rxn, subImgSize=(400, 400))
 
-
-    def create_reaction_image_grid(self, selected_reaction_instances):
-
+    def create_reaction_image_grid(self, selected_reaction_instances: List[ReactionInstance]) -> Optional[Image.Image]:
+        """
+        Creates a vertical grid image containing all selected reaction visualizations.
+        
+        Args:
+            selected_reaction_instances: List of reactions to visualize.
+            
+        Returns:
+            A combined PIL Image or None if no images were generated.
+        """
         img_list = []
 
         for rxn in selected_reaction_instances:
-
             reactant_a = rxn.monomer_1.smiles
+            reactant_b = rxn.monomer_2.smiles if rxn.monomer_2 else rxn.monomer_1.smiles
 
-            if rxn.monomer_2:
-                reactant_b = rxn.monomer_2.smiles
-            else:
-                reactant_b = rxn.monomer_1.smiles
-
-            img = self.create_reaction_image(
-                reactant_a,
-                reactant_b,
-                rxn.reaction_smarts,
-                rxn.reaction_name
-            )
-
-            if img:
-                img_list.append(img)
+            try:
+                img = self.create_reaction_image(
+                    reactant_a, reactant_b, rxn.reaction_smarts, rxn.reaction_name
+                )
+                if img: img_list.append(img)
+            except SMARTSerror as e:
+                print(f"Skipping visualization: {e}")
 
         if not img_list:
             return None
 
+        # Calculate dimensions for the vertical stack
         single_width, single_height = img_list[0].size
         total_height = single_height * len(img_list)
-        total_width = single_width + 80
+        total_width = single_width + 80 # Extra space for numbering
 
         new_img = Image.new("RGB", (total_width, total_height), (255, 255, 255))
         draw = ImageDraw.Draw(new_img)
@@ -287,6 +332,7 @@ class ReactionDetector:
         except:
             font = ImageFont.load_default()
 
+        # Paste each reaction image into the grid
         y_offset = 0
         for i, img in enumerate(img_list, start=1):
             draw.text((10, y_offset + 10), f"{i}.", fill=(0, 0, 0), font=font)
@@ -295,69 +341,58 @@ class ReactionDetector:
 
         return new_img
 
-    def reaction_selection(self, reaction_instances: list[ReactionInstance]) -> list[ReactionInstance]:
-        print("Detected Reactions:")
-        for i, rx in enumerate(reaction_instances, start=1):
-            print(f"{i}. {rx.reaction_name}")
-            print(f"   Monomer 1: {rx.monomer_1.smiles}")
-            print(f"   FG 1: {rx.functional_group_1.fg_name}")
-
-            if rx.monomer_2:
-                print(f"   Monomer 2: {rx.monomer_2.smiles}")
-                print(f"   FG 2: {rx.functional_group_2.fg_name}")
-
-            print()
+    def reaction_selection(self, reaction_instances: List[ReactionInstance]) -> List[ReactionInstance]:
+        """
+        Interactive CLI to allow users to select specific reactions from the detected list.
+        
+        Args:
+            reaction_instances: List of all detected reactions.
+            
+        Returns:
+            A list of user-selected ReactionInstance objects.
+        """
         if not reaction_instances:
             print("No reaction instances available.")
             return []
 
+        print("Detected Reactions:")
+        for i, rx in enumerate(reaction_instances, start=1):
+            print(f"{i}. {rx.reaction_name}")
+            print(f"   Monomer 1: {rx.monomer_1.smiles} ({rx.functional_group_1.fg_name})")
+            if rx.monomer_2:
+                print(f"   Monomer 2: {rx.monomer_2.smiles} ({rx.functional_group_2.fg_name})")
+            print()
+
         while True:
-            raw = input("Enter reaction numbers (comma-separated): ").strip()
-
+            raw = input("Enter reaction numbers (comma-separated, e.g., 1,3): ").strip()
             if not raw:
-                print("Empty input. Try again.")
                 continue
 
-            tokens = [t.strip() for t in raw.split(",")]
+            try:
+                tokens = [int(t.strip()) for t in raw.split(",")]
+                if any(i < 1 or i > len(reaction_instances) for i in tokens):
+                    print("Out of range. Try again.")
+                    continue
+                indices = sorted(set(tokens))
+                break
+            except ValueError:
+                print("Invalid input. Please use numbers.")
 
-            if not all(t.isdigit() for t in tokens):
-                print("Invalid input. Use integers like: 1,2,3")
-                continue
-
-            indices = sorted(set(int(t) for t in tokens))
-
-            if any(i < 1 or i > len(reaction_instances) for i in indices):
-                print("One or more indices out of range.")
-                continue
-
-            break
         selected = [reaction_instances[i-1] for i in indices]
         print(f"Selected {len(selected)} reactions.")
-        for rx in selected:
-            print(f"{rx.reaction_name}: {rx.monomer_1.smiles} ({rx.functional_group_1.fg_name})", end="")
-            if rx.monomer_2:
-                print(f" + {rx.monomer_2.smiles} ({rx.functional_group_2.fg_name})")
-            else:
-                print()
         return selected
 
 
 if __name__ == "__main__":
-    detector = ReactionDetector()
-    # Example monomer dictionary for testing
-    def convert_dict_to_monomer_roles(monomer_dictionary: dict) -> list[MonomerRole]:
+    # --- Test Setup ---
+    def convert_dict_to_monomer_roles(monomer_dictionary: dict) -> List[MonomerRole]:
+        """Helper to convert raw dictionary data into MonomerRole objects."""
         monomer_roles = []
-
         for _, entry in monomer_dictionary.items():
-
             smiles = entry["smiles"]
-
             functionalities = []
-
             for key, value in entry.items():
-                if not isinstance(key, int):
-                    continue
-
+                if not isinstance(key, int): continue
                 functionalities.append(
                     FunctionalGroupInfo(
                         functionality_type=value["functionality_type"],
@@ -368,17 +403,10 @@ if __name__ == "__main__":
                         fg_count_2=value.get("functional_count_2", 0),
                     )
                 )
-
-            monomer_roles.append(
-                MonomerRole(
-                    smiles=smiles,
-                    name=smiles,  # or replace with actual name if you have one
-                    functionalities=tuple(functionalities),
-                )
-            )
-
+            monomer_roles.append(MonomerRole(smiles=smiles, name=smiles, functionalities=tuple(functionalities)))
         return monomer_roles
     
+    # Mock monomer data for testing detection logic
     monomer_dictionary = {
         1: {
             "smiles": "C=CCO",
@@ -636,27 +664,22 @@ if __name__ == "__main__":
         }
     }
 
+
     detector = ReactionDetector()
-
-    # Convert dictionary to object model
     monomer_roles = convert_dict_to_monomer_roles(monomer_dictionary)
-
-    # Run detector
     reaction_instances = detector.reaction_detector(monomer_roles)
 
-    import os
-    from pathlib import Path
+    # --- Save Results ---
     autoreacter_dir = pathlib.Path(__file__).parent.parent.parent.resolve()
     save_dir = autoreacter_dir / "cache" / "_cache_test" / "reaction_visualization"
     os.makedirs(save_dir, exist_ok=True)
     
-    file_path =  save_dir / f"reaction_instances.png"
+    file_path = save_dir / "reaction_instances.png"
     img = detector.create_reaction_image_grid(reaction_instances)
+    
     if img:
         img.save(file_path)
         print(f"Reaction grid image saved to: {file_path}")
-    else:
-        print("No valid reaction images generated.")
     
-    # Optional: Allow user to select reactions
+    # Optional interactive selection
     selected_reactions = detector.reaction_selection(reaction_instances)
