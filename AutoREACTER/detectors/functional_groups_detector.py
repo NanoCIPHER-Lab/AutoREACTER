@@ -408,9 +408,6 @@ class FunctionalGroupsDetector:
             )
 
             return img
-    
-from rdkit.Chem import Descriptors
-from rdkit import Chem
 
 if __name__ == "__main__":
 
