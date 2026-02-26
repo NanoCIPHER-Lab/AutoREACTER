@@ -80,8 +80,17 @@ class ReactionInstance:
 class ReactionDetector:
     def __init__(self):
         self.reactions = ReactionLibrary().reactions
+    
+    def _matching_fg_indices(self, monomer_entry: MonomerRole, target_group_name: str) -> list:
+            fg_hits = []
+            for fg in monomer_entry.functionalities:
+                fg_index = fg.fg_name
+                if isinstance(fg_index, int):
+                    if monomer_entry[fg_index].get("functional_group_name") == target_group_name:
+                        fg_hits.append(fg_index)
+            return fg_hits
 
-    def reaction_detector(self, monomer_dictionary: dict) -> dict:
+    def reaction_detector(self, monomer_roles: list[MonomerRole]) -> dict:
         """
         Detects possible polymerization reactions based on the functional groups in the provided monomer dictionary.
 
@@ -102,27 +111,13 @@ class ReactionDetector:
             This logic matches functional_group_name against reaction reactant types.
             It does not validate the reaction SMARTS against the exact monomer structures (RDKit reaction execution is later).
         """
-        self.detected_reactions = {}
 
-        # Helper: get all functional-group indices in a monomer that match a target functional_group_name
-        def _matching_fg_indices(monomer_entry: dict, target_group_name: str) -> list:
-            fg_hits = []
-            for fg_index in monomer_entry:
-                if isinstance(fg_index, int):
-                    if monomer_entry[fg_index].get("functional_group_name") == target_group_name:
-                        fg_hits.append(fg_index)
-            return fg_hits
+        # create a new list to hold reaction instances
+        reaction_instances = []
+        seen_pairs = set()  # to track unique reactant pairs and avoid duplicates
 
         # Iterate over each predefined reaction
         for reaction_name, reaction_info in self.reactions.items():
-            rx_index = 0  # Counter for reaction instances for this reaction_name
-            seen_pairs = set()  # Used to avoid duplicates for symmetric cases
-
-            # Always prepare a clean metadata dict per reaction_name (prevents mutating global "reactions")
-            if reaction_name not in self.detected_reactions:
-                self.detected_reactions[reaction_name] = {}
-                for k, v in reaction_info.items():
-                    self.detected_reactions[reaction_name][k] = v  # copy metadata only (same_reactants/reactants/product/delete_atom/reaction)
 
             reactant_1_name = reaction_info.get("reactant_1")
             reactant_2_name = reaction_info.get("reactant_2")  # may be None
@@ -130,31 +125,35 @@ class ReactionDetector:
 
             # Case 1: True homopolymerization definition (single reactant only; no reactant_2)
             if same_reactants and reactant_2_name is None:
-                for i in monomer_dictionary:
-                    fg_hits_i = _matching_fg_indices(monomer_dictionary[i], reactant_1_name)
+                for monomer_role in monomer_roles:
+                    fg_hits_i = self._matching_fg_indices(monomer_role, reactant_1_name)
                     for fg_index_i in fg_hits_i:
                         # Each functional group hit is a valid candidate "instance"
-                        rx_index += 1
-                        self.detected_reactions[reaction_name][rx_index] = {}
-                        self.detected_reactions[reaction_name][rx_index]["monomer_1"] = {}
-                        self.detected_reactions[reaction_name][rx_index]["monomer_1"]["smiles"] = monomer_dictionary[i]["smiles"]
-                        self.detected_reactions[reaction_name][rx_index]["monomer_1"].update(monomer_dictionary[i][fg_index_i])  # attach fg metadata
-
+                        reaction_instances.append({
+                            "reaction_name": reaction_name,
+                            "monomer_1": {
+                                "smiles": monomer_role.smiles,
+                                **monomer_role[fg_index_i]  # attach fg metadata
+                            }
+                        })
+                        pair_key = (reaction_name, (monomer_role.smiles, fg_index_i))
+                        if pair_key in seen_pairs:
+                            continue
             # Case 2: Two-reactant reaction definition (reactant_2 exists)
             else:
                 # Build candidate lists for reactant_1 and reactant_2 across all monomers
                 reactant_1_candidates = []  # list of tuples: (monomer_id, fg_index)
                 reactant_2_candidates = []  # list of tuples: (monomer_id, fg_index)
 
-                for i in monomer_dictionary:
-                    fg_hits_i_r1 = _matching_fg_indices(monomer_dictionary[i], reactant_1_name)
+                for i, monomer_role in enumerate(monomer_roles):
+                    fg_hits_i_r1 = self._matching_fg_indices(monomer_role, reactant_1_name)
                     for fg_index_i in fg_hits_i_r1:
-                        reactant_1_candidates.append((i, fg_index_i))
+                        reactant_1_candidates.append((fg_index_i))
 
                     if reactant_2_name is not None:
-                        fg_hits_i_r2 = _matching_fg_indices(monomer_dictionary[i], reactant_2_name)
+                        fg_hits_i_r2 = self._matching_fg_indices(monomer_role, reactant_2_name)
                         for fg_index_i in fg_hits_i_r2:
-                            reactant_2_candidates.append((i, fg_index_i))
+                            reactant_2_candidates.append((fg_index_i))
 
                 # If reactant_2 is missing for some reason, nothing to pair
                 if reactant_2_name is None:
@@ -163,7 +162,7 @@ class ReactionDetector:
                 # Pair candidates (cartesian product) so we don't miss any valid combinations
                 for (i, fg_index_i) in reactant_1_candidates:
                     for (j, fg_index_j) in reactant_2_candidates:
-                        # Do not pair the same monomer with itself (keeps your current behavior)
+                        # Do not pair the same monomer with itself
                         if i == j:
                             continue
 
@@ -181,15 +180,17 @@ class ReactionDetector:
                             continue
                         seen_pairs.add(pair_key)
 
-                        rx_index += 1
-                        self.detected_reactions[reaction_name][rx_index] = {}
-                        self.detected_reactions[reaction_name][rx_index]["monomer_1"] = {}
-                        self.detected_reactions[reaction_name][rx_index]["monomer_1"]["smiles"] = monomer_dictionary[i]["smiles"]
-                        self.detected_reactions[reaction_name][rx_index]["monomer_1"].update(monomer_dictionary[i][fg_index_i])
-
-                        self.detected_reactions[reaction_name][rx_index]["monomer_2"] = {}
-                        self.detected_reactions[reaction_name][rx_index]["monomer_2"]["smiles"] = monomer_dictionary[j]["smiles"]
-                        self.detected_reactions[reaction_name][rx_index]["monomer_2"].update(monomer_dictionary[j][fg_index_j])
+                        reaction_instances.append({
+                            "reaction_name": reaction_name,
+                            "monomer_1": {
+                                "smiles": monomer_dictionary[i]["smiles"],
+                                **monomer_dictionary[i][fg_index_i]  # attach fg metadata
+                            },
+                            "monomer_2": {
+                                "smiles": monomer_dictionary[j]["smiles"],
+                                **monomer_dictionary[j][fg_index_j]  # attach fg metadata
+                            }
+                        })
 
         # Clean up: remove reaction_name entries with no detected instances
         self.cleaned_detected_reactions = {}
