@@ -380,7 +380,7 @@ class FunctionalGroupsDetector:
             Args:
                 monomer_roles_visualization (list[FunctionalGroupVisualization]): List of monomer roles with detected functionalities for visualization.
             Returns:
-                list[FunctionalGroupVisualization]: List of visualizations for monomers with highlighted functional groups.
+                PIL.Image.Image: A single grid image of the monomers with highlighted functional groups.
             """
             molecules = []
             indextohighlight = []
