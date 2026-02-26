@@ -238,7 +238,7 @@ class FunctionalGroupsDetector:
         
         if mol is None:
             logger.warning(f"Invalid SMILES: {smiles}")
-            return 0, None, None , None
+            return 0, None, None, None
 
         # Create pattern from primary SMARTS and validate.
         patt1 = Chem.MolFromSmarts(smarts_1)
