@@ -296,10 +296,9 @@ class InputParser:
         
         if force_field is None:
             return "PCFF"  # Default value
-        else:
-            if force_field not in allowed:
-                raise InputSchemaError(f"Unsupported force field: {force_field!r}")
-            
+
+        if force_field not in allowed:
+            raise InputSchemaError(f"Unsupported force field: {force_field!r}")
         return force_field
     
     def _validate_composition(
