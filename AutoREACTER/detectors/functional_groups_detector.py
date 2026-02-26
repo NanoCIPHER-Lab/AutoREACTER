@@ -100,11 +100,12 @@ templates safely.
 from __future__ import annotations # Enable postponed evaluation of annotations for forward references.
 from dataclasses import dataclass
 from rdkit import Chem
+from rdkit.Chem import Draw
 from rdkit.Chem import Descriptors, rdchem
 import logging
 import json
-from dataclasses import dataclass
 from typing import Dict, Tuple, Optional
+import pathlib, os
 try:
     from AutoREACTER.input_parser import MonomerEntry
 except (ImportError, ModuleNotFoundError):
@@ -204,7 +205,7 @@ class FunctionalGroupsDetector:
         self.monomer_types = self.functional_group_library.monomer_types
 
     def detect_monomer_functionality(
-        self, smiles: str, functionality_type: str, smarts_1: str, smarts_2: Optional[str] = None
+        self, mol: Chem.Mol, functionality_type: str, smarts_1: str, smarts_2: Optional[str] = None
         ) -> Tuple[int, Optional[int], Optional[int], Optional[Tuple[Tuple[int, ...], ...]]]:
         """
         Detect the functionality type of a monomer based on its SMILES string using RDKit substructure matching
@@ -234,7 +235,7 @@ class FunctionalGroupsDetector:
             - No validation on SMARTS complexity or performance for large molecules.
         """
         # Convert SMILES to RDKit molecule object for substructure matching.
-        mol = Chem.MolFromSmiles(smiles)
+        
         if mol is None:
             logger.warning(f"Invalid SMILES: {smiles}")
             return 0, None, None , None
@@ -263,11 +264,11 @@ class FunctionalGroupsDetector:
             functional_matches = matches1 + matches2
 
             # Debug
-            print(
-                f"SMILES: {smiles}, "
-                f"Pattern 1 Matches: {functional_count_1}, "
-                f"Pattern 2 Matches: {functional_count_2}"
-            )
+            # print(
+            #     f"SMILES: {smiles}, "
+            #     f"Pattern 1 Matches: {functional_count_1}, "
+            #     f"Pattern 2 Matches: {functional_count_2}"
+            # )
 
             if functional_count_1 >= 1 and functional_count_2 >= 1:
                 return 2, functional_count_1, functional_count_2, functional_matches
@@ -326,10 +327,9 @@ class FunctionalGroupsDetector:
             for functional_group in self.monomer_types.values():
                 ftype = functional_group["functionality_type"]
                 smarts_1 = functional_group["smarts_1"]
-                smarts_2 = functional_group.get("smarts_2")
-
+                smarts_2 = functional_group.get("smarts_2")  # May be None for non-di_different types.
                 functionality_count, count_1, count_2, functional_matches = self.detect_monomer_functionality(
-                    smiles, ftype, smarts_1, smarts_2
+                    monomer.rdkit_mol, ftype, smarts_1, smarts_2
                 )
 
                 # Determine if this functionality matches criteria.
@@ -352,11 +352,11 @@ class FunctionalGroupsDetector:
                             fg_count_2=count_2
                         )
                     )
-
-                    print(
-                        f"Monomer {monomer.name} (SMILES: {smiles}) matches {ftype} "
-                        f"with {functional_group['group_name']} (Count 1: {count_1}, Count 2: {count_2})"
-                    )
+                    # Debug print for match details.
+                    # print(
+                    #     f"Monomer {monomer.name} (SMILES: {smiles}) matches {ftype} "
+                    #     f"with {functional_group['group_name']} (Count 1: {count_1}, Count 2: {count_2})"
+                    # )
 
             # Add to roles if any functionalities detected.
             if detected_functionalities:
@@ -375,7 +375,7 @@ class FunctionalGroupsDetector:
                     ))
         return monomer_roles, monomer_roles_visualization
 
-    def molecules_to_visualization(self, monomer_roles_visualization: list[FunctionalGroupVisualization]) -> list[FunctionalGroupVisualization]:
+    def molecules_to_visualization(self, monomer_roles_visualization: list[FunctionalGroupVisualization]) -> Draw.MolsToGridImage:
             """Convert monomer roles with detected functionalities into visualizations.
             Args:
                 monomer_roles_visualization (list[FunctionalGroupVisualization]): List of monomer roles with detected functionalities for visualization.
@@ -399,14 +399,15 @@ class FunctionalGroupsDetector:
                 indextohighlight.append(highlight_atoms)
                 names.append(name)
 
-            Draw.MolsToGridImage(
-                    molecules,
-                    molsPerRow=3,
-                    names=names,
-                    size=(500, 500),
-                    highlightAtoms=indextohighlight
-                )
-            return monomer_roles_visualization  # Return list for ipynb usage.
+            img = Draw.MolsToGridImage(
+                molecules,
+                molsPerRow=3,
+                legends=names,
+                subImgSize=(500, 500),
+                highlightAtomLists=indextohighlight
+            )
+
+            return img
     
 from rdkit.Chem import Descriptors
 from rdkit import Chem
@@ -435,6 +436,8 @@ if __name__ == "__main__":
         19: "O=C=N-C-N=C=O",                # di-isocyanate (simplified; represents TDI core)
         20: "C1=CC(=CC=C1C(C2=CC=CC=C2)(O)CC3CO3)CC4CO4" # di-epoxide (bisphenol A diglycidyl ether)
     }
+    monomer_dictionary = {1: "O=C(Cl)c1cc(C(=O)Cl)cc(C(=O)Cl)c1",
+                          2: "Nc1cccc(N)c1"}
 
     monomers = []
 
@@ -460,7 +463,7 @@ if __name__ == "__main__":
     results = detector.functional_groups_detector(monomers)
 
     from dataclasses import asdict
-    import pathlib, os
+    
     results_dict = [asdict(role) for role in results[0]]
     visualization_dict = [asdict(viz) for viz in results[1]]
 
