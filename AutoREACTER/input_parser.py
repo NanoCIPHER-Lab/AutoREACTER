@@ -10,32 +10,6 @@ TODO (Input Parsing Layer)
 - [ ] Output a clean, consistently-formatted dictionary to feed into main.py.
 """
 
-"""
-TODO (Input Parsing Layer)
-from dataclasses import dataclass
-from typing import Literal
-
-@dataclass(slots=True, frozen=True)
-class MonomerRole:
-    spec: MoleculeSpec
-    functionality_type: str
-    fg_name: str
-    fg_smarts_1: str
-    fg_count_1: int
-    fg_smarts_2: str | None = None
-    fg_count_2: int | None = None
-
-@dataclass(slots=True, frozen=True)
-class ReactionDefinition:
-    reaction_name: str
-    reaction_smarts: str
-    same_reactants: bool
-    delete_atom: bool
-    references: dict
-    monomer_1: MonomerRole
-    monomer_2: MonomerRole | None = None
-"""
-
 from dataclasses import dataclass, asdict
 from typing import Any
 from rdkit import Chem
@@ -80,6 +54,7 @@ class DuplicateMonomerError(InputError):
 # Type aliases for clarity and validation
 StatusType = Literal["active", "discarded"]
 CompositionMethodType = Literal["counts", "stoichiometric_ratio"]  # Placeholder for future support.
+ForceFieldType = Literal["PCFF-IFF", "PCFF", "Compass", "CVFF-IFF", "CVFF", "Clay-FF", "DRIEDING", "OPLS-AA"] 
 
 
 @dataclass(slots=True, frozen=True)
@@ -96,6 +71,7 @@ class MonomerEntry:
         data_id: Original identifier string from input (e.g., "data_1").
         name: Optional human-readable name for LAMMPS labeling (defaults to "data_{id}" if not provided).
         smiles: RDKit-canonical SMILES string representing the molecular structure.
+        rdkit_mol: The RDKit Mol object corresponding to the SMILES string.
         count: Dictionary mapping target tags to integer counts (used in 'counts' mode).
         ratio: Float representing the stoichiometric ratio (used in 'stoichiometric_ratio' mode).
         atom_count: Total number of atoms in the monomer, derived from RDKit.
@@ -109,10 +85,9 @@ class MonomerEntry:
     count: dict | None  # None only if stoichiometric mode 
     ratio: float | None  # None only if counts mode 
     atom_count: int 
-    molar_mass: float 
-    status: StatusType = "active" 
-    rdkit_mol: Chem.Mol | None = None 
-
+    molar_mass: float  
+    rdkit_mol: Chem.Mol | None = None # Store the RDKit Mol object
+    status: StatusType = "active"
 
 @dataclass(slots=True)
 class SimulationSetup:
@@ -129,6 +104,7 @@ class SimulationSetup:
         simulation_name: A simple name for the simulation, used for output organization.
         temperature: List of temperature values (Kelvin). Normalized to list internally.
         density: Overall target density for the system (g/cm^3).
+        force_field: Optional string specifying the force field to use (e.g., "PCFF", "OPLS-AA"). Default is "PCFF".
         monomers: List of MonomerEntry objects representing the system composition.
         composition_method: The method used to define composition ("counts" or "stoichiometric_ratio").
         composition: Raw composition dictionary from inputs for flexible downstream use.
@@ -139,6 +115,7 @@ class SimulationSetup:
     simulation_name: str
     temperature: list[float]  
     density: float 
+    force_field: str | None
     monomers: list[MonomerEntry] 
     composition_method: CompositionMethodType | None = None 
     composition : dict[str, Any] | None = None 
@@ -177,6 +154,8 @@ class InputParser:
         composition_method = self._get_inputs_mode(inputs["composition"])
         composition_dict = self._validate_composition(inputs["composition"], composition_method)
         monomers = self._validate_monomer_entry(inputs, composition_method, composition_dict)
+        force_field = self._validate_force_field(inputs.get("force_field", None))
+        
 
         return SimulationSetup(
             simulation_name=simulation_name,
@@ -184,8 +163,26 @@ class InputParser:
             density=density,
             monomers=monomers,
             composition_method=composition_method,
-            composition=composition_dict
+            composition=composition_dict,
+            force_field=force_field
         )
+
+    def molecule_representation_of_initial_molecules(self, simulation_setup: SimulationSetup) -> list[Chem.Mol]:
+        """
+        Extracts RDKit Mol objects for all monomers in the simulation setup.
+        
+        This method can be used for downstream processing that requires direct access
+        to the molecular structures, such as reaction definition or advanced analysis.
+
+        Args:
+            simulation_setup: The validated SimulationSetup object.
+
+        Returns:
+            A list of RDKit Mol objects corresponding to each monomer entry.
+        """
+        initial_molecules = [monomer.rdkit_mol for monomer in simulation_setup.monomers if monomer.rdkit_mol is not None]
+        initial_molecules_legends = [monomer.name for monomer in simulation_setup.monomers]
+        return initial_molecules, initial_molecules_legends
 
     def validate_basic_format(self, inputs: dict) -> None:
         """
@@ -279,6 +276,30 @@ class InputParser:
         if not isinstance(density, (int, float)) or density <= 0:
             raise NumericFieldError(f"'density' must be a positive number. Got: {density!r}")
         return density
+    
+    def _validate_force_field(self, force_field: Any) -> str:
+        """
+        Validates the force field input.
+
+        Args:
+            force_field: Force field name as a string.
+
+        Returns:
+            Validated force field name.
+
+        Raises:
+            InputSchemaError: If force field is not a string or is empty.
+        """
+        allowed: set[ForceFieldType] = {
+            "PCFF-IFF", "PCFF", "Compass", "CVFF-IFF", "CVFF", "Clay-FF", "DRIEDING", "OPLS-AA"
+        }
+        
+        if force_field is None:
+            return "PCFF"  # Default value
+
+        if force_field not in allowed:
+            raise InputSchemaError(f"Unsupported force field: {force_field!r}")
+        return force_field
     
     def _validate_composition(
         self,
@@ -457,8 +478,9 @@ class InputParser:
                 raise InputSchemaError(f"Unsupported composition method: {method!r}")
             
             # Derive atom count and molar mass from RDKit
-            mw = Descriptors.MolWt(mol)
-            atom_count = mol.GetNumAtoms()
+            mol_with_h = Chem.AddHs(mol)  # Ensure we count implicit hydrogens for accurate atom count and molar mass.
+            mw = Descriptors.MolWt(mol_with_h)
+            atom_count = mol_with_h.GetNumAtoms()
             
             validated_monomers.append(MonomerEntry(
                 id=id,

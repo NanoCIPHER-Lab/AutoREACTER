@@ -24,20 +24,97 @@ TODO: Missing Polymerization Mechanisms
 - Polymerization in Supercritical Carbon Dioxide
 """
 
-import json
-from typing import Dict, Any
+import pathlib
+from typing import Dict, Any, Tuple, Optional
+from dataclasses import dataclass
+from PIL import Image, ImageDraw, ImageFont
+from rdkit import Chem
+from rdkit.Chem import Draw, rdChemReactions
 
 try:
     from reactions_library import ReactionLibrary
 except (ImportError, ModuleNotFoundError):
     from .reactions_library import ReactionLibrary
 
+try:
+    from .functional_groups_detector import FunctionalGroupInfo, MonomerRole
+except (ImportError, ModuleNotFoundError):
+    from functional_groups_detector import FunctionalGroupInfo, MonomerRole
+
+class SMARTSERROR(Exception):
+    """Error from developer-defined SMARTS patterns not producing expected products.
+    Please contact the developer to resolve this issue. Raise a GitHub issue if you encounter this error.
+    at <https://github.com/NanoCIPHER-Lab/AutoREACTER/issues>"""
+    pass
+
+@dataclass(slots=True, frozen=True)
+class FunctionalGroupInfo:
+    functionality_type: str
+    fg_name: str
+    fg_smarts_1: str
+    fg_count_1: int
+    fg_smarts_2: Optional[str] = None
+    fg_count_2: Optional[int] = None
+
+@dataclass(slots=True, frozen=True)
+class MonomerRole:
+    smiles: str
+    name: str
+    functionalities: Tuple[FunctionalGroupInfo, ...]
+
+@dataclass(slots=True, frozen=True)
+class ReactionTemplate:
+    reaction_name: str
+    reactant_1: str                 # functional group name
+    reactant_2: Optional[str]       # functional group name or None
+    reaction_smarts: str
+    same_reactants: bool
+    delete_atom: bool
+    references: dict
+
+@dataclass(slots=True, frozen=True)
+class ReactionInstance:
+    reaction_name: str
+    reaction_smarts: str
+    delete_atom: bool
+    references: dict
+
+    monomer_1: MonomerRole
+    functional_group_1: FunctionalGroupInfo
+    monomer_2: Optional[MonomerRole] = None
+    functional_group_2: Optional[FunctionalGroupInfo] = None
 
 class ReactionDetector:
     def __init__(self):
         self.reactions = ReactionLibrary().reactions
+    
+    def _matching_fgs(self, monomer_entry: MonomerRole, target_group_name: str) -> list:
+            fg_hits = []
+            for fg in monomer_entry.functionalities:
+                if fg.fg_name == target_group_name:
+                    fg_hits.append(fg)
+            return fg_hits
 
-    def reaction_detector(self, monomer_dictionary: dict) -> dict:
+    def _seen_pair_key(
+            self,
+            reaction_name: str,
+            monomer_role_1: MonomerRole,
+            fg_1: FunctionalGroupInfo,
+            monomer_role_2: Optional[MonomerRole] = None,
+            fg_2: Optional[FunctionalGroupInfo] = None,
+        ) -> Tuple:
+
+        if monomer_role_2 is None or fg_2 is None:
+            return (reaction_name, monomer_role_1, fg_1)
+
+        # symmetric case
+        ordered = tuple(sorted(
+            [(monomer_role_1, fg_1), (monomer_role_2, fg_2)],
+            key=lambda x: (id(x[0]), id(x[1]))
+        ))
+        return (reaction_name, ordered[0], ordered[1])
+
+    def reaction_detector(self, monomer_roles: list[MonomerRole]) -> list[ReactionInstance]:
         """
         Detects possible polymerization reactions based on the functional groups in the provided monomer dictionary.
 
@@ -58,259 +135,250 @@ class ReactionDetector:
             This logic matches functional_group_name against reaction reactant types.
             It does not validate the reaction SMARTS against the exact monomer structures (RDKit reaction execution is later).
         """
-        self.detected_reactions = {}
 
-        # Helper: get all functional-group indices in a monomer that match a target functional_group_name
-        def _matching_fg_indices(monomer_entry: dict, target_group_name: str) -> list:
-            fg_hits = []
-            for fg_index in monomer_entry:
-                if isinstance(fg_index, int):
-                    if monomer_entry[fg_index].get("functional_group_name") == target_group_name:
-                        fg_hits.append(fg_index)
-            return fg_hits
+        # create a new list to hold reaction instances
+        reaction_instances = []
+        seen_pairs = set()  # to track unique reactant pairs and avoid duplicates
 
         # Iterate over each predefined reaction
         for reaction_name, reaction_info in self.reactions.items():
-            rx_index = 0  # Counter for reaction instances for this reaction_name
-            seen_pairs = set()  # Used to avoid duplicates for symmetric cases
-
-            # Always prepare a clean metadata dict per reaction_name (prevents mutating global "reactions")
-            if reaction_name not in self.detected_reactions:
-                self.detected_reactions[reaction_name] = {}
-                for k, v in reaction_info.items():
-                    self.detected_reactions[reaction_name][k] = v  # copy metadata only (same_reactants/reactants/product/delete_atom/reaction)
-
             reactant_1_name = reaction_info.get("reactant_1")
             reactant_2_name = reaction_info.get("reactant_2")  # may be None
             same_reactants = reaction_info.get("same_reactants", False)
-
-            # Case 1: True homopolymerization definition (single reactant only; no reactant_2)
+            
+            # HOMO CASE
             if same_reactants and reactant_2_name is None:
-                for i in monomer_dictionary:
-                    fg_hits_i = _matching_fg_indices(monomer_dictionary[i], reactant_1_name)
-                    for fg_index_i in fg_hits_i:
-                        # Each functional group hit is a valid candidate "instance"
-                        rx_index += 1
-                        self.detected_reactions[reaction_name][rx_index] = {}
-                        self.detected_reactions[reaction_name][rx_index]["monomer_1"] = {}
-                        self.detected_reactions[reaction_name][rx_index]["monomer_1"]["smiles"] = monomer_dictionary[i]["smiles"]
-                        self.detected_reactions[reaction_name][rx_index]["monomer_1"].update(monomer_dictionary[i][fg_index_i])  # attach fg metadata
-
-            # Case 2: Two-reactant reaction definition (reactant_2 exists)
-            else:
-                # Build candidate lists for reactant_1 and reactant_2 across all monomers
-                reactant_1_candidates = []  # list of tuples: (monomer_id, fg_index)
-                reactant_2_candidates = []  # list of tuples: (monomer_id, fg_index)
-
-                for i in monomer_dictionary:
-                    fg_hits_i_r1 = _matching_fg_indices(monomer_dictionary[i], reactant_1_name)
-                    for fg_index_i in fg_hits_i_r1:
-                        reactant_1_candidates.append((i, fg_index_i))
-
-                    if reactant_2_name is not None:
-                        fg_hits_i_r2 = _matching_fg_indices(monomer_dictionary[i], reactant_2_name)
-                        for fg_index_i in fg_hits_i_r2:
-                            reactant_2_candidates.append((i, fg_index_i))
-
-                # If reactant_2 is missing for some reason, nothing to pair
-                if reactant_2_name is None:
-                    continue
-
-                # Pair candidates (cartesian product) so we don't miss any valid combinations
-                for (i, fg_index_i) in reactant_1_candidates:
-                    for (j, fg_index_j) in reactant_2_candidates:
-                        # Do not pair the same monomer with itself (keeps your current behavior)
-                        if i == j:
-                            continue
-
-                        # Duplicate control:
-                        # If reactant_1 and reactant_2 are the SAME type, reaction is symmetric in practice.
-                        # So we treat (i,fg_i,j,fg_j) same as (j,fg_j,i,fg_i) and store only one.
-                        if reactant_1_name == reactant_2_name:
-                            ordered = tuple(sorted([(i, fg_index_i), (j, fg_index_j)]))
-                            pair_key = (reaction_name, ordered[0], ordered[1])
-                        else:
-                            # If types differ, keep directionality (reactant_1 -> monomer_1, reactant_2 -> monomer_2)
-                            pair_key = (reaction_name, (i, fg_index_i), (j, fg_index_j))
+                for monomer_role in monomer_roles: 
+                    fg_hits = self._matching_fgs(monomer_role, reactant_1_name)
+                    if not fg_hits:
+                        continue
+                    for fg in fg_hits:
+                        pair_key = self._seen_pair_key(
+                            reaction_name,
+                            monomer_role,
+                            fg
+                        )
 
                         if pair_key in seen_pairs:
                             continue
+
                         seen_pairs.add(pair_key)
+                        reaction_instances.append(
+                            ReactionInstance(
+                                reaction_name=reaction_name,
+                                reaction_smarts=reaction_info["reaction"],
+                                delete_atom=reaction_info["delete_atom"],
+                                references=reaction_info["reference"],
+                                monomer_1=monomer_role,
+                                functional_group_1=fg,
+                                monomer_2=None,
+                                functional_group_2=None
+                            )
+                        )
+            # COMONOMER CASE
+            else:
+                for monomer_role_i in monomer_roles:
+                    fg_hits_i = self._matching_fgs(monomer_role_i, reactant_1_name)
+                    if not fg_hits_i:
+                        continue
+                    for fg_i in fg_hits_i:
+                        for monomer_role_j in monomer_roles:
+                            if monomer_role_i == monomer_role_j:
+                                continue  # skip same monomer
+                            fg_hits_j = self._matching_fgs(monomer_role_j, reactant_2_name)
+                            if not fg_hits_j:
+                                continue
+                            for fg_j in fg_hits_j:
+                                # Create a unique pair identifier to avoid duplicates
+                                pair_key = self._seen_pair_key(
+                                            reaction_name,
+                                            monomer_role_i,
+                                            fg_i,
+                                            monomer_role_j,
+                                            fg_j
+                                        )
+                                if pair_key not in seen_pairs:
+                                    seen_pairs.add(pair_key)
+                                    reaction_instances.append(
+                                        ReactionInstance(
+                                            reaction_name=reaction_name,
+                                            reaction_smarts=reaction_info["reaction"],
+                                            delete_atom=reaction_info["delete_atom"],
+                                            references=reaction_info["reference"],
+                                            monomer_1=monomer_role_i,
+                                            functional_group_1=fg_i,
+                                            monomer_2=monomer_role_j,
+                                            functional_group_2=fg_j
+                                        )
+                                        )
 
-                        rx_index += 1
-                        self.detected_reactions[reaction_name][rx_index] = {}
-                        self.detected_reactions[reaction_name][rx_index]["monomer_1"] = {}
-                        self.detected_reactions[reaction_name][rx_index]["monomer_1"]["smiles"] = monomer_dictionary[i]["smiles"]
-                        self.detected_reactions[reaction_name][rx_index]["monomer_1"].update(monomer_dictionary[i][fg_index_i])
+        return reaction_instances
 
-                        self.detected_reactions[reaction_name][rx_index]["monomer_2"] = {}
-                        self.detected_reactions[reaction_name][rx_index]["monomer_2"]["smiles"] = monomer_dictionary[j]["smiles"]
-                        self.detected_reactions[reaction_name][rx_index]["monomer_2"].update(monomer_dictionary[j][fg_index_j])
+    def create_reaction_image(self, reactant_a_smiles, reactant_b_smiles, reaction_smarts, reaction_name):
 
-        # Clean up: remove reaction_name entries with no detected instances
-        self.cleaned_detected_reactions = {}
-        for reaction_name, rx_block in self.detected_reactions.items():
-            has_any_instance = False
-            for k in rx_block:
-                if isinstance(k, int):
-                    has_any_instance = True
-                    break
-            if has_any_instance:
-                self.cleaned_detected_reactions[reaction_name] = rx_block
+        reactant_a = Chem.MolFromSmiles(reactant_a_smiles)
+        reactant_b = Chem.MolFromSmiles(reactant_b_smiles)
+        reactant_a = Chem.AddHs(reactant_a)
+        reactant_b = Chem.AddHs(reactant_b)
+        # debug prints
+        # print(Chem.MolToSmiles(reactant_a))
+        # print(Chem.MolToSmiles(reactant_b))
+        rxn_engine = rdChemReactions.ReactionFromSmarts(reaction_smarts)
+        products_sets = rxn_engine.RunReactants((reactant_a, reactant_b))
+        # debug print
+        # print(f"Products sets for {reaction_smarts}")
 
-        return self.cleaned_detected_reactions
-
-
-    def reaction_arranger(self, monomer_dictionary: dict) -> dict:
-        """
-        Arranges and prints detected reactions from the monomer dictionary.
-
-        This function processes the output of reaction_detector, organizes reactions by index,
-        and prints user-friendly messages about identified homomonomers or comonomers.
-        It restructures the data for easier selection in subsequent steps.
-
-        Args:
-            monomer_dictionary (dict): The same dictionary as input to reaction_detector.
-
-        Returns:
-            dict: An arranged dictionary of reactions, structured as:
-                {reaction_name_index: {reaction_name: str, monomer_1: {...}, monomer_2: {... (if applicable)}, ...}}
-        """
-        detected_reactions = self.reaction_detector(monomer_dictionary)
-        self.arranged_reactions = {}
-        reaction_name_index = 0
-
-        for reaction_name, reaction_info in detected_reactions.items():
-            for rx_index in reaction_info:
-                if isinstance(rx_index, int):
-                    monomer_1 = reaction_info[rx_index]["monomer_1"]
-
-                    try:
-                        monomer_2 = reaction_info[rx_index]["monomer_2"]
-                    except KeyError:
-                        monomer_2 = None
-
-                    # Homomonomer case (single monomer in entry)
-                    if monomer_2 is None:
-                        reaction_name_index += 1
-                        monomer_1_smiles = monomer_1["smiles"]
-                        print(f"{reaction_name_index}. {reaction_name} homomonomer identified: {monomer_1_smiles}")
-                        # Optional comment display
-                        try:
-                            comment = reaction_info.get("comments", None)
-                        except Exception:
-                            comment = None
-                        if comment:
-                            print(f"   Note: {comment}")
-                    
-                        self.arranged_reactions[reaction_name_index] = {}
-                        self.arranged_reactions[reaction_name_index]["reaction_name"] = reaction_name
-
-                        # Copy metadata keys (non-int keys only)
-                        for rx_index_meta, rx_info in reaction_info.items():
-                            if not isinstance(rx_index_meta, int):
-                                self.arranged_reactions[reaction_name_index][rx_index_meta] = rx_info
-
-                        self.arranged_reactions[reaction_name_index]["monomer_1"] = monomer_1
-
-                    # Comonomer / two-monomer case
-                    else:
-                        reaction_name_index += 1
-                        monomer_1_smiles = monomer_1["smiles"]
-                        monomer_2_smiles = monomer_2["smiles"]
-                        print(f"{reaction_name_index}. {reaction_name} comonomers identified: {monomer_1_smiles} and {monomer_2_smiles}.")
-
-                        # Optional comment display
-                        try:
-                            comment = reaction_info.get("comments", None)
-                        except Exception:
-                            comment = None
-                        if comment:
-                            print(f"   Note: {comment}")
-
-                        self.arranged_reactions[reaction_name_index] = {}
-                        self.arranged_reactions[reaction_name_index]["reaction_name"] = reaction_name
-
-                        # Copy metadata keys (non-int keys only)
-                        for rx_index_meta, rx_info in reaction_info.items():
-                            if not isinstance(rx_index_meta, int):
-                                self.arranged_reactions[reaction_name_index][rx_index_meta] = rx_info
-
-                        self.arranged_reactions[reaction_name_index]["monomer_1"] = monomer_1
-                        self.arranged_reactions[reaction_name_index]["monomer_2"] = monomer_2
-
-        return self.arranged_reactions
+        if not products_sets:
+            products_sets = rxn_engine.RunReactants((reactant_b, reactant_a))
+            if not products_sets:
+                print(f"No products generated for {reaction_smarts} with either reactant order.")
+                raise SMARTSERROR(f"Reaction SMARTS '{reaction_smarts}' did not produce any products for reactants '{reactant_a_smiles}' and '{reactant_b_smiles}' in either order.")
 
 
-    def reaction_selector(self, monomer_dictionary: Dict[str, Any]) -> Dict[int, Any]:
-        """
-        Allows the user to select specific reactions from the arranged list.
+        display_rxn = rdChemReactions.ChemicalReaction()
+        display_rxn.AddReactantTemplate(reactant_a)
+        display_rxn.AddReactantTemplate(reactant_b)
 
-        This function uses reaction_arranger to get the list of detected and arranged reactions,
-        then prompts the user for indices to select via input. It filters and returns only the selected reactions.
+        for prod in products_sets[0]:
+            try:
+                Chem.SanitizeMol(prod)
+            except:
+                pass
+            display_rxn.AddProductTemplate(prod)
 
-        Rules:
-        - Re-asks if any token is not a positive integer.
-        - Re-asks if any index is not present in arranged_reactions.
-        - Re-asks if the input is empty.
+        return Draw.ReactionToImage(display_rxn, subImgSize=(400, 400))
 
-        Args:
-            monomer_dictionary: Input dictionary containing monomers + metadata.
 
-        Returns:
-            A dictionary containing only the user-selected reactions, keyed by their indices.
-            If no reactions are detected, raises a ValueError.
-        """
-        arranged_reactions = self.reaction_arranger(monomer_dictionary)
-        
-        if not arranged_reactions:
-            raise ValueError("No possible reactions detected from the given monomers.")
+    def create_reaction_image_grid(self, selected_reaction_instances):
 
-        valid_indices = sorted(arranged_reactions.keys())
+        img_list = []
+
+        for rxn in selected_reaction_instances:
+
+            reactant_a = rxn.monomer_1.smiles
+
+            if rxn.monomer_2:
+                reactant_b = rxn.monomer_2.smiles
+            else:
+                reactant_b = rxn.monomer_1.smiles
+
+            img = self.create_reaction_image(
+                reactant_a,
+                reactant_b,
+                rxn.reaction_smarts,
+                rxn.reaction_name
+            )
+
+            if img:
+                img_list.append(img)
+
+        if not img_list:
+            return None
+
+        single_width, single_height = img_list[0].size
+        total_height = single_height * len(img_list)
+        total_width = single_width + 80
+
+        new_img = Image.new("RGB", (total_width, total_height), (255, 255, 255))
+        draw = ImageDraw.Draw(new_img)
+
+        try:
+            font = ImageFont.truetype("arial.ttf", 40)
+        except:
+            font = ImageFont.load_default()
+
+        y_offset = 0
+        for i, img in enumerate(img_list, start=1):
+            draw.text((10, y_offset + 10), f"{i}.", fill=(0, 0, 0), font=font)
+            new_img.paste(img, (70, y_offset))
+            y_offset += single_height
+
+        return new_img
+
+    def reaction_selection(self, reaction_instances: list[ReactionInstance]) -> list[ReactionInstance]:
+        print("Detected Reactions:")
+        for i, rx in enumerate(reaction_instances, start=1):
+            print(f"{i}. {rx.reaction_name}")
+            print(f"   Monomer 1: {rx.monomer_1.smiles}")
+            print(f"   FG 1: {rx.functional_group_1.fg_name}")
+
+            if rx.monomer_2:
+                print(f"   Monomer 2: {rx.monomer_2.smiles}")
+                print(f"   FG 2: {rx.functional_group_2.fg_name}")
+
+            print()
+        if not reaction_instances:
+            print("No reaction instances available.")
+            return []
 
         while True:
-            raw = input(
-                f"Enter reaction indices (comma-separated). Valid options: {valid_indices}\n> "
-            ).strip()
+            raw = input("Enter reaction numbers (comma-separated): ").strip()
 
             if not raw:
-                print("Empty input. Please enter at least one index.")
+                print("Empty input. Try again.")
                 continue
 
-            parts = [p.strip() for p in raw.split(",") if p.strip()]
-            bad_tokens = [p for p in parts if not p.isdigit()]
+            tokens = [t.strip() for t in raw.split(",")]
 
-            if bad_tokens:
-                print(f"Invalid token(s): {bad_tokens}. Use only integers like: 1,2,3")
+            if not all(t.isdigit() for t in tokens):
+                print("Invalid input. Use integers like: 1,2,3")
                 continue
 
-            selected_indices: list[int] = []
-            for p in parts:
-                # safe because since checked isdigit()
-                selected_indices.append(int(p))
+            indices = sorted(set(int(t) for t in tokens))
 
-            out_of_range: list[int] = []
-            for idx in selected_indices:
-                if idx not in arranged_reactions:
-                    out_of_range.append(idx)
-
-            if out_of_range:
-                print(f"Out of range / not available: {out_of_range}. Valid: {valid_indices}")
+            if any(i < 1 or i > len(reaction_instances) for i in indices):
+                print("One or more indices out of range.")
                 continue
 
-            # If we got here, everything is valid
-            selected_reactions: Dict[int, Any] = {}
-            for idx in selected_indices:
-                selected_reactions[idx] = arranged_reactions[idx]
-
-            return selected_reactions
-
-
+            break
+        selected = [reaction_instances[i-1] for i in indices]
+        print(f"Selected {len(selected)} reactions.")
+        for rx in selected:
+            print(f"{rx.reaction_name}: {rx.monomer_1.smiles} ({rx.functional_group_1.fg_name})", end="")
+            if rx.monomer_2:
+                print(f" + {rx.monomer_2.smiles} ({rx.functional_group_2.fg_name})")
+            else:
+                print()
+        return selected
 
 
 if __name__ == "__main__":
     detector = ReactionDetector()
     # Example monomer dictionary for testing
+    def convert_dict_to_monomer_roles(monomer_dictionary: dict) -> list[MonomerRole]:
+        monomer_roles = []
+
+        for _, entry in monomer_dictionary.items():
+
+            smiles = entry["smiles"]
+
+            functionalities = []
+
+            for key, value in entry.items():
+                if not isinstance(key, int):
+                    continue
+
+                functionalities.append(
+                    FunctionalGroupInfo(
+                        functionality_type=value["functionality_type"],
+                        fg_name=value["functional_group_name"],
+                        fg_smarts_1=value.get("functional_group_smarts_1"),
+                        fg_count_1=value.get("functional_count_1", 0),
+                        fg_smarts_2=value.get("functional_group_smarts_2"),
+                        fg_count_2=value.get("functional_count_2", 0),
+                    )
+                )
+
+            monomer_roles.append(
+                MonomerRole(
+                    smiles=smiles,
+                    name=smiles,  # or replace with actual name if you have one
+                    functionalities=tuple(functionalities),
+                )
+            )
+
+        return monomer_roles
+    
     monomer_dictionary = {
         1: {
             "smiles": "C=CCO",
@@ -567,11 +635,28 @@ if __name__ == "__main__":
             }
         }
     }
-    import json
+
     detector = ReactionDetector()
-    detected = detector.reaction_detector(monomer_dictionary)
-    arranged = detector.reaction_arranger(monomer_dictionary)
-    print("\nDetected Reactions:")
-    print(json.dumps(detected, indent=2))
-    # print("\nArranged Reactions:")
-    # print(json.dumps(arranged, indent=2))
+
+    # Convert dictionary to object model
+    monomer_roles = convert_dict_to_monomer_roles(monomer_dictionary)
+
+    # Run detector
+    reaction_instances = detector.reaction_detector(monomer_roles)
+
+    import os
+    from pathlib import Path
+    autoreacter_dir = pathlib.Path(__file__).parent.parent.parent.resolve()
+    save_dir = autoreacter_dir / "cache" / "_cache_test" / "reaction_visualization"
+    os.makedirs(save_dir, exist_ok=True)
+    
+    file_path =  save_dir / f"reaction_instances.png"
+    img = detector.create_reaction_image_grid(reaction_instances)
+    if img:
+        img.save(file_path)
+        print(f"Reaction grid image saved to: {file_path}")
+    else:
+        print("No valid reaction images generated.")
+    
+    # Optional: Allow user to select reactions
+    selected_reactions = detector.reaction_selection(reaction_instances)

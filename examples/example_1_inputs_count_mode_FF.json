@@ -2,7 +2,7 @@
   "simulation_name": "Example_Count_Mode",
   "temperature": [300, 400, 500],
   "density": 0.8,
-
+  "force_field": "PCFF",
   "composition": {
     "method": "counts",
     "targets": [
