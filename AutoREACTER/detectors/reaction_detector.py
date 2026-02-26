@@ -77,7 +77,6 @@ class ReactionInstance:
     monomer_2: Optional[MonomerRole] = None
     fg_2: Optional[FunctionalGroupInfo] = None
 
-
 class ReactionDetector:
     def __init__(self):
         self.reactions = ReactionLibrary().reactions
