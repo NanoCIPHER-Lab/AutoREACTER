@@ -683,3 +683,12 @@ if __name__ == "__main__":
     
     # Optional interactive selection
     selected_reactions = detector.reaction_selection(reaction_instances)
+
+    print(f"Total detected reactions: {len(selected_reactions)}")
+    for i, rx in enumerate(selected_reactions, start=1):
+        print(f"{i}. {rx.reaction_name} - {rx.monomer_1.smiles} ({rx.functional_group_1.fg_name})", end="")
+        if rx.monomer_2:
+            print(f" + {rx.monomer_2.smiles} ({rx.functional_group_2.fg_name})")
+        else:
+            print()
+    print(selected_reactions)
