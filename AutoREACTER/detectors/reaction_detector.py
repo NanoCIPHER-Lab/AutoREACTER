@@ -53,6 +53,11 @@ class SMARTSerror(Exception):
     at <https://github.com/NanoCIPHER-Lab/AutoREACTER/issues>"""
     pass
 
+class EmptyReactionListError(Exception):
+    """Raised when no reaction instances are detected, but the user attempts to select reactions.
+    This should be prevented by the reaction_selection method, but this error serves as a safeguard."""
+    pass
+
 @dataclass(slots=True, frozen=True)
 class FunctionalGroupInfo:
     """
@@ -352,8 +357,11 @@ class ReactionDetector:
             A list of user-selected ReactionInstance objects.
         """
         if not reaction_instances:
-            print("No reaction instances available.")
-            return []
+            raise EmptyReactionListError("No reaction instances detected. Cannot proceed with selection.")
+        
+        if len(reaction_instances) == 1:
+            print("Only one reaction detected. Automatically selecting it.")
+            return reaction_instances
 
         print("Detected Reactions:")
         for i, rx in enumerate(reaction_instances, start=1):

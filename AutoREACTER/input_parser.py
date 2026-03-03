@@ -115,7 +115,7 @@ class SimulationSetup:
     simulation_name: str
     temperature: list[float]  
     density: float 
-    force_field: ForceFieldType | None = "PCFF"  # Default to PCFF if not provided
+    force_field: None
     monomers: list[MonomerEntry] 
     composition_method: CompositionMethodType | None = None 
     composition : dict[str, Any] | None = None 
