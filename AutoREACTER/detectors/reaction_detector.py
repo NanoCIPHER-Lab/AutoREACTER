@@ -59,40 +59,6 @@ class EmptyReactionListError(Exception):
     pass
 
 @dataclass(slots=True, frozen=True)
-class FunctionalGroupInfo:
-    """
-    Stores metadata about a specific functional group detected in a molecule.
-    
-    Attributes:
-        functionality_type: Category of the group (e.g., 'vinyl', 'diol').
-        fg_name: Human-readable name of the functional group.
-        fg_smarts_1: Primary SMARTS pattern for detection.
-        fg_count_1: Number of occurrences of the primary pattern.
-        fg_smarts_2: Secondary SMARTS pattern (optional).
-        fg_count_2: Number of occurrences of the secondary pattern (optional).
-    """
-    functionality_type: str
-    fg_name: str
-    fg_smarts_1: str
-    fg_count_1: int
-    fg_smarts_2: Optional[str] = None
-    fg_count_2: Optional[int] = None
-
-@dataclass(slots=True, frozen=True)
-class MonomerRole:
-    """
-    Represents a monomer and its associated functional groups.
-    
-    Attributes:
-        smiles: SMILES string of the monomer.
-        name: Identifier or name of the monomer.
-        functionalities: A tuple of FunctionalGroupInfo objects present in this monomer.
-    """
-    smiles: str
-    name: str
-    functionalities: Tuple[FunctionalGroupInfo, ...]
-
-@dataclass(slots=True, frozen=True)
 class ReactionTemplate:
     """
     Defines a generic template for a polymerization reaction.
