@@ -38,6 +38,7 @@
       "smiles": "C1=CC(=CC(=C1)N)N"
     },
     {
+      "name": "data_3",
       "smiles": "CCO"
     }
   ]

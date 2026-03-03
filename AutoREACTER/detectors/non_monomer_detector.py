@@ -312,9 +312,35 @@ Example: If you want to keep monomers with IDs 1 and 3, you would enter: 1,3
                     elif user_input == 'S':
                         # Selective retention: user specifies which IDs to keep
                         # Others will be marked as 'discarded'
-                        selected_ids = input("Enter the IDs of the monomers you want to retain, separated by commas: ")
-                        # Parse input into list of integers ( monomer IDs)
-                        selected_ids = [int(id.strip()) for id in selected_ids.split(',')]
+                        selected_ids_input = input(
+                            "Enter the IDs of the monomers you want to retain, separated by commas: "
+                        )
+
+                        try:
+                            selected_ids = [
+                                int(id_str.strip())
+                                for id_str in selected_ids_input.split(',')
+                                if id_str.strip()
+                            ]
+                        except ValueError:
+                            print("Invalid input. Please enter a comma-separated list of integers (e.g., 1,3,5).")
+                            continue
+
+                        if not selected_ids:
+                            print("No valid IDs entered.")
+                            continue
+
+                        valid_ids = {m.id for m in non_reactants_list}
+
+                        unknown_ids = [i for i in selected_ids if i not in valid_ids]
+
+                        if unknown_ids:
+                            print(
+                                f"Invalid IDs: {', '.join(map(str, unknown_ids))}. "
+                                "Choose from the displayed monomer IDs."
+                            )
+                            continue
+                        
                         discard_ids = {m.id for m in non_reactants_list if m.id not in selected_ids}
                         simulation_setup.monomers = [
                             replace(m, status='discarded') if m.id in discard_ids else m

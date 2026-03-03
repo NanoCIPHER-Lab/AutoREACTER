@@ -15,7 +15,8 @@
                 "monomer_counts": {
                     "tmc": 220,
                     "mpd": 220,
-                    "ethanol": 110
+                    "ethanol": 110,
+                    "data_3": 55
                 }
             },
 
@@ -25,7 +26,8 @@
                 "monomer_counts": {
                     "tmc": 2200,
                     "mpd": 2200,
-                    "ethanol": 1100
+                    "ethanol": 1100,
+                    "data_3": 550
                 }
             }
 
@@ -47,6 +49,10 @@
         {
             "name": "ethanol",
             "smiles": "CCO"
+        },
+        {
+            "name": "data_3",
+            "smiles": "CCN"
         }
 
     ]
