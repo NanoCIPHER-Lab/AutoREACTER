@@ -1,3 +1,4 @@
+from dataclasses import replace
 from typing import List
 from rdkit import Chem
 from rdkit.Chem import rdmolops, Draw
@@ -243,7 +244,8 @@ class NonReactantsDetector:
                               either retained or marked as discarded based on user input.
         
         Note:
-            - This method modifies the status attribute of MonomerEntry objects in place.
+            - This method replaces MonomerEntry objects in simulation_setup.monomers with
+              updated copies (via dataclasses.replace) to reflect 'discarded' status.
             - For single non-reactant monomers, only N and A options are presented.
             - The status values follow the StatusType convention: 'active' or 'discarded'.
         """
@@ -279,7 +281,11 @@ Example: If you want to keep monomers with IDs 1 and 3, you would enter: 1,3
                         continue
                     if user_input == 'N':
                         # Mark single monomer as discarded
-                        non_reactants_list[0].status = 'discarded'
+                        target_id = non_reactants_list[0].id
+                        simulation_setup.monomers = [
+                            replace(m, status='discarded') if m.id == target_id else m
+                            for m in simulation_setup.monomers
+                        ]
                         break
                     elif user_input == 'A':
                         # Keep the single monomer (retain)
@@ -292,9 +298,12 @@ Example: If you want to keep monomers with IDs 1 and 3, you would enter: 1,3
                         continue
 
                     if user_input == 'N':
-                        # Discard all non-reactants: mark each as 'discarded'
-                        for monomer in non_reactants_list:
-                            monomer.status = 'discarded'
+                        # Discard all non-reactants: replace each with 'discarded' status
+                        discard_ids = {m.id for m in non_reactants_list}
+                        simulation_setup.monomers = [
+                            replace(m, status='discarded') if m.id in discard_ids else m
+                            for m in simulation_setup.monomers
+                        ]
                         break
                     elif user_input == 'A':
                         # Retain all non-reactants: do nothing (keep 'active' status)
@@ -305,10 +314,11 @@ Example: If you want to keep monomers with IDs 1 and 3, you would enter: 1,3
                         selected_ids = input("Enter the IDs of the monomers you want to retain, separated by commas: ")
                         # Parse input into list of integers ( monomer IDs)
                         selected_ids = [int(id.strip()) for id in selected_ids.split(',')]
-                        for monomer in non_reactants_list:
-                            # Discard monomers NOT in the selected list
-                            if monomer.id not in selected_ids:
-                                monomer.status = 'discarded'
+                        discard_ids = {m.id for m in non_reactants_list if m.id not in selected_ids}
+                        simulation_setup.monomers = [
+                            replace(m, status='discarded') if m.id in discard_ids else m
+                            for m in simulation_setup.monomers
+                        ]
                         break
                     
         # Return the modified simulation setup
