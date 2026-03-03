@@ -12,7 +12,7 @@ import warnings
 
 warnings.warn(
     """This script is deprecated and will be modified in future versions. Within v0.2, the whole package will primaraliy 
-    support on jupyter notebook and the CLI will be removed. Please use the notebook version for now and refer to the README for how to use the package.""",
+    support on jupyter notebook and the CLI is removed. Please use the notebook version for now and refer to the README for how to use the package.""",
     DeprecationWarning,
     stacklevel=2
 )
