@@ -11,7 +11,7 @@ TODO (Input Parsing Layer)
 """
 
 from dataclasses import dataclass, asdict
-from typing import Any, List
+from typing import Any
 from rdkit import Chem
 from rdkit.Chem import Descriptors
 import logging
