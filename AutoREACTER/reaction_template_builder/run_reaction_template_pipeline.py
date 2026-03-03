@@ -16,40 +16,6 @@ TODO:
 - Implement duplicate reaction detection and handling.
 """
 
-
-"""TODO (Reaction Template Pipeline):
-from dataclasses import dataclass
-from typing import Literal
-
-@dataclass(slots=True, frozen=True)
-class MonomerRole:
-    spec: MoleculeSpec
-    functionality_type: str
-    fg_name: str
-    fg_smarts_1: str
-    fg_count_1: int
-    fg_smarts_2: str | None = None
-    fg_count_2: int | None = None
-
-@dataclass(slots=True, frozen=True)
-class ReactionDefinition:
-    reaction_name: str
-    reaction_smarts: str
-    same_reactants: bool
-    delete_atom: bool
-    references: dict
-    monomer_1: MonomerRole
-    monomer_2: MonomerRole | None = None
-"""
-
-
-"""
-def withdraw(balance, amount):
-    if amount > balance:
-        raise InsufficientFundsError(amount - balance, f"Cannot withdraw {amount}, only {balance} available.")
-    return balance - amount
-"""
-
 """
 TODO: Preserve stable reaction_id for each reaction (never renumber).
 Maintain a seq_id mapping for the current filtered set (continuous 1..N) for UI/export.
