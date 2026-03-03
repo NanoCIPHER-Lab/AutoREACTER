@@ -622,15 +622,18 @@ class InputParser:
         return seen_monomer_list
     
     def _validate_replicas(self, replicas_dict: dict, method: CompositionMethodType) -> dict:
-        """Validates the 'replicas' section of the input, ensuring correct structure and required fields based on the composition method.
-        Args:            
-            replicas_dict: The 'replicas' sub-dictionary from the input.
-            method: The composition method being used ("counts" or "stoichiometric_ratio").
-        Returns:            
-            A validated dictionary containing the method, temperatures, density, and systems.
-        Raises:
-            InputSchemaError: If the structure is invalid, required fields are missing, or tags are duplicated.
-            NumericFieldError: If numeric fields like 'total_atoms' are invalid.
+        """
+        Validates the 'replicas' section of the input.
+
+        Ensures structure, numeric fields, and system-level composition fields
+        are correct based on the selected composition method.
+
+        Args:
+            replicas_dict: The 'replicas' dictionary from user input.
+            method: Composition method ("counts" or "stoichiometric_ratio").
+
+        Returns:
+            Normalized replicas dictionary.
         """
 
         temperatures = self._validate_temperature(
@@ -648,7 +651,10 @@ class InputParser:
                 "'replicas.systems' must be a non-empty list."
             )
 
-        seen_tags = set()
+        seen_tags: set[str] = set()
+
+        # used for ratio consistency check
+        reference_ratios: dict | None = None
 
         for system in systems:
 
@@ -671,6 +677,7 @@ class InputParser:
 
             seen_tags.add(tag)
 
+            # -------- ratio mode --------
             if method == "stoichiometric_ratio":
 
                 total_atoms = system.get("total_atoms")
@@ -682,19 +689,43 @@ class InputParser:
 
                 ratios = system.get("monomer_ratios")
 
-                if not isinstance(ratios, dict):
+                if not isinstance(ratios, dict) or not ratios:
                     raise InputSchemaError(
                         "'monomer_ratios' must be provided in ratio mode."
                     )
 
+                # validate ratio values
+                for monomer, value in ratios.items():
+                    if not isinstance(value, (int, float)) or value < 0:
+                        raise NumericFieldError(
+                            f"Invalid ratio value for monomer {monomer!r}: {value!r}"
+                        )
+
+                # enforce ratio consistency across systems
+                if reference_ratios is None:
+                    reference_ratios = ratios
+                else:
+                    if ratios != reference_ratios:
+                        raise InputSchemaError(
+                            "All systems must use identical 'monomer_ratios'."
+                        )
+
+            # -------- counts mode --------
             if method == "counts":
 
                 counts = system.get("monomer_counts")
 
-                if not isinstance(counts, dict):
+                if not isinstance(counts, dict) or not counts:
                     raise InputSchemaError(
                         "'monomer_counts' must be provided in counts mode."
                     )
+
+                for monomer, value in counts.items():
+
+                    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                        raise NumericFieldError(
+                            f"Invalid count for monomer {monomer!r}: {value!r}"
+                        )
 
                 if "total_atoms" in system:
                     raise InputSchemaError(

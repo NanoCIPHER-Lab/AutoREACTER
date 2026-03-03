@@ -1,7 +1,8 @@
-from dataclasses import replace
 from typing import List
 from rdkit import Chem
 from rdkit.Chem import rdmolops, Draw
+from PIL.Image import Image
+from dataclasses import replace
 
 # AutoREACTER internal imports for simulation configuration and reaction detection
 from AutoREACTER.input_parser import SimulationSetup
@@ -182,7 +183,7 @@ class NonReactantsDetector:
         # Return the list of non-reactant monomers
         return non_reactants_list
 
-    def non_reactants_to_visualization(self, non_reactants_list: List[MonomerEntry]) -> Draw.MolsToGridImage:
+    def non_reactants_to_visualization(self, non_reactants_list: List[MonomerEntry]) -> Image | None:
         """
         Generates a grid image visualization of non-reacting monomers.
         
@@ -195,8 +196,8 @@ class NonReactantsDetector:
                                                      participate in any reactions.
         
         Returns:
-            Draw.MolsToGridImage: An RDKit grid image object containing the molecular
-                                  structures of all non-reacting monomers.
+            PIL.Image.Image | None: A grid image object containing the molecular
+                                     structures of all non-reacting monomers, or None if no non-reacting monomers are found.
         
         Note:
             The grid image displays molecules with their names as legends and arranges
@@ -280,7 +281,7 @@ Example: If you want to keep monomers with IDs 1 and 3, you would enter: 1,3
                         print("Invalid input. Please enter N or A.")
                         continue
                     if user_input == 'N':
-                        # Mark single monomer as discarded
+                        # Discard the single non-reactant monomer: mark it as 'discarded'
                         target_id = non_reactants_list[0].id
                         simulation_setup.monomers = [
                             replace(m, status='discarded') if m.id == target_id else m
