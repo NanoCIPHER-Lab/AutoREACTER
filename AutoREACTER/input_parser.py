@@ -53,8 +53,12 @@ class DuplicateMonomerError(InputError):
 
 # Type aliases for clarity and validation
 StatusType = Literal["active", "discarded"]
-CompositionMethodType = Literal["counts", "stoichiometric_ratio"]  # Placeholder for future support.
-ForceFieldType = Literal["PCFF-IFF", "PCFF", "Compass", "CVFF-IFF", "CVFF", "Clay-FF", "DRIEDING", "OPLS-AA"] 
+CompositionMethodType = Literal["counts", "stoichiometric_ratio"]
+ForceFieldType = Literal[
+    "PCFF-IFF", "PCFF", "Compass",
+    "CVFF-IFF", "CVFF", "Clay-FF",
+    "DRIEDING", "OPLS-AA"
+]
 
 
 @dataclass(slots=True, frozen=True)
