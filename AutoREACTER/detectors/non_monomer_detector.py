@@ -1,18 +1,4 @@
-"""
-AutoREACTER - Non-Reactant Monomer Detection Module
-
-This module provides functionality to detect monomer molecules that do not participate
-in any identified chemical reactions within a simulation setup. It allows users to
-visualize these non-reacting monomers and decide whether to retain or discard them
-from the simulation.
-
-Author: AutoREACTER Development Team
-"""
-
-from dataclasses import dataclass
-from typing import Any, List, Literal, Optional, Tuple
-
-# RDKit chemistry library imports for molecular operations and visualization
+from typing import List
 from rdkit import Chem
 from rdkit.Chem import rdmolops, Draw
 
@@ -20,8 +6,6 @@ from rdkit.Chem import rdmolops, Draw
 from AutoREACTER.input_parser import SimulationSetup
 from AutoREACTER.input_parser import MonomerEntry
 from AutoREACTER.detectors.reaction_detector import ReactionInstance
-from AutoREACTER.detectors.reaction_detector import FunctionalGroupInfo
-from AutoREACTER.detectors.reaction_detector import MonomerRole
 
 
 class NonReactantsDetector:
