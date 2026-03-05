@@ -16,7 +16,7 @@
                     "tmc": 220,
                     "mpd": 220,
                     "ethanol": 110,
-                    "data_3": 55
+                    "data_4": 55
                 }
             },
 
@@ -27,7 +27,7 @@
                     "tmc": 2200,
                     "mpd": 2200,
                     "ethanol": 1100,
-                    "data_3": 550
+                    "data_4": 550
                 }
             }
 
@@ -51,7 +51,7 @@
             "smiles": "CCO"
         },
         {
-            "name": "data_3",
+            "name": "data_4",
             "smiles": "CCN"
         }
 

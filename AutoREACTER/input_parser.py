@@ -13,9 +13,10 @@ TODO (Input Parsing Layer)
 from dataclasses import dataclass, asdict
 from typing import Any
 from rdkit import Chem
-from rdkit.Chem import Descriptors
+from rdkit.Chem import Descriptors, Draw
 import logging
 from typing import Literal
+from PIL.Image import Image
 
 # Module-level logger for future diagnostics.
 logger = logging.getLogger(__name__)
@@ -195,6 +196,19 @@ class InputParser:
         initial_molecules = [monomer.rdkit_mol for monomer in simulation_setup.monomers if monomer.rdkit_mol is not None]
         initial_molecules_legends = [monomer.name for monomer in simulation_setup.monomers]
         return initial_molecules, initial_molecules_legends
+    
+    def initial_molecules_image_grid(self, simulation_setup: SimulationSetup) -> Image:
+        """
+        Creates a grid image of the initial molecules for visualization purposes.
+        Args:
+            simulation_setup: The validated SimulationSetup object.
+
+        Returns:
+            A Image object containing the grid of molecule images.
+        """
+        initial_molecules = [monomer.rdkit_mol for monomer in simulation_setup.monomers if monomer.rdkit_mol is not None]
+        initial_molecules_legends = [monomer.name for monomer in simulation_setup.monomers]
+        return Draw.MolsToGridImage(initial_molecules, molsPerRow=3, subImgSize=(400, 400), legends=initial_molecules_legends)
 
     def validate_basic_format(self, inputs: dict) -> None:
         """

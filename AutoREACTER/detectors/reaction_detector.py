@@ -263,7 +263,7 @@ class ReactionDetector:
 
         return Draw.ReactionToImage(display_rxn, subImgSize=(400, 400))
 
-    def create_reaction_image_grid(self, selected_reaction_instances: List[ReactionInstance]) -> Optional[Image.Image]:
+    def available_reaction_image_grid(self, selected_reaction_instances: List[ReactionInstance]) -> Optional[Image.Image]:
         """
         Creates a vertical grid image containing all selected reaction visualizations.
         
