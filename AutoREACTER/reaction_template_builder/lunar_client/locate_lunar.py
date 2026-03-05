@@ -56,7 +56,7 @@ def _normalize_path(p):
     p = os.path.expandvars(p)
 
     # Convert Windows drive paths to WSL format if in a WSL environment.
-    if p.startswith(("C:\\", "D:\\", "E:\\", "F:\\")) and os.path.exists("/mnt/c"):
+    if len(p) > 2 and p[1] == ":" and os.path.exists("/mnt"):
         drive = p[0].lower()
         rest = p[2:].replace("\\", "/")
         p = f"/mnt/{drive}{rest}"
@@ -93,20 +93,37 @@ def _ask_cli():
         return None
     return _normalize_path(folder)
 
-
 def _is_valid_dir(p):
     """
-    Check if the given path exists and is a valid directory.
-
-    Args:
-        p (str): The path to check.
-
-    Returns:
-        bool: True if the path is a valid directory, False otherwise.
+    Validate that the directory is a LUNAR root folder.
     """
     if not p:
         return False
-    return Path(p).is_dir()
+
+    p = Path(p)
+
+    if not p.exists() or not p.is_dir():
+        return False
+
+    required_files = [
+        "LUNAR.py",
+        "atom_typing.py",
+        "all2lmp.py",
+        "bond_react_merge.py",
+    ]
+
+    required_dirs = [
+        "src",
+        "frc_files",
+    ]
+
+    if not all((p / f).is_file() for f in required_files):
+        return False
+
+    if not all((p / d).is_dir() for d in required_dirs):
+        return False
+
+    return True
 
 
 def _write_config_py(lunar_path):
@@ -159,27 +176,31 @@ def reset_LUNAR_loc():
 def get_LUNAR_loc(force_prompt=False, use_gui=None):
     """
     Get the LUNAR root directory path. If a valid path is already saved in config,
-    return it. Otherwise, prompt the user to select or enter a path (looping until valid).
-
-    Args:
-        force_prompt (bool): If True, ignore saved path and always prompt. Defaults to False.
-        use_gui (bool or None): If True, use GUI for prompting; False for CLI. If None,
-                                defaults to the global USE_GUI value.
-
-    Returns:
-        str or None: The valid LUNAR root path, or None if the user cancels.
+    return it. Otherwise, prompt the user to select or enter a path.
     """
+
     if use_gui is None:
         use_gui = USE_GUI
 
-    # Use saved path if available, valid, and not forcing a prompt.
+    # Try auto-detection (unless forcing prompt)
+    if not force_prompt:
+        current = Path(__file__).resolve()
+
+        for parent in current.parents:
+            if _is_valid_dir(parent):
+                config.LUNAR_ROOT_DIR = str(parent)
+                _write_config_py(str(parent))
+                return str(parent)
+
+    # Use saved config path
     if not force_prompt and config.LUNAR_ROOT_DIR and _is_valid_dir(config.LUNAR_ROOT_DIR):
         print("Using saved LUNAR root directory:", config.LUNAR_ROOT_DIR)
         return config.LUNAR_ROOT_DIR
 
-    # Loop until a valid path is provided or canceled.
+    # Ask user
     while True:
         new_path = _ask_gui() if use_gui else _ask_cli()
+
         if not new_path:
             return None
 
@@ -188,15 +209,19 @@ def get_LUNAR_loc(force_prompt=False, use_gui=None):
             _write_config_py(new_path)
             return new_path
 
-        # Handle invalid path feedback.
         if use_gui:
             root_msg = tk.Tk()
             root_msg.withdraw()
-            messagebox.showerror("Invalid Folder", f"Not a valid directory:\n\n{new_path}")
+            messagebox.showerror(
+                "Invalid Folder",
+                f"Not a valid LUNAR directory:\n\n{new_path}"
+            )
             root_msg.destroy()
         else:
-            print("Invalid directory. Try again.")
-
+            print(f"Invalid LUNAR directory: {new_path}")
+            print("Expected files: LUNAR.py, atom_typing.py, all2lmp.py, bond_react_merge.py")
+            print("Expected directory: src/")
+            print("Press Enter to cancel or try again.")
 
 if __name__ == "__main__":
     # Entry point: Prompt for LUNAR location if run as a script.
