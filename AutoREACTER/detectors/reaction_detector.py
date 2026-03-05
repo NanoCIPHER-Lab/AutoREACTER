@@ -184,6 +184,7 @@ class ReactionDetector:
                                     functional_group_1=fg
                                 )
                             )
+
             # CASE 2: CO-POLYMERIZATION (e.g., A + B)
             else:
                 for monomer_role_i in monomer_roles:
@@ -215,6 +216,39 @@ class ReactionDetector:
                                             functional_group_2=fg_j
                                         )
                                     )
+            # case 1.1: If same reacants has two functional groups (e.g., A + A with FG1 and FG2)
+            if not same_reactants and reactant_2_name is not None:
+                for monomer_role in monomer_roles:
+
+                    fg_hits_1 = self._matching_fgs(monomer_role, reactant_1_name)
+                    fg_hits_2 = self._matching_fgs(monomer_role, reactant_2_name)
+
+                    for fg_1 in fg_hits_1:
+                        for fg_2 in fg_hits_2:
+
+                            # Skip identical FG objects
+                            if fg_1 == fg_2:
+                                continue
+
+                            pair_key = self._seen_pair_key(
+                                reaction_name, monomer_role, fg_1, monomer_role, fg_2
+                            )
+
+                            if pair_key not in seen_pairs:
+                                seen_pairs.add(pair_key)
+
+                                reaction_instances.append(
+                                    ReactionInstance(
+                                        reaction_name=reaction_name,
+                                        reaction_smarts=reaction_info["reaction"],
+                                        delete_atom=reaction_info["delete_atom"],
+                                        references=reaction_info["reference"],
+                                        monomer_1=monomer_role,
+                                        functional_group_1=fg_1,
+                                        monomer_2=monomer_role,
+                                        functional_group_2=fg_2
+                                    )
+                                )
         return reaction_instances
 
     def create_reaction_image(self, reactant_a_smiles: str, reactant_b_smiles: str, 

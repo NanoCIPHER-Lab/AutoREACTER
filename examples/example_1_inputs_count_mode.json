@@ -38,7 +38,7 @@
 
         {
             "name": "tmc",
-            "smiles": "ClC(=O)c1cc(cc(c1)C(Cl)=O)C(Cl)=O"
+            "smiles": "CC(O)C(O)CCCCc1c(C(=O)Cl)cc(C(=O)Cl)cc1C(=O)Cl"
         },
 
         {
