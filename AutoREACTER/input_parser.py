@@ -78,8 +78,6 @@ class MonomerEntry:
         rdkit_mol: The RDKit Mol object corresponding to the SMILES string.
         count: Dictionary mapping target tags to integer counts (used in 'counts' mode).
         ratio: Float representing the stoichiometric ratio (used in 'stoichiometric_ratio' mode).
-        atom_count: Total number of atoms in the monomer, derived from RDKit.
-        molar_mass: Molecular weight of the monomer, derived from RDKit.
         status: Current status of the monomer (default is "active").
     """
     id: int
