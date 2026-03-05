@@ -88,8 +88,6 @@ class MonomerEntry:
     smiles: str  
     count: dict | None  # None only if stoichiometric mode 
     ratio: float | None  # None only if counts mode 
-    atom_count: int 
-    molar_mass: float  
     rdkit_mol: Chem.Mol | None = None # Store the RDKit Mol object
     status: StatusType = "active"
 
@@ -502,11 +500,6 @@ class InputParser:
                 ratio = float(ratio_value)
                 count = None
 
-            # RDKit derived properties
-            mol_with_h = Chem.AddHs(mol)
-            atom_count = mol_with_h.GetNumAtoms()
-            mw = Descriptors.MolWt(mol_with_h)
-
             validated_monomers.append(
                 MonomerEntry(
                     id=monomer_id,
@@ -515,8 +508,6 @@ class InputParser:
                     smiles=smiles,
                     count=count,
                     ratio=ratio,
-                    atom_count=atom_count,
-                    molar_mass=mw,
                     rdkit_mol=mol,
                 )
             )
