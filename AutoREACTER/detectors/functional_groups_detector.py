@@ -106,6 +106,8 @@ import logging
 import json
 from typing import Dict, Tuple, Optional
 import pathlib, os
+from PIL.Image import Image
+
 try:
     from AutoREACTER.input_parser import MonomerEntry
 except (ImportError, ModuleNotFoundError):
@@ -375,7 +377,7 @@ class FunctionalGroupsDetector:
                     ))
         return monomer_roles, monomer_roles_visualization
 
-    def molecules_to_visualization(self, monomer_roles_visualization: list[FunctionalGroupVisualization]) -> Draw.MolsToGridImage:
+    def functional_group_highlighted_molecules_image_grid(self, monomer_roles_visualization: list[FunctionalGroupVisualization]) -> Image:
             """Convert monomer roles with detected functionalities into visualizations.
             Args:
                 monomer_roles_visualization (list[FunctionalGroupVisualization]): List of monomer roles with detected functionalities for visualization.

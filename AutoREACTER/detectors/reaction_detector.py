@@ -59,40 +59,6 @@ class EmptyReactionListError(Exception):
     pass
 
 @dataclass(slots=True, frozen=True)
-class FunctionalGroupInfo:
-    """
-    Stores metadata about a specific functional group detected in a molecule.
-    
-    Attributes:
-        functionality_type: Category of the group (e.g., 'vinyl', 'diol').
-        fg_name: Human-readable name of the functional group.
-        fg_smarts_1: Primary SMARTS pattern for detection.
-        fg_count_1: Number of occurrences of the primary pattern.
-        fg_smarts_2: Secondary SMARTS pattern (optional).
-        fg_count_2: Number of occurrences of the secondary pattern (optional).
-    """
-    functionality_type: str
-    fg_name: str
-    fg_smarts_1: str
-    fg_count_1: int
-    fg_smarts_2: Optional[str] = None
-    fg_count_2: Optional[int] = None
-
-@dataclass(slots=True, frozen=True)
-class MonomerRole:
-    """
-    Represents a monomer and its associated functional groups.
-    
-    Attributes:
-        smiles: SMILES string of the monomer.
-        name: Identifier or name of the monomer.
-        functionalities: A tuple of FunctionalGroupInfo objects present in this monomer.
-    """
-    smiles: str
-    name: str
-    functionalities: Tuple[FunctionalGroupInfo, ...]
-
-@dataclass(slots=True, frozen=True)
 class ReactionTemplate:
     """
     Defines a generic template for a polymerization reaction.
@@ -218,6 +184,7 @@ class ReactionDetector:
                                     functional_group_1=fg
                                 )
                             )
+
             # CASE 2: CO-POLYMERIZATION (e.g., A + B)
             else:
                 for monomer_role_i in monomer_roles:
@@ -249,6 +216,39 @@ class ReactionDetector:
                                             functional_group_2=fg_j
                                         )
                                     )
+            # case 1.1: If same reacants has two functional groups (e.g., A + A with FG1 and FG2)
+            if not same_reactants and reactant_2_name is not None:
+                for monomer_role in monomer_roles:
+
+                    fg_hits_1 = self._matching_fgs(monomer_role, reactant_1_name)
+                    fg_hits_2 = self._matching_fgs(monomer_role, reactant_2_name)
+
+                    for fg_1 in fg_hits_1:
+                        for fg_2 in fg_hits_2:
+
+                            # Skip identical FG objects
+                            if fg_1 == fg_2:
+                                continue
+
+                            pair_key = self._seen_pair_key(
+                                reaction_name, monomer_role, fg_1, monomer_role, fg_2
+                            )
+
+                            if pair_key not in seen_pairs:
+                                seen_pairs.add(pair_key)
+
+                                reaction_instances.append(
+                                    ReactionInstance(
+                                        reaction_name=reaction_name,
+                                        reaction_smarts=reaction_info["reaction"],
+                                        delete_atom=reaction_info["delete_atom"],
+                                        references=reaction_info["reference"],
+                                        monomer_1=monomer_role,
+                                        functional_group_1=fg_1,
+                                        monomer_2=monomer_role,
+                                        functional_group_2=fg_2
+                                    )
+                                )
         return reaction_instances
 
     def create_reaction_image(self, reactant_a_smiles: str, reactant_b_smiles: str, 
@@ -297,7 +297,7 @@ class ReactionDetector:
 
         return Draw.ReactionToImage(display_rxn, subImgSize=(400, 400))
 
-    def create_reaction_image_grid(self, selected_reaction_instances: List[ReactionInstance]) -> Optional[Image.Image]:
+    def available_reaction_image_grid(self, selected_reaction_instances: List[ReactionInstance]) -> Optional[Image.Image]:
         """
         Creates a vertical grid image containing all selected reaction visualizations.
         

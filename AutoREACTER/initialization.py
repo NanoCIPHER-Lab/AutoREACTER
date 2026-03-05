@@ -1,8 +1,8 @@
 """
 Author: "Janitha Mahanthe"
-Version: v0.1-beta.1
+Version: v0.1-beta.0
 """
-version = "v0.1-beta.1"
+version = "v0.2-beta.0"
 import importlib
 
 

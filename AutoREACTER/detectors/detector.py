@@ -9,15 +9,15 @@ the simulation.
 """
 
 import warnings
+import os, json
 
-warnings.warn(
-    """This script is deprecated and will be modified in future versions. Within v0.2, the whole package will primaraliy 
-    support on jupyter notebook and the CLI is removed. Please use the notebook version for now and refer to the README for how to use the package.""",
-    DeprecationWarning,
-    stacklevel=2
-)
-
-import json
+if os.environ.get("AUTOREACTER_SHOW_DEPRECATION", "").lower() in {"1", "true", "yes", "on"}:
+    warnings.warn(
+        """This script is deprecated and will be modified in future versions. Within v0.2, the whole package will primaraliy 
+        support on jupyter notebook and the CLI is removed. Please use the notebook version for now and refer to the README for how to use the package.""",
+        DeprecationWarning,
+        stacklevel=2
+    )
 
 # Attempt to import detector modules. Handles different import paths depending on
 # whether the script is run as a module, part of a package, or standalone.

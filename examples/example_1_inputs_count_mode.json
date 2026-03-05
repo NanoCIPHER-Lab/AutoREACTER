@@ -15,7 +15,8 @@
                 "monomer_counts": {
                     "tmc": 220,
                     "mpd": 220,
-                    "ethanol": 110
+                    "ethanol": 110,
+                    "data_4": 55
                 }
             },
 
@@ -25,7 +26,8 @@
                 "monomer_counts": {
                     "tmc": 2200,
                     "mpd": 2200,
-                    "ethanol": 1100
+                    "ethanol": 1100,
+                    "data_4": 550
                 }
             }
 
@@ -36,7 +38,7 @@
 
         {
             "name": "tmc",
-            "smiles": "ClC(=O)c1cc(cc(c1)C(Cl)=O)C(Cl)=O"
+            "smiles": "CC(O)C(O)CCCCc1c(C(=O)Cl)cc(C(=O)Cl)cc1C(=O)Cl"
         },
 
         {
@@ -47,6 +49,10 @@
         {
             "name": "ethanol",
             "smiles": "CCO"
+        },
+        {
+            "name": "data_4",
+            "smiles": "CCN"
         }
 
     ]

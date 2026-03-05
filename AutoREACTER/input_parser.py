@@ -13,9 +13,10 @@ TODO (Input Parsing Layer)
 from dataclasses import dataclass, asdict
 from typing import Any
 from rdkit import Chem
-from rdkit.Chem import Descriptors
+from rdkit.Chem import Descriptors, Draw
 import logging
 from typing import Literal
+from PIL.Image import Image
 
 # Module-level logger for future diagnostics.
 logger = logging.getLogger(__name__)
@@ -78,8 +79,6 @@ class MonomerEntry:
         rdkit_mol: The RDKit Mol object corresponding to the SMILES string.
         count: Dictionary mapping target tags to integer counts (used in 'counts' mode).
         ratio: Float representing the stoichiometric ratio (used in 'stoichiometric_ratio' mode).
-        atom_count: Total number of atoms in the monomer, derived from RDKit.
-        molar_mass: Molecular weight of the monomer, derived from RDKit.
         status: Current status of the monomer (default is "active").
     """
     id: int
@@ -88,8 +87,6 @@ class MonomerEntry:
     smiles: str  
     count: dict | None  # None only if stoichiometric mode 
     ratio: float | None  # None only if counts mode 
-    atom_count: int 
-    molar_mass: float  
     rdkit_mol: Chem.Mol | None = None # Store the RDKit Mol object
     status: StatusType = "active"
 
@@ -199,6 +196,19 @@ class InputParser:
         initial_molecules = [monomer.rdkit_mol for monomer in simulation_setup.monomers if monomer.rdkit_mol is not None]
         initial_molecules_legends = [monomer.name for monomer in simulation_setup.monomers]
         return initial_molecules, initial_molecules_legends
+    
+    def initial_molecules_image_grid(self, simulation_setup: SimulationSetup) -> Image:
+        """
+        Creates a grid image of the initial molecules for visualization purposes.
+        Args:
+            simulation_setup: The validated SimulationSetup object.
+
+        Returns:
+            A Image object containing the grid of molecule images.
+        """
+        initial_molecules = [monomer.rdkit_mol for monomer in simulation_setup.monomers if monomer.rdkit_mol is not None]
+        initial_molecules_legends = [monomer.name for monomer in simulation_setup.monomers]
+        return Draw.MolsToGridImage(initial_molecules, molsPerRow=3, subImgSize=(400, 400), legends=initial_molecules_legends)
 
     def validate_basic_format(self, inputs: dict) -> None:
         """
@@ -502,11 +512,6 @@ class InputParser:
                 ratio = float(ratio_value)
                 count = None
 
-            # RDKit derived properties
-            mol_with_h = Chem.AddHs(mol)
-            atom_count = mol_with_h.GetNumAtoms()
-            mw = Descriptors.MolWt(mol_with_h)
-
             validated_monomers.append(
                 MonomerEntry(
                     id=monomer_id,
@@ -515,8 +520,6 @@ class InputParser:
                     smiles=smiles,
                     count=count,
                     ratio=ratio,
-                    atom_count=atom_count,
-                    molar_mass=mw,
                     rdkit_mol=mol,
                 )
             )
@@ -622,15 +625,18 @@ class InputParser:
         return seen_monomer_list
     
     def _validate_replicas(self, replicas_dict: dict, method: CompositionMethodType) -> dict:
-        """Validates the 'replicas' section of the input, ensuring correct structure and required fields based on the composition method.
-        Args:            
-            replicas_dict: The 'replicas' sub-dictionary from the input.
-            method: The composition method being used ("counts" or "stoichiometric_ratio").
-        Returns:            
-            A validated dictionary containing the method, temperatures, density, and systems.
-        Raises:
-            InputSchemaError: If the structure is invalid, required fields are missing, or tags are duplicated.
-            NumericFieldError: If numeric fields like 'total_atoms' are invalid.
+        """
+        Validates the 'replicas' section of the input.
+
+        Ensures structure, numeric fields, and system-level composition fields
+        are correct based on the selected composition method.
+
+        Args:
+            replicas_dict: The 'replicas' dictionary from user input.
+            method: Composition method ("counts" or "stoichiometric_ratio").
+
+        Returns:
+            Normalized replicas dictionary.
         """
 
         temperatures = self._validate_temperature(
@@ -648,7 +654,10 @@ class InputParser:
                 "'replicas.systems' must be a non-empty list."
             )
 
-        seen_tags = set()
+        seen_tags: set[str] = set()
+
+        # used for ratio consistency check
+        reference_ratios: dict | None = None
 
         for system in systems:
 
@@ -671,6 +680,7 @@ class InputParser:
 
             seen_tags.add(tag)
 
+            # -------- ratio mode --------
             if method == "stoichiometric_ratio":
 
                 total_atoms = system.get("total_atoms")
@@ -682,19 +692,43 @@ class InputParser:
 
                 ratios = system.get("monomer_ratios")
 
-                if not isinstance(ratios, dict):
+                if not isinstance(ratios, dict) or not ratios:
                     raise InputSchemaError(
                         "'monomer_ratios' must be provided in ratio mode."
                     )
 
+                # validate ratio values
+                for monomer, value in ratios.items():
+                    if not isinstance(value, (int, float)) or value < 0:
+                        raise NumericFieldError(
+                            f"Invalid ratio value for monomer {monomer!r}: {value!r}"
+                        )
+
+                # enforce ratio consistency across systems
+                if reference_ratios is None:
+                    reference_ratios = ratios
+                else:
+                    if ratios != reference_ratios:
+                        raise InputSchemaError(
+                            "All systems must use identical 'monomer_ratios'."
+                        )
+
+            # -------- counts mode --------
             if method == "counts":
 
                 counts = system.get("monomer_counts")
 
-                if not isinstance(counts, dict):
+                if not isinstance(counts, dict) or not counts:
                     raise InputSchemaError(
                         "'monomer_counts' must be provided in counts mode."
                     )
+
+                for monomer, value in counts.items():
+
+                    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                        raise NumericFieldError(
+                            f"Invalid count for monomer {monomer!r}: {value!r}"
+                        )
 
                 if "total_atoms" in system:
                     raise InputSchemaError(
