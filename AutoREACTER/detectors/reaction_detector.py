@@ -118,35 +118,27 @@ class ReactionDetector:
         return [fg for fg in monomer_entry.functionalities if fg.fg_name == target_group_name]
 
     def _seen_pair_key(
-            self,
-            reaction_name: str,
-            monomer_role_1: MonomerRole,
-            fg_1: FunctionalGroupInfo,
-            monomer_role_2: Optional[MonomerRole] = None,
-            fg_2: Optional[FunctionalGroupInfo] = None,
-        ) -> Tuple:
-        """
-        Generates a unique, order-independent key for a reaction pair to avoid duplicates.
-        
-        Args:
-            reaction_name: Name of the reaction.
-            monomer_role_1: First monomer.
-            fg_1: First functional group.
-            monomer_role_2: Second monomer (optional).
-            fg_2: Second functional group (optional).
-            
-        Returns:
-            A tuple representing the unique state of this reaction instance.
-        """
-        if monomer_role_2 is None or fg_2 is None:
-            return (reaction_name, monomer_role_1, fg_1)
+        self,
+        reaction_name: str,
+        monomer_role_1: MonomerRole,
+        fg_1: FunctionalGroupInfo,
+        monomer_role_2: Optional[MonomerRole] = None,
+        fg_2: Optional[FunctionalGroupInfo] = None,
+    ) -> Tuple:
 
-        # Sort reactants by memory ID to ensure (A, B) and (B, A) produce the same key
-        ordered = tuple(sorted(
-            [(monomer_role_1, fg_1), (monomer_role_2, fg_2)],
-            key=lambda x: (id(x[0]), id(x[1]))
-        ))
-        return (reaction_name, ordered[0], ordered[1])
+        if monomer_role_2 is None or fg_2 is None:
+            return (
+                reaction_name,
+                monomer_role_1.smiles,
+                fg_1.fg_name
+            )
+
+        pair1 = (monomer_role_1.smiles, fg_1.fg_name)
+        pair2 = (monomer_role_2.smiles, fg_2.fg_name)
+
+        ordered = tuple(sorted([pair1, pair2]))
+
+        return (reaction_name, ordered)
 
     def reaction_detector(self, monomer_roles: List[MonomerRole]) -> List[ReactionInstance]:
         """
