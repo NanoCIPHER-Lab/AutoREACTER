@@ -4,7 +4,8 @@ from pathlib import Path
 from typing import Dict, List, Optional
 import pandas as pd
 from rdkit import Chem
-from rdkit.Chem import AllChem, Draw, rdChemReactions
+from rdkit.Chem import AllChem, Draw, rdChemReactions, rdmolops
+from rdkit.Chem.rdchem import Mol
 from PIL.Image import Image
 import itertools
 import pandas as pd
@@ -39,8 +40,8 @@ class ReactionMetadata:
     activity_stats: bool = True
     
 class PrepareReactions:
-    def __init__(self, reaction_templates: List[ReactionInstance]):
-        self.reaction_templates = reaction_templates
+    def __init__(self, cache: Path):
+        self.cache = self._prepare_paths(cache)
 
     def _add_column_safe(self, df, list_data, column_name):
         """
@@ -387,9 +388,9 @@ class PrepareReactions:
 
         return mols, molecule_and_csv_path_dict
     
-    def prepare_reactions(self, reactions: List[ReactionInstance], cache: str) -> List[ReactionMetadata]:
+    def prepare_reactions(self, reactions: List[ReactionInstance],) -> List[ReactionMetadata]:
 
-        csv_cache = self._prepare_paths(cache)
+        csv_cache = self._prepare_paths(self.cache)
         metadata_list = []
 
         for reaction in reactions:
