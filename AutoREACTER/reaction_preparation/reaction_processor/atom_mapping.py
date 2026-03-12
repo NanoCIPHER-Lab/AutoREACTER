@@ -26,23 +26,23 @@ import os
 import itertools
 try:
     # Case 1: correct when reaction_template_pipeline is a proper package
-    from .util import compare_products
+    from .utils import compare_products
 
 except (ImportError, ModuleNotFoundError):
     try:
         # Case 2: fully-qualified import under your installed namespace
-        from reaction_lammps_mupt.reaction_template_builder.reaction_template_pipeline.util import (
+        from reaction_lammps_mupt.reaction_template_builder.reaction_template_pipeline.utils import (
             compare_products,
         )
 
     except (ImportError, ModuleNotFoundError):
         try:
             # Case 3: if reaction_template_pipeline is installed as a top-level package
-            from reaction_template_pipeline.util import compare_products
+            from reaction_template_pipeline.utils import compare_products
 
         except (ImportError, ModuleNotFoundError):
             # Case 4: running as a loose script from the same directory
-            from util import compare_products
+            from utils import compare_products
 
 
 def is_number_in_set(set_of_tuples, reactant):

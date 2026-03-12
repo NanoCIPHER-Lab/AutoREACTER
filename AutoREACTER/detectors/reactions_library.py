@@ -51,8 +51,8 @@ class ReactionLibrary:
             },
             "Hydroxy Acid Halides Hydroxy Acid Halides Polycondensation(Polyesterification)": {
                 "same_reactants": False,
-                "reactant_1": "hydroxy_acid_halides_monomer",
-                "reactant_2": "hydroxy_acid_halides_monomer",
+                "reactant_1": "hydroxy_acid_halide",
+                "reactant_2": "hydroxy_acid_halide",
                 "product": "polyester_chain",
                 "delete_atom": True,
                 "reaction": "[O;!$(OC=*):1]-[H:3].[CX3:2](=[O:5])[Cl,Br,I:4]>>[OX2:1]-[CX3:2](=[O:5]).[Cl,Br,I:4]-[H:3]",
@@ -62,7 +62,7 @@ class ReactionLibrary:
             },
             "Hydroxy Acid Halides Polycondensation(Polyesterification)": {
                 "same_reactants": True,
-                "reactant_1": "hydroxy_acid_halides_monomer",
+                "reactant_1": "hydroxy_acid_halide",
                 "product": "polyester_chain",
                 "delete_atom": True,
                 "reaction": "[O;!$(OC=*):1]-[H:3].[CX3:2](=[O:5])[Cl,Br,I:4]>>[OX2:1]-[CX3:2](=[O:5]).[Cl,Br,I:4]-[H:3]",

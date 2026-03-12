@@ -20,6 +20,10 @@ class MappingError(Exception):
     """Custom exception for errors in atom mapping."""
     pass
 
+class SMARTSParsingError(Exception):
+    """Custom exception for errors in parsing reaction SMARTS."""
+    pass
+
 @dataclass(slots=True)
 class ReactionMetadata:
     reaction_id: int
@@ -103,7 +107,6 @@ class PrepareReactions:
                 x = atom.GetIdx()
                 for t in set_of_tuples:
                     if x in t:
-                        print(f"Found matching atom index {x} in tuple {t}")
                         return t
         raise ValueError("No matching atom found in the provided set of tuples")
     
@@ -122,8 +125,13 @@ class PrepareReactions:
             >>> mol1, mol2 = self._build_reactants("CCO", "CC=O")
         """
         mol_reactant_1 = Chem.MolFromSmiles(reactant_smiles_1)
+        mol = Chem.MolFromSmiles(reactant_smiles_1)
+        if mol is None:
+            raise SMARTSParsingError(f"Invalid SMILES: {reactant_smiles_1}")
         mol_reactant_1 = Chem.AddHs(mol_reactant_1)  # Add explicit hydrogens
         mol_reactant_2 = Chem.MolFromSmiles(reactant_smiles_2)
+        if mol_reactant_2 is None:
+            raise SMARTSParsingError(f"Invalid SMILES: {reactant_smiles_2}")
         mol_reactant_2 = Chem.AddHs(mol_reactant_2)  # Add explicit hydrogens
         return mol_reactant_1, mol_reactant_2
 
@@ -135,7 +143,7 @@ class PrepareReactions:
     def _build_reaction(self, rxn_smarts):
         rxn = AllChem.ReactionFromSmarts(rxn_smarts)
         if rxn is None:
-            raise ValueError(f"Invalid reaction SMARTS: {rxn_smarts}")
+            raise SMARTSParsingError(f"Invalid reaction SMARTS: {rxn_smarts}")
         return rxn
 
     def _is_consecutive(self, num_list):
@@ -398,8 +406,8 @@ class PrepareReactions:
             rxn = self._build_reaction(reaction.reaction_smarts)
 
             mol_r1, mol_r2 = self._build_reactants(
-                reaction.reactant_smiles_1,
-                reaction.reactant_smiles_2
+                reaction.monomer_1.smiles,
+                reaction.monomer_2.smiles
             )
 
             reaction_tuple = self._reaction_tuples(
