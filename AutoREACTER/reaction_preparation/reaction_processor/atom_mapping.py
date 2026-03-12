@@ -72,7 +72,6 @@ def is_number_in_set(set_of_tuples, reactant):
             x = atom.GetIdx()
             for t in set_of_tuples:
                 if x in t:
-                    print(f"Found matching atom index {x} in tuple {t}")
                     return t
     raise ValueError("No matching atom found in the provided set of tuples.")
 

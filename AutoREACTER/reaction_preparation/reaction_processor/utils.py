@@ -39,7 +39,8 @@ def compare_products(reactions_dict, _prod2):
 
             # Perform string comparison to detect duplicates
             if smi1 == smi2:
-                print("DUPLICATE PRODUCT FOUND")
+                # Debug print to indicate a duplicate was found (can be commented out in production)
+                # print("DUPLICATE PRODUCT FOUND")
                 return False
                 
     # No duplicates found after checking all entries
