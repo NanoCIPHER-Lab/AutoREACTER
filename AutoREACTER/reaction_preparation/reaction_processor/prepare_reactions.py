@@ -7,6 +7,9 @@ initiators, byproducts), and generates metadata and visualizations for downstrea
 or mechanistic analysis.
 """
 
+# WARNING:
+# When modifying this file for dataframe or any other indexing varibales use idx, do not use index or indicies or similar.
+
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -367,14 +370,14 @@ class PrepareReactions:
                         byproduct_reactant_idxs = []
 
                         if delete_atoms:
-                            byproduct_reactant_idxs = self._detect_byproducts(product_combined, df, delete_atoms)
+                            byproduct_reactant_idxs = self._detect_byproducts(product_combined, mapping_dict, delete_atoms)
 
                         # Build dataframe
                         df_combined = pd.concat([
                             df,
                             pd.Series(first_shell, name="first_shell"),
                             pd.Series(initiator_idxs, name="initiators"),
-                            pd.Series(byproduct_reactant_idxs, name="byproduct_indices")
+                            pd.Series(byproduct_reactant_idxs, name="byproduct_idx")
                         ], axis=1).astype(pd.Int64Dtype())
 
                         total_products = len(reaction_metadata) + 1 if reaction_metadata else 1
@@ -413,27 +416,24 @@ class PrepareReactions:
         return True
     
 
-    def _detect_byproducts(self, product_combined: Chem.Mol, df: pd.DataFrame, delete_atoms: bool) -> list[int]:
+    def _detect_byproducts(self, product_combined: Chem.Mol, mapping_dict: dict[int, int], delete_atoms: bool) -> list[int]:
         if not delete_atoms:
             return []
 
         frags = rdmolops.GetMolFrags(product_combined, asMols=True)
         smallest = min(frags, key=lambda m: m.GetNumAtoms())
 
-        product_idxs = []
+        byproduct = []
+
+        # reverse mapping: product_idx → reactant_idx
+        reverse_map = {v: k for k, v in mapping_dict.items()}
+
         for atom in smallest.GetAtoms():
-            map_num = atom.GetAtomMapNum()
-            for p_atom in product_combined.GetAtoms():
-                if p_atom.GetAtomMapNum() == map_num:
-                    product_idxs.append(p_atom.GetIdx())
-                    break
+            p_idx = atom.GetIdx()
+            if p_idx in reverse_map:
+                byproduct.append(reverse_map[p_idx])
 
-        return (
-            df.loc[df["product_idx"].isin(product_idxs), "reactant_idx"]
-            .astype(int)
-            .tolist()
-        )
-
+        return byproduct
 
     def _is_consecutive(self, num_list: list[int]) -> bool:
         """
