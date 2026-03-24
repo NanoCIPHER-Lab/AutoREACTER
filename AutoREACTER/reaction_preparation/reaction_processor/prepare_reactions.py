@@ -23,8 +23,11 @@ import pandas as pd
 
 from AutoREACTER.detectors.reaction_detector import ReactionInstance
 from AutoREACTER.reaction_preparation.reaction_processor.atom_mapping import smart_mapping
-from AutoREACTER.reaction_preparation.reaction_processor.utils import compare_products
+from AutoREACTER.reaction_preparation.reaction_processor.utils import (
+    add_dict_as_new_columns, add_column_safe, compare_set, prepare_paths
+)
 from AutoREACTER.reaction_preparation.reaction_processor.walker import reaction_atom_walker
+
 
 
 class MappingError(Exception):
@@ -95,9 +98,9 @@ class PrepareReactions:
             cache: Path to the base cache directory for storing processed reaction data.
         """
         self.cache = Path(cache)
-        self.csv_cache = self._prepare_paths()
+        self.csv_cache = prepare_paths(self.cache, "csv_cache")
 
-    def run_reaction_template_pipeline(self, detected_reactions_dict, cache):
+    def prepare_reactions(self, reaction_instances: list[ReactionInstance]) -> list[ReactionMetadata]:
         """
         Main execution pipeline for mapping reactions, identifying templates, 
         and saving results to CSV.
@@ -109,20 +112,23 @@ class PrepareReactions:
         4. Updates reaction dataframes with mapping indices and saves them.
 
         Args:
-            detected_reactions_dict (dict): Raw dictionary of detected reactions.
+            reaction_instances (list[ReactionInstance]): List of reaction instances to process.
             cache (str): Path to the cache directory for processing.
 
         Returns:
             tuple: (updated_molecule_dict, formatted_summary_dict)
         """
         # Initial processing: atom mapping and basic dictionary formatting
-        reactions_metadata = self.process_reaction_instances(detected_reactions_dict, cache)
-   
+        reactions_metadata = self.process_reaction_instances(reaction_instances)
+
+        # Detect duplicates after processing all reactions to ensure comprehensive comparison
+        reaction_metadata = self._detect_duplicates(reactions_metadata)
         
         # Iterate through each detected reaction to perform template analysis
         for reaction in reactions_metadata:
+            if not reaction.activity_stats:
+                continue  # Skip reactions marked as duplicates
             combined_reactant_molecule_object = reaction.reactant_combined_mol
-            combined_product_molecule_object = reaction.product_combined_mol
             reaction_dataframe = reaction.reaction_dataframe
             csv_save_path = reaction.csv_path
 
@@ -138,19 +144,16 @@ class PrepareReactions:
                 first_shell,
                 fully_mapped_dict
             )
-            
-            # Note: Duplicate checking logic is currently commented out but available for future use
-            # is_duplicate, processed_dict = compare_rdkit_fragments(...)
 
             # Update the dataframe with specific template mapping indices
-            reaction_dataframe = self._add_dict_as_new_columns(
+            reaction_dataframe = add_dict_as_new_columns(
                 reaction_dataframe,
                 template_mapped_dict,
                 titles = ["template_reactant_idx", "template_product_idx"]
             )
             
             # Append edge atoms information (crucial for building polymer chains)
-            reaction_dataframe = self._add_column_safe(
+            reaction_dataframe = add_column_safe(
                 reaction_dataframe,
                 edge_atoms,
                 "edge_atoms"
@@ -162,14 +165,25 @@ class PrepareReactions:
             
             # Persist the processed reaction data to a CSV file
             reaction_dataframe.to_csv(csv_save_path, index=False)
+            reaction.edge_atoms = edge_atoms
+            reaction.template_reactant_to_product_mapping = template_mapped_dict
 
-        # For debugging: print the final molecule dictionary with CSV paths
-        # print("Formatted Detected Reactions Summary:")
-        # print(molecule_dict_csv_path_dict)
-        return 
+        return reaction_metadata
 
+    def _detect_duplicates(self, reaction_metadata_list: list[ReactionMetadata]) -> list[ReactionMetadata]:
+        unique_metadata: list[ReactionMetadata] = []
+        for reaction in reaction_metadata_list:
+            reactants = reaction.reactant_combined_mol
+            products = reaction.product_combined_mol
+
+            if compare_set(unique_metadata, reactants, products):
+                unique_metadata.append(reaction)
+            else:
+                reaction.activity_stats = False  # mark duplicate reactions with False for activity_stats
+
+        return unique_metadata
     
-    def process_reaction_instances(self, detected_reactions: list[ReactionInstance], cache : Path) -> list[ReactionInstance]:
+    def process_reaction_instances(self, detected_reactions: list[ReactionInstance]) -> list[ReactionMetadata]:
         """
         Process a dictionary of detected reactions and generate mapping data.
         
@@ -215,18 +229,17 @@ class PrepareReactions:
             reaction_tuple = self._build_reaction_tuple(same_reactants, mol_reactant_1, mol_reactant_2)
 
             # Process the reaction
-            reaction_metadata = self._process_reaction_products( 
+            reaction_metadata = self.process_reaction_products( 
                                    rxn, 
                                    csv_cache, 
                                    reaction_tuple, 
                                    delete_atoms, 
-                                   reaction_metadata = []
                                    )
             all_metadata.extend(reaction_metadata)
         
         return all_metadata
     
-    def _process_reaction_products(self, 
+    def process_reaction_products(self, 
                                    rxn: Chem.rdChemReactions.ChemicalReaction, 
                                    csv_cache: Path, 
                                    reaction_tuple: list, 
@@ -354,13 +367,13 @@ class PrepareReactions:
                         atom indices so that downstream processes, such as the atom walker, can identify reaction templates and edge atoms.
                         """
                         # Apply SMARTS-based mapping for THIS combination
-                        self._smart_mapping(
+                        smart_mapping(
                             reactant=r1_copy,
                             smarts_template=rxn.GetReactants()[0],
                             match_tuple=match1 if match1 else (),
                         )
 
-                        self._smart_mapping(
+                        smart_mapping(
                             reactant=r2_copy,
                             smarts_template=rxn.GetReactants()[1],
                             match_tuple=match2 if match2 else (),
@@ -502,98 +515,7 @@ class PrepareReactions:
 
         return [[mol_reactant_1, mol_reactant_2], [mol_reactant_2, mol_reactant_1]]
     
-
-    def _add_dict_as_new_columns(self, df_existing, data_dict, titles=["template_reactant_idx", "template_product_idx"]):
-        """
-        Adds dictionary keys and values as new columns to an existing DataFrame.
-
-        This is specifically used to map reactant indices to product indices 
-        within the reaction template.
-
-        Args:
-            df_existing (pd.DataFrame): The DataFrame to modify.
-            data_dict (dict): Dictionary where keys and values will become column data.
-            titles (list): List of two strings for the new column names.
-
-        Returns:
-            pd.DataFrame: The modified DataFrame with new columns added.
-        """
-        # Convert dict keys and values to Series to ensure alignment with the DataFrame
-        # Use .astype("Int64") to allow for potential Null/NaN values while keeping integers
-        df_existing[titles[0]] = pd.Series(list(data_dict.keys())).astype("Int64")
-        df_existing[titles[1]] = pd.Series(list(data_dict.values())).astype("Int64")
-        
-        return df_existing
-
-
-    def _add_column_safe(self, df, list_data, column_name):
-        """
-        Safely adds a list as a new column to a DataFrame, handling potential 
-        length mismatches by using Series alignment.
-
-        Args:
-            df (pd.DataFrame): Target DataFrame.
-            list_data (list): Data to be added to the column.
-            column_name (str): Name of the new column.
-
-        Returns:
-            pd.DataFrame: Modified DataFrame with the new column.
-        """
-        # Creating a Series from the list ensures it starts from the top (index 0)
-        # and fills missing rows with NaN if the list is shorter than the DataFrame
-        df[column_name] = pd.Series(list_data).astype("Int64")
-        return df
     
-    def _extract_unique_references(self, detected_reactions: List[ReactionInstance]) -> list[str]:
-        """Collect reference URLs from detected_reactions[*]["reference"], dedupe, keep order."""
-            
-        seen = set()
-        refs: list[str] = []
-
-        for metadata in detected_reactions:
-            ref = metadata.reference or {}
-
-            # single URL fields
-            for v in ref.values():
-                if isinstance(v, str):
-                    if v not in seen:
-                        seen.add(v)
-                        refs.append(v)
-
-                # list-of-URLs fields
-                elif isinstance(v, (list, tuple)):
-                    for u in v:
-                        if isinstance(u, str) and u not in seen:
-                            seen.add(u)
-                            refs.append(u)
-
-                # (optional) nested dict handling, if you ever add that later
-                elif isinstance(v, dict):
-                    for u in v.values():
-                        if isinstance(u, str) and u not in seen:
-                            seen.add(u)
-                            refs.append(u)
-
-        return refs
-
-    def _prepare_paths(self):
-        """
-        Create and prepare directory structure for CSV output files.
-        
-        Args:
-            cache (str or Path): Base cache directory path
-            
-        Returns:
-            Path: Path object pointing to the CSV cache directory
-            
-        Example:
-            >>> csv_dir = prepare_paths("/path/to/cache")
-            >>> print(csv_dir)  # /path/to/cache/csv
-        """
-        csv_cache = Path(self.cache) / "reactant_product_mapping"
-        os.makedirs(csv_cache, exist_ok=True)
-        return csv_cache
-
     def _build_reaction(self, rxn_smarts):
         """
         Create an RDKit reaction object from SMARTS string.
@@ -661,43 +583,6 @@ class PrepareReactions:
                         return t
         raise ValueError("No matching atom found in the provided set of tuples.")
     
-
-    def _smart_mapping(self, reactant, smarts_template, match_tuple):
-        """
-        Apply atom mapping from SMARTS template to reactant molecule based on match indices.
-        
-        This function transfers atom map numbers from a SMARTS template to corresponding
-        atoms in the reactant molecule using the provided match tuple that maps SMARTS
-        atom indices to reactant atom indices.
-        
-        Args:
-            reactant (Chem.Mol): The reactant molecule to apply mapping to
-            smarts_template (Chem.Mol): SMARTS pattern molecule with atom map numbers
-            match_tuple (tuple): Tuple mapping SMARTS atom indices to reactant atom indices
-            
-        Returns:
-            None: Modifies the reactant molecule in-place by setting atom map numbers
-            
-        Note:
-            Only atoms with non-zero map numbers in the SMARTS template are processed.
-            The function does nothing if match_tuple is empty.
-        """
-        if not match_tuple:
-            return
-        
-        # Create mapping from SMARTS atom indices to their map numbers
-        SMARTS_index_to_Map_Number = {}
-        for smarts_atom in smarts_template.GetAtoms():
-            map_num = smarts_atom.GetAtomMapNum()
-            if map_num != 0:  # Only process atoms with explicit mapping
-                SMARTS_index_to_Map_Number[smarts_atom.GetIdx()] = map_num
-        
-        # Apply mapping to corresponding atoms in reactant
-        for smarts_pos, map_num in SMARTS_index_to_Map_Number.items():
-            if smarts_pos < len(match_tuple):
-                atom_index_in_mol = match_tuple[smarts_pos]
-                atom = reactant.GetAtomWithIdx(atom_index_in_mol)
-                atom.SetAtomMapNum(map_num)
 
     def reaction_templates_highlighted_image_grid(
         self,
