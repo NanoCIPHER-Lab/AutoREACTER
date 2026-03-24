@@ -61,7 +61,6 @@ class ReactionMetadata:
     reactant_combined_mol: Chem.Mol
     product_combined_mol: Chem.Mol
     reactant_to_product_mapping: Dict[int, int]
-    csv_path: Path
     template_reactant_to_product_mapping: Optional[Dict[int, int]] = None
     edge_atoms: Optional[List[int]] = None
 
@@ -251,12 +250,13 @@ monomer_2
             reaction_tuple = self._build_reaction_tuple(same_reactants, mol_reactant_1, mol_reactant_2)
 
             # Process the reaction
-            reaction_metadata = self._process_reaction_products(
-                rxn,
-                csv_cache,
-                reaction_tuple,
-                delete_atoms=delete_atoms,
-            )
+            reaction_metadata = self._process_reaction_products( 
+                                   rxn, 
+                                   csv_cache, 
+                                   reaction_tuple, 
+                                   delete_atoms, 
+                                   reaction_metadata = []
+                                   )
         
         return reaction_metadata
     
@@ -447,22 +447,24 @@ monomer_2
                             pd.Series(byproduct_indexs, name="byproduct_indices")
                         ], axis=1).astype(pd.Int64Dtype())
 
-
                         total_products = len(reaction_metadata) + 1 if reaction_metadata else 1
 
                         df_combined.to_csv(csv_cache / f"reaction_{total_products}.csv", index=False) 
                         reaction_metadata.append(
                             ReactionMetadata(
-                                reaction_id=total_products,
-                                reactant_combined_mol=reactant_combined,
-                                product_combined_mol=product_combined,
-                                reactant_to_product_mapping=mapping_dict,
-                                csv_path= csv_cache / f"reaction_{total_products}.csv",
-                                first_shell=first_shell,
-                                initiators=initiator_idxs,
-                                byproduct_indices=byproduct_indexs,
-                                reaction_dataframe=df_combined
-                            )
+                                    reaction_id = total_products,
+                                    reactant_combined_mol = reactant_combined,
+                                    product_combined_mol = product_combined,
+                                    reactant_to_product_mapping = mapping_dict,
+                                    first_shell = first_shell,
+                                    initiators = initiator_idxs,
+                                    byproduct_indices = byproduct_indexs,
+                                    csv_path = csv_cache / f"reaction_{total_products}.csv",
+                                    reaction_dataframe = df_combined,
+                                    delete_atom = delete_atoms,
+                                    delete_atom_idx = byproduct_indexs[0] if byproduct_indexs else None,
+                                    activity_stats = True
+                                )
                         )
 
         return reaction_metadata
@@ -576,12 +578,13 @@ monomer_2
         df[column_name] = pd.Series(list_data).astype("Int64")
         return df
     
-    def _extract_unique_references(self, metadata_list: List[ReactionMetadata]) -> list[str]:
+    def _extract_unique_references(self, detected_reactions: List[ReactionInstance]) -> list[str]:
         """Collect reference URLs from detected_reactions[*]["reference"], dedupe, keep order."""
+            
         seen = set()
         refs: list[str] = []
 
-        for metadata in metadata_list:
+        for metadata in detected_reactions:
             ref = metadata.reference or {}
 
             # single URL fields
@@ -770,7 +773,7 @@ monomer_2
             color_map: Dict[int, tuple] = {}
 
             if highlight_type == "template":
-                atoms = list(metadata.template_reactant_to_product_mapping.keys())
+                atoms = list((metadata.template_reactant_to_product_mapping or {}).keys())
                 for a in atoms:
                     color_map[a] = (0.2, 0.6, 1.0)  # blue
 
