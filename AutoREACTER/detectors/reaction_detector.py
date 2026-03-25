@@ -58,20 +58,8 @@ class EmptyReactionListError(Exception):
     This should be prevented by the reaction_selection method, but this error serves as a safeguard."""
     pass
 
-@dataclass(slots=True, frozen=True)
-class ReactionTemplate:
-    """
-    Defines a generic template for a polymerization reaction.
-    """
-    reaction_name: str
-    reactant_1: str                 # functional group name
-    reactant_2: Optional[str]       # functional group name or None
-    reaction_smarts: str
-    same_reactants: bool
-    delete_atom: bool
-    references: dict
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True)
 class ReactionInstance:
     """
     Represents a specific instance of a reaction between identified monomers.
@@ -90,6 +78,7 @@ class ReactionInstance:
     reaction_smarts: str
     delete_atom: bool
     references: dict
+    same_reactants: bool
     monomer_1: MonomerRole
     functional_group_1: FunctionalGroupInfo
     monomer_2: Optional[MonomerRole] = None
@@ -172,6 +161,7 @@ class ReactionDetector:
                                     reaction_smarts=reaction_info["reaction"],
                                     delete_atom=reaction_info["delete_atom"],
                                     references=reaction_info["reference"],
+                                    same_reactants=same_reactants,
                                     monomer_1=monomer_role,
                                     functional_group_1=fg
                                 )
@@ -202,6 +192,7 @@ class ReactionDetector:
                                             reaction_smarts=reaction_info["reaction"],
                                             delete_atom=reaction_info["delete_atom"],
                                             references=reaction_info["reference"],
+                                            same_reactants=same_reactants,
                                             monomer_1=monomer_role_i,
                                             functional_group_1=fg_i,
                                             monomer_2=monomer_role_j,
@@ -235,6 +226,7 @@ class ReactionDetector:
                                         reaction_smarts=reaction_info["reaction"],
                                         delete_atom=reaction_info["delete_atom"],
                                         references=reaction_info["reference"],
+                                        same_reactants=same_reactants,
                                         monomer_1=monomer_role,
                                         functional_group_1=fg_1,
                                         monomer_2=monomer_role,
