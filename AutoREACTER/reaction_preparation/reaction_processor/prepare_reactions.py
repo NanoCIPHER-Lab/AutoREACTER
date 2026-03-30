@@ -77,9 +77,11 @@ class PrepareReactions:
         self.cache = Path(cache)
         self.csv_cache = prepare_paths(self.cache, "csv_cache")
 
+    # --- PUBLIC ---
+
     def prepare_reactions(self, reaction_instances: list[ReactionInstance]) -> list[ReactionMetadata]:
         # Initial processing: atom mapping and basic dictionary formatting
-        reactions_metadata = self.process_reaction_instances(reaction_instances)
+        reactions_metadata = self._process_reaction_instances(reaction_instances)
 
         # Detect duplicates after processing all reactions to ensure comprehensive comparison
         reaction_metadata = self._detect_duplicates(reactions_metadata)
@@ -129,21 +131,9 @@ class PrepareReactions:
             reaction.template_reactant_to_product_mapping = template_mapped_dict
 
         return reaction_metadata
-
-    def _detect_duplicates(self, reaction_metadata_list: list[ReactionMetadata]) -> list[ReactionMetadata]:
-        unique_metadata: list[ReactionMetadata] = []
-        for reaction in reaction_metadata_list:
-            reactants = reaction.reactant_combined_mol
-            products = reaction.product_combined_mol
-
-            if compare_set(unique_metadata, reactants, products):
-                unique_metadata.append(reaction)
-            else:
-                reaction.activity_stats = False  # mark duplicate reactions with False for activity_stats
-
-        return unique_metadata
     
-    def process_reaction_instances(self, detected_reactions: list[ReactionInstance]) -> list[ReactionMetadata]:
+    # --- PIPELINE STEPS (PRIVATE) ---
+    def _process_reaction_instances(self, detected_reactions: list[ReactionInstance]) -> list[ReactionMetadata]:
         csv_cache = self.csv_cache
         reaction_metadata = []
 
@@ -167,17 +157,31 @@ class PrepareReactions:
             reaction_tuple = self._build_reaction_tuple(same_reactants, mol_reactant_1, mol_reactant_2)
 
             # Process the reaction
-            reaction_metadata = self.process_reaction_products( 
+            reaction_metadata = self._process_reaction_products( 
                                    rxn, 
                                    csv_cache, 
                                    reaction_tuple, 
                                    delete_atoms,
                                    reaction_metadata
                                    )
+            
         
         return reaction_metadata
+
+    def _detect_duplicates(self, reaction_metadata_list: list[ReactionMetadata]) -> list[ReactionMetadata]:
+        unique_metadata: list[ReactionMetadata] = []
+        for reaction in reaction_metadata_list:
+            reactants = reaction.reactant_combined_mol
+            products = reaction.product_combined_mol
+
+            if compare_set(unique_metadata, reactants, products):
+                unique_metadata.append(reaction)
+            else:
+                reaction.activity_stats = False  # mark duplicate reactions with False for activity_stats
+
+        return unique_metadata
     
-    def process_reaction_products(self, 
+    def _process_reaction_products(self, 
                                    rxn: Chem.rdChemReactions.ChemicalReaction, 
                                    csv_cache: Path, 
                                    reaction_tuple: list, 
@@ -261,6 +265,7 @@ class PrepareReactions:
 
         return reaction_metadata
     
+    # --- CORE REACTION LOGIC ---
     def _assign_first_shell_and_initiators(self, reactant_combined, product_combined, mapping_dict):
         first_shell = []
         initiator_idxs = []
@@ -290,7 +295,54 @@ class PrepareReactions:
             raise ValueError(f"Expected 2 initiators, got {len(initiator_idxs)}: {initiator_idxs}") 
 
         return first_shell, initiator_idxs
+    def _detect_byproducts(self, product_combined: Chem.Mol, mapping_dict: dict[int, int], delete_atoms: bool) -> list[int]:
+        if not delete_atoms:
+            return []
+
+        frags = rdmolops.GetMolFrags(product_combined, asMols=True)
+        smallest = min(frags, key=lambda m: m.GetNumAtoms())
+
+        byproduct = []
+
+        # reverse mapping: product_idx → reactant_idx
+        reversed_mapping_dict = {}
+        for react_idx, prod_idx in mapping_dict.items():
+            reversed_mapping_dict[prod_idx] = react_idx
+
+        for atom in smallest.GetAtoms():
+            p_idx = atom.GetIdx()
+            if p_idx in reversed_mapping_dict:
+                byproduct.append(reversed_mapping_dict[p_idx])
+
+        return byproduct
     
+    def _validate_mapping(self, df: pd.DataFrame, reactant: Chem.Mol, product: Chem.Mol) -> bool:
+        if df["reactant_idx"].notna().sum() != df["product_idx"].notna().sum():
+            return False
+        if df["reactant_idx"].notna().sum() != reactant.GetNumAtoms():
+            return False
+        if df["product_idx"].notna().sum() != product.GetNumAtoms():
+            return False
+        if not self._is_consecutive(df["reactant_idx"].tolist()):
+            return False
+        if not self._is_consecutive(df["product_idx"].tolist()):
+            return False
+        return True
+    
+
+    # --- ATOM MAPPING ---
+    
+    def _assign_atom_map_numbers(self, r1: Chem.Mol, r2: Chem.Mol) -> None:
+        for atom in r1.GetAtoms():
+            idx = 1001 + atom.GetIdx()
+            atom.SetAtomMapNum(idx)
+            atom.SetIsotope(idx)  # The isotope is what will survive the reaction!
+
+        for atom in r2.GetAtoms():
+            idx = 2001 + atom.GetIdx()
+            atom.SetAtomMapNum(idx)
+            atom.SetIsotope(idx) # The isotope is what will survive the reaction!
+
     def _reassign_atom_map_numbers_by_isotope(self, mol: Chem.Mol) -> None:
         """
         surviving_idx = atom.GetIsotope() inside the atom's "Isotope" property because 
@@ -327,13 +379,9 @@ class PrepareReactions:
         df = pd.DataFrame(rows)
 
         return mapping_dict, df
-    
-    def _clear_isotopes(self, mol_1: Chem.Mol, mol_2: Chem.Mol) -> None:
-        '''Clear isotopes from a molecule to restore normal chemistry after using isotopes to store custom IDs'''
-        for atom in mol_1.GetAtoms():
-            atom.SetIsotope(0)
-        for atom in mol_2.GetAtoms():
-            atom.SetIsotope(0)
+
+
+
 
     def _reveal_template_map_numbers(self, mol : Chem.Mol) -> None:
         '''Make map numbers assigned to products of reaction visible for display'''
@@ -342,52 +390,37 @@ class PrepareReactions:
                 map_num = atom.GetIntProp('old_mapno')
                 atom.SetAtomMapNum(map_num)
 
-    def _assign_atom_map_numbers(self, r1: Chem.Mol, r2: Chem.Mol) -> None:
-        for atom in r1.GetAtoms():
-            idx = 1001 + atom.GetIdx()
-            atom.SetAtomMapNum(idx)
-            atom.SetIsotope(idx)  # The isotope is what will survive the reaction!
+    
+    def _clear_isotopes(self, mol_1: Chem.Mol, mol_2: Chem.Mol) -> None:
+        '''Clear isotopes from a molecule to restore normal chemistry after using isotopes to store custom IDs'''
+        for atom in mol_1.GetAtoms():
+            atom.SetIsotope(0)
+        for atom in mol_2.GetAtoms():
+            atom.SetIsotope(0)
 
-        for atom in r2.GetAtoms():
-            idx = 2001 + atom.GetIdx()
-            atom.SetAtomMapNum(idx)
-            atom.SetIsotope(idx) # The isotope is what will survive the reaction!
-
-    def _validate_mapping(self, df: pd.DataFrame, reactant: Chem.Mol, product: Chem.Mol) -> bool:
-        if df["reactant_idx"].notna().sum() != df["product_idx"].notna().sum():
-            return False
-        if df["reactant_idx"].notna().sum() != reactant.GetNumAtoms():
-            return False
-        if df["product_idx"].notna().sum() != product.GetNumAtoms():
-            return False
-        if not self._is_consecutive(df["reactant_idx"].tolist()):
-            return False
-        if not self._is_consecutive(df["product_idx"].tolist()):
-            return False
-        return True
     
 
-    def _detect_byproducts(self, product_combined: Chem.Mol, mapping_dict: dict[int, int], delete_atoms: bool) -> list[int]:
-        if not delete_atoms:
-            return []
 
-        frags = rdmolops.GetMolFrags(product_combined, asMols=True)
-        smallest = min(frags, key=lambda m: m.GetNumAtoms())
 
-        byproduct = []
 
-        # reverse mapping: product_idx → reactant_idx
-        reversed_mapping_dict = {}
-        for react_idx, prod_idx in mapping_dict.items():
-            reversed_mapping_dict[prod_idx] = react_idx
 
-        for atom in smallest.GetAtoms():
-            p_idx = atom.GetIdx()
-            if p_idx in reversed_mapping_dict:
-                byproduct.append(reversed_mapping_dict[p_idx])
+    # --- BUILDERS ---
+    
+    def _build_reaction(self, rxn_smarts):
+        return AllChem.ReactionFromSmarts(rxn_smarts)
+    def _build_reactants(self, reactant_smiles_1, reactant_smiles_2):
+        mol_reactant_1 = Chem.MolFromSmiles(reactant_smiles_1)
+        mol_reactant_1 = Chem.AddHs(mol_reactant_1)  # Add explicit hydrogens
+        mol_reactant_2 = Chem.MolFromSmiles(reactant_smiles_2)
+        mol_reactant_2 = Chem.AddHs(mol_reactant_2)  # Add explicit hydrogens
+        return mol_reactant_1, mol_reactant_2
+    def _build_reaction_tuple(self, same_reactants, mol_reactant_1, mol_reactant_2):
+        if same_reactants:
+            return [[mol_reactant_1, mol_reactant_1]]
 
-        return byproduct
-
+        return [[mol_reactant_1, mol_reactant_2], [mol_reactant_2, mol_reactant_1]]
+    
+    # --- HELPERS ---
     def _is_consecutive(self, num_list: list[int]) -> bool:
         if not num_list:
             return False
@@ -395,24 +428,9 @@ class PrepareReactions:
         return (
             len(set(num_list)) == len(num_list)
             and max(num_list) - min(num_list) + 1 == len(num_list)
-    )
-    
-    def _build_reaction_tuple(self, same_reactants, mol_reactant_1, mol_reactant_2):
-        if same_reactants:
-            return [[mol_reactant_1, mol_reactant_1]]
+        )
 
-        return [[mol_reactant_1, mol_reactant_2], [mol_reactant_2, mol_reactant_1]]
-    
-    
-    def _build_reaction(self, rxn_smarts):
-        return AllChem.ReactionFromSmarts(rxn_smarts)
-
-    def _build_reactants(self, reactant_smiles_1, reactant_smiles_2):
-        mol_reactant_1 = Chem.MolFromSmiles(reactant_smiles_1)
-        mol_reactant_1 = Chem.AddHs(mol_reactant_1)  # Add explicit hydrogens
-        mol_reactant_2 = Chem.MolFromSmiles(reactant_smiles_2)
-        mol_reactant_2 = Chem.AddHs(mol_reactant_2)  # Add explicit hydrogens
-        return mol_reactant_1, mol_reactant_2
+    # --- VISUALIZATION ---
 
     def reaction_templates_highlighted_image_grid(
         self,
