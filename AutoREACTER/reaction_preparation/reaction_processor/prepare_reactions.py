@@ -414,18 +414,6 @@ class PrepareReactions:
         mol_reactant_2 = Chem.AddHs(mol_reactant_2)  # Add explicit hydrogens
         return mol_reactant_1, mol_reactant_2
 
-    def _is_initiator_in_set(self, set_of_tuples, reactant):
-        for atom in reactant.GetAtoms():
-            # Check for specific atom map numbers (101 or 102)
-            if atom.GetAtomMapNum() == 101 or atom.GetAtomMapNum() == 102:
-                x = atom.GetIdx()
-                for t in set_of_tuples:
-                    if x in t:
-                        print(f"Found matching atom index {x} in tuple {t}")
-                        return t
-        raise ValueError("No matching atom found in the provided set of tuples.")
-    
-
     def reaction_templates_highlighted_image_grid(
         self,
         metadata_list: List[ReactionMetadata],
