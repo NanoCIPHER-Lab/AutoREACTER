@@ -334,12 +334,13 @@ class PrepareReactions:
                 if not self._validate_mapping(df, reactant_combined, product_combined):
                     raise MappingError("Atom mapping validation failed: inconsistent mapping between reactants and products.")
                 
-
                 for p_atom in product_combined.GetAtoms():
                     if p_atom.GetAtomMapNum() < 999:  # Only print mapped atoms (those with our custom map numbers)
                         found_keys = [key for key, val in mapping_dict.items() if val == p_atom.GetIdx()]
                         if len(found_keys) > 1 or len(found_keys) == 0:
                             raise ValueError(f"Mapping error for product atom {p_atom.GetIdx()}: found keys {found_keys}")
+                        atom = reactant_combined.GetAtomWithIdx(found_keys[0])
+                        atom.SetAtomMapNum(p_atom.GetAtomMapNum())  # Ensure reactant atom has the same map number for visualization
                         first_shell.append(found_keys[0])  # Assuming one-to-one mapping, take the first key
                         if p_atom.GetAtomMapNum() in [1, 2] :
                             initiator_idxs.append(found_keys[0])
@@ -376,7 +377,9 @@ class PrepareReactions:
                     pd.Series(byproduct_reactant_idxs, name="byproduct_idx")
                 ], axis=1).astype(pd.Int64Dtype())
 
-                total_products = len(reaction_metadata) + 1 if reaction_metadata else 1
+                total_products = len(reaction_metadata) + 1
+
+                self._clear_isotopes(reactant_combined, product_combined) # Clear isotopes to restore normal chemistry before saving
 
                 df_combined.to_csv(csv_cache / f"reaction_{total_products}.csv", index=False) 
                 reaction_metadata.append(
@@ -398,6 +401,13 @@ class PrepareReactions:
 
         return reaction_metadata
     
+    def _clear_isotopes(self, mol_1: Chem.Mol, mol_2: Chem.Mol) -> None:
+        '''Clear isotopes from a molecule to restore normal chemistry after using isotopes to store custom IDs'''
+        for atom in mol_1.GetAtoms():
+            atom.SetIsotope(0)
+        for atom in mol_2.GetAtoms():
+            atom.SetIsotope(0)
+
     def _reveal_template_map_numbers(self, mol : Chem.Mol) -> None:
         '''Make map numbers assigned to products of reaction visible for display'''
         for atom in mol.GetAtoms():
@@ -405,13 +415,13 @@ class PrepareReactions:
                 map_num = atom.GetIntProp('old_mapno')
                 atom.SetAtomMapNum(map_num)
 
-    def _assign_atom_map_numbers(self, r1_copy: Chem.Mol, r2_copy: Chem.Mol) -> None:
-        for atom in r1_copy.GetAtoms():
+    def _assign_atom_map_numbers(self, r1: Chem.Mol, r2: Chem.Mol) -> None:
+        for atom in r1.GetAtoms():
             idx = 1001 + atom.GetIdx()
             atom.SetAtomMapNum(idx)
             atom.SetIsotope(idx)  # The isotope is what will survive the reaction!
 
-        for atom in r2_copy.GetAtoms():
+        for atom in r2.GetAtoms():
             idx = 2001 + atom.GetIdx()
             atom.SetAtomMapNum(idx)
             atom.SetIsotope(idx) # The isotope is what will survive the reaction!
