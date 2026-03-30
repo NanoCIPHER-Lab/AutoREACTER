@@ -9,7 +9,7 @@ or mechanistic analysis.
 """
 
 # WARNING:
-# When modifying this file for dataframe or any other indexing varibales use idx, do not use index or indicies or similar.
+# When modifying this file for dataframe or any other indexing varibales use idx and idxs, do not use index or indicies or similar.
 
 from dataclasses import dataclass
 from pathlib import Path
