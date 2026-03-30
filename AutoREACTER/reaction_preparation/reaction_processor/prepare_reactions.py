@@ -14,8 +14,6 @@ or mechanistic analysis.
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional
-import itertools
-import os
 
 from rdkit import Chem
 from rdkit.Chem import AllChem, Draw, rdmolops
@@ -266,7 +264,7 @@ class PrepareReactions:
         return reaction_metadata
     
     # --- CORE REACTION LOGIC ---
-    def _assign_first_shell_and_initiators(self, reactant_combined, product_combined, mapping_dict):
+    def _assign_first_shell_and_initiators(self, reactant_combined: Chem.Mol, product_combined: Chem.Mol, mapping_dict: dict[int, int]) -> tuple[list[int], list[int]]:
         first_shell = []
         initiator_idxs = []
         reversed_mapping_dict = {}
@@ -295,6 +293,7 @@ class PrepareReactions:
             raise ValueError(f"Expected 2 initiators, got {len(initiator_idxs)}: {initiator_idxs}") 
 
         return first_shell, initiator_idxs
+    
     def _detect_byproducts(self, product_combined: Chem.Mol, mapping_dict: dict[int, int], delete_atoms: bool) -> list[int]:
         if not delete_atoms:
             return []
@@ -317,16 +316,39 @@ class PrepareReactions:
         return byproduct
     
     def _validate_mapping(self, df: pd.DataFrame, reactant: Chem.Mol, product: Chem.Mol) -> bool:
-        if df["reactant_idx"].notna().sum() != df["product_idx"].notna().sum():
+        # Ensure required columns exist
+        if df is None or df.empty:
             return False
-        if df["reactant_idx"].notna().sum() != reactant.GetNumAtoms():
-            return False
-        if df["product_idx"].notna().sum() != product.GetNumAtoms():
-            return False
-        if not self._is_consecutive(df["reactant_idx"].tolist()):
-            return False
-        if not self._is_consecutive(df["product_idx"].tolist()):
-            return False
+
+        required_cols = {"reactant_idx", "product_idx"}
+        if not required_cols.issubset(df.columns):
+            raise MappingError(f"Mapping validation error: required columns {required_cols} not found in dataframe.")
+
+        r_idxs = df["reactant_idx"].dropna().tolist()
+        p_idxs = df["product_idx"].dropna().tolist()
+
+        # Basic sanity: counts must match
+        if len(r_idxs) != len(p_idxs):
+            raise MappingError(f"Mapping validation error: mismatch in atom counts between reactant and product.")
+
+        # No duplicates (1-to-1 mapping)
+        if len(set(r_idxs)) != len(r_idxs):
+            raise MappingError(f"Mapping validation error: duplicate indices found in reactant mapping.")
+        if len(set(p_idxs)) != len(p_idxs):
+            raise MappingError(f"Mapping validation error: duplicate indices found in product mapping.")
+
+        # Indices must be within bounds
+        if any(idx >= reactant.GetNumAtoms() for idx in r_idxs):
+            raise MappingError(f"Mapping validation error: reactant index {idx} is out of bounds.")
+        if any(idx >= product.GetNumAtoms() for idx in p_idxs):
+            raise MappingError(f"Mapping validation error: product index {idx} is out of bounds.")
+
+        # Optional strict check: full coverage
+        if len(r_idxs) != reactant.GetNumAtoms():
+            raise MappingError(f"Mapping validation error: incomplete mapping for reactant.")
+        if len(p_idxs) != product.GetNumAtoms():
+            raise MappingError(f"Mapping validation error: incomplete mapping for product.")
+
         return True
     
 
@@ -398,12 +420,6 @@ class PrepareReactions:
         for atom in mol_2.GetAtoms():
             atom.SetIsotope(0)
 
-    
-
-
-
-
-
     # --- BUILDERS ---
     
     def _build_reaction(self, rxn_smarts):
@@ -431,7 +447,6 @@ class PrepareReactions:
         )
 
     # --- VISUALIZATION ---
-
     def reaction_templates_highlighted_image_grid(
         self,
         metadata_list: List[ReactionMetadata],
