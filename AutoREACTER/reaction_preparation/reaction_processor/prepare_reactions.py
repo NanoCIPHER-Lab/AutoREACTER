@@ -572,9 +572,13 @@ class PrepareReactions:
             Tuple of (reactant1 molecule, reactant2 molecule) with explicit hydrogens
         """
         mol_reactant_1 = Chem.MolFromSmiles(reactant_smiles_1)
+        if mol_reactant_1 is None:
+            raise SMARTSParsingError(f"Failed to parse first reactant SMILES: {reactant_smiles_1!r}")
         mol_reactant_1 = Chem.AddHs(mol_reactant_1)
         
         mol_reactant_2 = Chem.MolFromSmiles(reactant_smiles_2)
+        if mol_reactant_2 is None:
+            raise SMARTSParsingError(f"Failed to parse second reactant SMILES: {reactant_smiles_2!r}")
         mol_reactant_2 = Chem.AddHs(mol_reactant_2)
         
         return mol_reactant_1, mol_reactant_2
