@@ -40,7 +40,14 @@ def extract_unique_references(detected_reactions: List[ReactionInstance]) -> lis
     refs = []
 
     for metadata in detected_reactions:
-        ref = metadata.reference or {}
+        # Prefer the correct 'references' attribute on ReactionInstance, with
+        # a backward-compatible fallback to 'reference' if present.
+        ref = getattr(metadata, "references", None)
+        if ref is None:
+            ref = getattr(metadata, "reference", {}) or {}
+        else:
+            if ref is None:
+                ref = {}
 
         for v in ref.values():
             if isinstance(v, str):
