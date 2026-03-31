@@ -139,7 +139,7 @@ logger = logging.getLogger(__name__)  # Module-level logger for future diagnosti
 # TODO: Add more functional groups as needed from literature/user requirements.
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True)
 class FunctionalGroupInfo:
     """
     Immutable dataclass storing information about a detected functional group.

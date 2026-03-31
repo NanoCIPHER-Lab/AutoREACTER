@@ -105,7 +105,8 @@ def product_atom_walker(template_indexes, MAP_dict):
     """
     template_mapped_dict = {}
     for i in template_indexes:
-        print(f"Mapping reactant atom index {i}")
+        # debug print to trace which reactant atom index is being processed
+        # print(f"Mapping reactant atom index {i}")
         # Check if the reactant atom index exists in our mapping dictionary
         atom = MAP_dict.get(i)
         if atom is not None:

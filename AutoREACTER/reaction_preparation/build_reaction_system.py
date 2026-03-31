@@ -24,7 +24,7 @@ If sequential filenames are needed, generate them only in an export step, and st
 """
 
 
-from typing import Literal
+
 # --- preferred: package-relative imports; fallback: absolute imports for script/notebook ---
 try:
     # Case 1 (correct when imported as part of the package)
@@ -54,204 +54,69 @@ except (ImportError, ModuleNotFoundError):
     from lunar_client.lunar_api_wrapper import lunar_workflow
     from lunar_client.molecule_template_preparation import molecule_template_preparation
 
+from AutoREACTER.detectors.reaction_detector import ReactionInstance, ReactionTemplate
+from AutoREACTER.detectors.functional_groups_detector import FunctionalGroupInfo, MonomerRole
+from AutoREACTER.input_parser import SimulationSetup, MonomerEntry
 
 # standard libs / third-party
 import pandas as pd
 from pathlib import Path
 import os
+from dataclasses import dataclass, field
+from typing import List, Any, Optional, Dict
+from rdkit import Chem
 
 
-def is_continuous(d):
+
+@dataclass (slots=True)
+class ReactionMetadata:
     """
-    Checks if the integer keys of a dictionary form a continuous sequence starting from 1.
-
-    This is used to verify if reaction IDs are sequential after potential 
-    filtering or deduplication steps.
-
-    Args:
-        d (dict): The dictionary to check, where keys are expected to be integers.
-
-    Returns:
-        bool: True if keys are exactly [1, 2, ..., len(d)], False otherwise.
+    A dataclass to hold all relevant metadata and file paths for a single reaction instance.
+    Attributes:
+    - reaction_id: Unique identifier for the reaction.
+    - reactant_combined_mol: RDKit molecule object representing the combined reactants.
+    - product_combined_mol: RDKit molecule object representing the combined products.
+    - reaction_smarts: Optional SMARTS string representing the reaction.
+    - reactant_smarts: Optional SMARTS string for the reactants.
+    - product_smiles: Optional SMILES string for the products.
+    - csv_path: Path to the CSV file containing processing reaction data.
+    - mol_3d_path: Optional path to the generated 3D molecule file.
+    - reaction_dataframe: Optional pandas DataFrame holding detailed reaction mapping and analysis data.
+    - reactant_to_product_mapping: Dictionary mapping reactant atom indices to product atom indices.
+    - template_reactant_to_product_mapping: Dictionary mapping reactant atom indices to product atom indices specifically for the reaction template.
+    - edge_atoms: List of atom indices that are considered 'edge atoms' connecting the reaction template to the rest of the molecule.
+    - delete_atom: Boolean flag indicating whether an atom is deleted in the reaction (e.g., for polycondensation).
+    - delete_atom_idx: Optional index of the atom that is deleted in the reaction, if applicable.
+    - activity_stats: Boolean flag indicating whether to calculate and include activity statistics for the reaction.
     """
-    keys = sorted(d.keys())
-    if not keys: 
-        return True
-    # Compare sorted keys against a generated range of the same length
-    return keys == list(range(1, len(keys) + 1))
-
-
-def save_grid_image(mols, cache, key=None):
-    from pathlib import Path
-    from rdkit.Chem import Draw
-    import base64
-    """
-    TODO: Add full grid set of reactant1 + reactant2  → product image grid to ipynb or cache/ "grid_images".
-          With Template atoms highlighted in one color and Edge atoms highlighted in another color.
-          With Edge atoms hightlighted in a different color if possible. 
-          This will be useful for debugging and for users to visually inspect the detected reactions and templates.
-    Note: If you want to use the SVG output instead of PNG, you can set useSVG=True in Draw.MolsToGridImage and handle the SVG data accordingly.
-    """
-    out_dir = Path(cache) / "grid_images"
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    out_path = out_dir / (f"reaction_grid_{key}.png" if key is not None else "reaction_grid.png")
-
-    # Ask RDKit for a raster image (PNG-like)
-    img = Draw.MolsToGridImage(mols, useSVG=False)
-
-    # Case 1: PIL.Image.Image (has .save)
-    if hasattr(img, "save"):
-        img.save(str(out_path))
-        return out_path
-
-    # Case 2: IPython/RDKit display object (often has .data)
-    data = getattr(img, "data", None)
-    if data is None:
-        raise TypeError(f"Unexpected image type {type(img)}; cannot save.")
-
-    # data can be bytes OR base64 string depending on wrapper
-    if isinstance(data, bytes):
-        png_bytes = data
-    elif isinstance(data, str):
-        # try base64 decode; if it fails, treat as raw text
-        try:
-            png_bytes = base64.b64decode(data)
-        except Exception:
-            png_bytes = data.encode("utf-8")
-    else:
-        raise TypeError(f"Unexpected img.data type {type(data)}; cannot save.")
-
-    with open(out_path, "wb") as f:
-        f.write(png_bytes)
-
-    return out_path
-
-
-def add_dict_as_new_columns(df_existing, data_dict, titles=["template_reactant_idx", "template_product_idx"]):
-    """
-    Adds dictionary keys and values as new columns to an existing DataFrame.
-
-    This is specifically used to map reactant indices to product indices 
-    within the reaction template.
-
-    Args:
-        df_existing (pd.DataFrame): The DataFrame to modify.
-        data_dict (dict): Dictionary where keys and values will become column data.
-        titles (list): List of two strings for the new column names.
-
-    Returns:
-        pd.DataFrame: The modified DataFrame with new columns added.
-    """
-    # Convert dict keys and values to Series to ensure alignment with the DataFrame
-    # Use .astype("Int64") to allow for potential Null/NaN values while keeping integers
-    df_existing[titles[0]] = pd.Series(list(data_dict.keys())).astype("Int64")
-    df_existing[titles[1]] = pd.Series(list(data_dict.values())).astype("Int64")
+    reaction_id: int
+    reactant_combined_mol: Chem.Mol
+    product_combined_mol: Chem.Mol
+    reaction_smarts: Optional[str] = None
+    reactant_smarts: Optional[str] = None
+    product_smiles: Optional[str] = None
+    csv_path: Path = None
+    mol_3d_path: Optional[Path] = None
+    reaction_dataframe: Optional[pd.DataFrame] = None
+    reactant_to_product_mapping: Dict[int, int]
+    template_reactant_to_product_mapping: Dict[int, int] 
+    edge_atoms: List[int] 
+    delete_atom: bool = True
+    delete_atom_idx: Optional[int] = None
+    activity_stats: bool = True
     
-    return df_existing
 
-
-def molecule_dict_csv_path_dict_rearrange(molecule_dict_csv_path_dict):
+ 
+@dataclass (slots=True)
+class PipelineOutput:
     """
-    Rearranges the reaction dictionary keys to be continuous and renames 
-    associated CSV files on the filesystem to match the new keys.
-
-    This ensures that if reaction #2 is deleted, reaction #3 becomes the new #2,
-    maintaining a clean, gapless sequence for downstream processing.
-
-    Args:
-        molecule_dict_csv_path_dict (dict): Dictionary containing reaction metadata 
-                                        and 'csv_path' entries.
-
-    Returns:
-        dict: A new dictionary with normalized continuous keys (1 to N) and updated file paths.
+    Final structured output of the ReactionTemplatePipeline.
+    Attributes:
+    - template_files: Dictionary mapping reaction identifiers to their corresponding molecule template file paths.
+    - all_reactions: Optional list of ReactionMetadata instances containing detailed information about each processed reaction
     """
-    # Skip if already continuous to save processing time
-    if is_continuous(molecule_dict_csv_path_dict):
-        return molecule_dict_csv_path_dict
-        
-    print("Rearranging molecule_dict_csv_path_dict keys to be continuous...")
-    new_dict = {}
-    
-    # Sort keys to ensure we process them in the original numerical order
-    sorted_old_keys = sorted(molecule_dict_csv_path_dict.keys())
-    
-    for new_key_idx, old_key in enumerate(sorted_old_keys):
-        new_key = new_key_idx + 1  # Start new keys from 1
-        reaction_data = molecule_dict_csv_path_dict[old_key]
-        csv_save_path = reaction_data.get("csv_path")
-        
-        if new_key != old_key:
-            # Construct the new filename based on the new index (e.g., reaction_2.csv)
-            new_csv_save_path = os.path.join(
-                os.path.dirname(csv_save_path),
-                f"reaction_{new_key}.csv"
-            )
-            
-            # Check if destination exists to avoid crashing or accidental overwrites
-            if os.path.exists(new_csv_save_path):
-                os.remove(new_csv_save_path)
-                
-            # Rename the physical file on the disk to match the new key
-            os.rename(csv_save_path, new_csv_save_path)
-            
-            # Update the path in the metadata dictionary
-            reaction_data["csv_path"] = new_csv_save_path
-            
-        new_dict[new_key] = reaction_data
-
-    return new_dict
-
-
-def add_column_safe(df, list_data, column_name):
-    """
-    Safely adds a list as a new column to a DataFrame, handling potential 
-    length mismatches by using Series alignment.
-
-    Args:
-        df (pd.DataFrame): Target DataFrame.
-        list_data (list): Data to be added to the column.
-        column_name (str): Name of the new column.
-
-    Returns:
-        pd.DataFrame: Modified DataFrame with the new column.
-    """
-    # Creating a Series from the list ensures it starts from the top (index 0)
-    # and fills missing rows with NaN if the list is shorter than the DataFrame
-    df[column_name] = pd.Series(list_data).astype("Int64")
-    return df
-
-
-def extract_unique_references(detected_reactions: dict) -> list[str]:
-        """Collect reference URLs from detected_reactions[*]["reference"], dedupe, keep order."""
-        seen = set()
-        refs: list[str] = []
-
-        for rxn in detected_reactions.values():
-            ref = rxn.get("reference") or {}
-
-            # single URL fields
-            for v in ref.values():
-                if isinstance(v, str):
-                    if v not in seen:
-                        seen.add(v)
-                        refs.append(v)
-
-                # list-of-URLs fields
-                elif isinstance(v, (list, tuple)):
-                    for u in v:
-                        if isinstance(u, str) and u not in seen:
-                            seen.add(u)
-                            refs.append(u)
-
-                # (optional) nested dict handling, if you ever add that later
-                elif isinstance(v, dict):
-                    for u in v.values():
-                        if isinstance(u, str) and u not in seen:
-                            seen.add(u)
-                            refs.append(u)
-        return refs
-
+    template_files: Dict[str, Path]
+    all_reactions: Optional[List[ReactionMetadata]] = None
 
 # The main class encapsulating the reaction template pipeline
 class ReactionTemplatePipeline:
@@ -277,7 +142,46 @@ class ReactionTemplatePipeline:
         self.non_monomer_molecules_to_retain = non_monomer_molecules_to_retain
         self.formatted_dict, self.molecule_template_files, self.molecule_images = self.execute_pipeline(self.detected_reactions_dict, self.non_monomer_molecules_to_retain, self.cache)
 
+    def _add_column_safe(self, df, list_data, column_name):
+        """
+        Safely adds a list as a new column to a DataFrame, handling potential 
+        length mismatches by using Series alignment.
 
+        Args:
+            df (pd.DataFrame): Target DataFrame.
+            list_data (list): Data to be added to the column.
+            column_name (str): Name of the new column.
+
+        Returns:
+            pd.DataFrame: Modified DataFrame with the new column.
+        """
+        # Creating a Series from the list ensures it starts from the top (index 0)
+        # and fills missing rows with NaN if the list is shorter than the DataFrame
+        df[column_name] = pd.Series(list_data).astype("Int64")
+        return df
+    
+    def _add_dict_as_new_columns(self, df_existing, data_dict, titles=["template_reactant_idx", "template_product_idx"]):
+        """
+        Adds dictionary keys and values as new columns to an existing DataFrame.
+
+        This is specifically used to map reactant indices to product indices 
+        within the reaction template.
+
+        Args:
+            df_existing (pd.DataFrame): The DataFrame to modify.
+            data_dict (dict): Dictionary where keys and values will become column data.
+            titles (list): List of two strings for the new column names.
+
+        Returns:
+            pd.DataFrame: The modified DataFrame with new columns added.
+        """
+        # Convert dict keys and values to Series to ensure alignment with the DataFrame
+        # Use .astype("Int64") to allow for potential Null/NaN values while keeping integers
+        df_existing[titles[0]] = pd.Series(list(data_dict.keys())).astype("Int64")
+        df_existing[titles[1]] = pd.Series(list(data_dict.values())).astype("Int64")
+    
+        return df_existing
+    
     def run_reaction_template_pipeline(self, detected_reactions, cache):
         """
         Main execution pipeline for mapping reactions, identifying templates, 
@@ -324,14 +228,14 @@ class ReactionTemplatePipeline:
             # is_duplicate, processed_dict = compare_rdkit_fragments(...)
 
             # Update the dataframe with specific template mapping indices
-            reaction_dataframe = add_dict_as_new_columns(
+            reaction_dataframe = self._add_dict_as_new_columns(
                 reaction_dataframe,
                 template_mapped_dict,
                 titles = ["template_reactant_idx", "template_product_idx"]
             )
             
             # Append edge atoms information (crucial for building polymer chains)
-            reaction_dataframe = add_column_safe(
+            reaction_dataframe = self._add_column_safe(
                 reaction_dataframe,
                 edge_atoms,
                 "edge_atoms"
@@ -406,19 +310,11 @@ class ReactionTemplatePipeline:
             print(f"Molecule Template File for {name}: {path}")
 
         # Extract and save unique references to a text file for user reference
-        references = extract_unique_references(detected_reactions)
-
-        # Print and save references to a text file
-        print("\nReferences used in detected reactions:")
-        for ref in references:
-            print(ref)
         
         with open(Path(cache) / "molecule_template_files.txt", "w") as f:
             for name, path in molecule_template_files.items():
                 f.write(f"{name}: {path}\n")
-            f.write("\nReferences:\n")
-            for ref in references:
-                f.write(f"{ref}\n")
+            
 
         return formatted_dict, molecule_template_files, molecule_images
         # TODO: If duplicates were found and skipped, re-index the dictionary and files to be continuous
