@@ -57,10 +57,9 @@ StatusType = Literal["active", "discarded"]
 CompositionMethodType = Literal["counts", "stoichiometric_ratio"]
 ForceFieldType = Literal[
     "PCFF-IFF", "PCFF", "Compass",
-    "CVFF-IFF", "CVFF", "Clay-FF",
-    "DRIEDING", "OPLS-AA"
+    "CVFF-IFF", "CVFF", "DRIEDING", 
 ]
-
+# Note: Since Clay-FF and OPLS-AA are not fully supported within LUNAR, they are consequently unsupported in AutoREACTER.
 
 @dataclass(slots=True, frozen=True)
 class MonomerEntry:
