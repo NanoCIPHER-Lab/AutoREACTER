@@ -53,17 +53,19 @@ class ReactionMetadata:
     byproduct_indices: Optional list of reactant atom indices corresponding to detected byproducts
     reaction_smarts: Optional string of the reaction SMARTS pattern
     reactant_smarts: Optional string of the combined reactant SMILES
-    product_smiles: Optional string of the combined product SMILES
+    product_smarts: Optional string of the combined product SMILES
     csv_path: Optional Path to the CSV file containing atom mappings and analysis
     mol_3d_path: Optional Path to a file containing 3D structures of the molecules
     reaction_dataframe: Optional pandas DataFrame containing detailed mapping and analysis results
     delete_atom: Boolean indicating whether the reaction involves a delete atom (byproduct)
     delete_atom_idx: Optional integer index of the reactant atom that corresponds to the byproduct
+    molecule_3Dmol_path: Optional file path to the 3Dmol.mol representation of the reaction
+    molecule_3Dmol_file: Optional filename for the 3Dmol.mol representation as a string
     activity_stats: Boolean indicating whether this reaction should be included in activity statistics (e.g., not a duplicate)
     """
     reaction_id: int
-    reactant_combined_mol: Chem.Mol
-    product_combined_mol: Chem.Mol
+    reactant_combined_RDmol: Chem.Mol
+    product_combined_RDmol: Chem.Mol
     reactant_to_product_mapping: Dict[int, int]
     product_to_reactant_mapping: Dict[int, int]
     template_reactant_to_product_mapping: Optional[Dict[int, int]] = None
@@ -73,12 +75,15 @@ class ReactionMetadata:
     byproduct_indices: Optional[List[int]] = None
     reaction_smarts: Optional[str] = None
     reactant_smarts: Optional[str] = None
-    product_smiles: Optional[str] = None
+    product_smarts: Optional[str] = None
     csv_path: Optional[Path] = None
-    mol_3d_path: Optional[Path] = None
     reaction_dataframe: Optional[pd.DataFrame] = None
     delete_atom: bool = True
     delete_atom_idx: Optional[int] = None
+    reactant_combined_3Dmol_path: Optional[Path] = None
+    reactant_combined_3Dmol_file : str = None
+    product_combined_3Dmol_path: Optional[Path] = None
+    product_combined_3Dmol_file : str = None
     activity_stats: bool = True
 
 
@@ -110,7 +115,7 @@ class PrepareReactions:
             if not reaction.activity_stats:
                 continue  # Skip reactions marked as duplicates
             
-            combined_reactant_molecule_object = reaction.reactant_combined_mol
+            combined_reactant_molecule_object = reaction.reactant_combined_RDmol
             reaction_dataframe = reaction.reaction_dataframe
             csv_save_path = reaction.csv_path
             
@@ -210,8 +215,8 @@ class PrepareReactions:
         
         for reaction in reaction_metadata_list:
             # Compare current reaction's reactants and products against unique reactions collected so far
-            reactants = reaction.reactant_combined_mol
-            products = reaction.product_combined_mol
+            reactants = reaction.reactant_combined_RDmol
+            products = reaction.product_combined_RDmol
 
             # Keep reaction if it's unique, otherwise mark as duplicate
             if compare_set(unique_metadata, reactants, products):
@@ -307,8 +312,8 @@ class PrepareReactions:
                 reaction_metadata.append(
                     ReactionMetadata(
                         reaction_id=total_products,
-                        reactant_combined_mol=reactant_combined,
-                        product_combined_mol=product_combined,
+                        reactant_combined_RDmol=reactant_combined,
+                        product_combined_RDmol=product_combined,
                         reactant_to_product_mapping=mapping_dict,
                         product_to_reactant_mapping=reverse_mapping,
                         first_shell=first_shell,
@@ -643,8 +648,8 @@ class PrepareReactions:
         highlight_colors = []
 
         for metadata in metadata_list:
-            reactant = Chem.RWMol(metadata.reactant_combined_mol)
-            product = Chem.RWMol(metadata.product_combined_mol)
+            reactant = Chem.RWMol(metadata.reactant_combined_RDmol)
+            product = Chem.RWMol(metadata.product_combined_RDmol)
 
             # Clear atom maps for clean visualization
             for atom in reactant.GetAtoms():
