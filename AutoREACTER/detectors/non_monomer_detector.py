@@ -284,7 +284,7 @@ Example: If you want to keep monomers with IDs 1 and 3, you would enter: 1,3
                         # Discard the single non-reactant monomer: mark it as 'discarded'
                         target_id = non_reactants_list[0].id
                         simulation_setup.monomers = [
-                            replace(m, status='discarded') if m.id == target_id else m
+                            replace(m, status = False) if m.id == target_id else m
                             for m in simulation_setup.monomers
                         ]
                         break
@@ -302,7 +302,7 @@ Example: If you want to keep monomers with IDs 1 and 3, you would enter: 1,3
                         # Discard all non-reactants: replace each with 'discarded' status
                         discard_ids = {m.id for m in non_reactants_list}
                         simulation_setup.monomers = [
-                            replace(m, status='discarded') if m.id in discard_ids else m
+                            replace(m, status=False) if m.id in discard_ids else m
                             for m in simulation_setup.monomers
                         ]
                         break
@@ -343,7 +343,7 @@ Example: If you want to keep monomers with IDs 1 and 3, you would enter: 1,3
                         
                         discard_ids = {m.id for m in non_reactants_list if m.id not in selected_ids}
                         simulation_setup.monomers = [
-                            replace(m, status='discarded') if m.id in discard_ids else m
+                            replace(m, status=False) if m.id in discard_ids else m
                             for m in simulation_setup.monomers
                         ]
                         break

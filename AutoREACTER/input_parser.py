@@ -53,7 +53,7 @@ class DuplicateMonomerError(InputError):
 
 
 # Type aliases for clarity and validation
-StatusType = Literal["active", "discarded"]
+
 CompositionMethodType = Literal["counts", "stoichiometric_ratio"]
 ForceFieldType = Literal[
     "PCFF-IFF", "PCFF", "Compass",
@@ -87,7 +87,7 @@ class MonomerEntry:
     count: dict | None  # None only if stoichiometric mode 
     ratio: float | None  # None only if counts mode 
     rdkit_mol: Chem.Mol | None = None # Store the RDKit Mol object
-    status: StatusType = "active"
+    status: bool = True
 
 @dataclass(slots=True)
 class SimulationSetup:
