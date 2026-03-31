@@ -42,8 +42,8 @@ class ReactionMetadata:
     Stores comprehensive metadata for a single reaction including molecular structures, 
     atom mappings, and analysis results.
     reaction_id: Unique identifier for the reaction instance
-    reactant_combined_mol: RDKit molecule object representing combined reactants
-    product_combined_mol: RDKit molecule object representing combined products
+    reactant_combined_RDmol: RDKit molecule object representing combined reactants
+    product_combined_RDmol: RDKit molecule object representing combined products
     reactant_to_product_mapping: Dictionary mapping reactant atom indices to product atom indices
     product_to_reactant_mapping: Dictionary mapping product atom indices back to reactant atom indices
     template_reactant_to_product_mapping: Optional dictionary mapping reactant indices in the template to product indices

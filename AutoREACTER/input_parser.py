@@ -63,7 +63,7 @@ ForceFieldType = Literal[
 ]
 # Note: Since Clay-FF and OPLS-AA are not fully supported within LUNAR, they are consequently unsupported in AutoREACTER.
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True)
 class MonomerEntry:
     """
     Canonical internal representation of a monomer.

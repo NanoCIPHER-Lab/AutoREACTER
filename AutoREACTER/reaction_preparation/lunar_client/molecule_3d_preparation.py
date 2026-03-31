@@ -103,6 +103,8 @@ class Molecule3DPreparation:
         # Process individual monomer molecules
         monomer_entries = updated_inputs.monomers
         for entry in monomer_entries:
+            if not entry.status:
+                continue  # Skip monomers that ommitted during selections
             if entry.rdkit_mol is None:
                 raise Molecule3DPreparationError(
                     f"RDKit Mol object is missing for molecule {entry.data_id}. "
@@ -124,31 +126,33 @@ class Molecule3DPreparation:
 
         # Process combined reactant and product complexes for each reaction
         for reaction in prepared_reactions:
-            if reaction.combined_reactants is not None:
+            if not reaction.activity_stats:
+                continue  # Skip reactions that were filtered out during duplicate filtering
+            if reaction.reactant_combined_RDmol is not None:
                 try:
                     optimized_path, mol_block = self._optimization(
                         molecule_name=f"{reaction.reaction_id}_pre",
-                        mol=reaction.combined_reactants,
+                        mol=reaction.reactant_combined_RDmol,
                         cache_dir=self.full_templates_path,
                         separate_fragments=True,
                     )
-                    reaction.reactants_3Dmol_path = optimized_path
-                    reaction.reactants_3Dmol_file = mol_block
+                    reaction.reactant_combined_3Dmol_path = optimized_path
+                    reaction.reactant_combined_3Dmol_file = mol_block
                 except Exception as e:
                     raise OptimizationError(
                         f"Error optimizing reactant complex for reaction {reaction.reaction_id}: {str(e)}"
                     ) from e
 
-            if reaction.combined_products is not None:
+            if reaction.product_combined_RDmol is not None:
                 try:
                     optimized_path, mol_block = self._optimization(
                         molecule_name=f"{reaction.reaction_id}_post",
-                        mol=reaction.combined_products,
+                        mol=reaction.product_combined_RDmol,
                         cache_dir=self.full_templates_path,
                         separate_fragments=True,
                     )
-                    reaction.products_3Dmol_path = optimized_path
-                    reaction.products_3Dmol_file = mol_block
+                    reaction.product_combined_3Dmol_path = optimized_path
+                    reaction.product_combined_3Dmol_file = mol_block
                 except Exception as e:
                     raise OptimizationError(
                         f"Error optimizing product complex for reaction {reaction.reaction_id}: {str(e)}"
@@ -258,7 +262,7 @@ class Molecule3DPreparation:
         # Perform geometry optimization using MMFF force field
         ff_result = AllChem.MMFFOptimizeMolecule(mol)
         if ff_result == -1:
-            raise OptimizationError(f"MMFF optimization failed for {molecule_name}.")
+            print(f"MMFF optimization failed for {molecule_name}.")
         if ff_result == 1:
             print(f"Warning: MMFF optimization did not converge for {molecule_name}.")
 

@@ -90,8 +90,8 @@ def compare_set(reaction_metadata_list, _react2, _prod2):
     smi_p2 = Chem.MolToSmiles(prod2, canonical=True)
 
     for metadata in reaction_metadata_list:
-        react1 = Chem.Mol(metadata.reactant_combined_mol)
-        prod1 = Chem.Mol(metadata.product_combined_mol)
+        react1 = Chem.Mol(metadata.reactant_combined_RDmol)
+        prod1 = Chem.Mol(metadata.product_combined_RDmol)
 
         for atom in react1.GetAtoms():
             atom.SetAtomMapNum(0)
