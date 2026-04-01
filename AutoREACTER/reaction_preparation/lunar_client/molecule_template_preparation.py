@@ -17,13 +17,46 @@ Dependencies:
     - re: For regular expression operations
 """
 
-import shutil
-import pandas as pd
-import re
 import os
-import json
-import logging
-logger = logging.getLogger(__name__)
+import pandas as pd
+import datetime
+from pathlib import Path
+from dataclasses import dataclass
+from typing import Optional
+import shutil
+
+now = datetime.datetime.now() 
+
+@dataclass(slots=True)
+class DataFiles:
+    """Simple container for paired LAMMPS data and molecule files."""
+    data_file: Path             # Main *.data file for LAMMPS
+    lmp_molecule_file: Path     # Associated *.lmpmol molecule template
+
+@dataclass(slots=True)
+class MoleculeFile:
+    """Wrapper associating a molecule ID with its generated data files."""
+    id: str
+    molecule_files: Optional[DataFiles]
+
+@dataclass(slots=True)
+class TemplateFile:
+    """
+    Container for pre- and post-reaction template file pairs.
+    """
+    reaction_id: Optional[int]
+    pre_reaction_file: Optional[DataFiles]
+    post_reaction_file: Optional[DataFiles]
+
+@dataclass(slots=True)
+class REACTERFiles:
+    """
+    Complete collection of output files from the LUNAR workflow.
+    """
+    force_field_data: Path             # force_field.data (FF parameters)
+    in_file: Path                      # in.fix_bond_react.script (LAMMPS input)
+    molecule_files: list[MoleculeFile]
+    template_files: list[TemplateFile]
 
 def get_ending_integer(s: str) -> int | None:
     """

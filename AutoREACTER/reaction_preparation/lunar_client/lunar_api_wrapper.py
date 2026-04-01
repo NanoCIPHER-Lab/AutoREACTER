@@ -620,7 +620,6 @@ class LunarAPIWrapper:
         
         # Collect all final file paths
         lunar_files = LunarFiles(
-            merged_txt_file=merge_input_file_path,
             force_field_data=Path(output_dir) / "force_field.data",
             in_file=Path(self.cache_all2lmp) / "in.lammps",
             molecule_files=molecule_files,
