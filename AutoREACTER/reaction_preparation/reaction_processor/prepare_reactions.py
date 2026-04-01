@@ -73,8 +73,8 @@ class ReactionMetadata:
     initiators: Optional[List[int]] = None
     byproduct_indices: Optional[List[int]] = None
     reaction_smarts: Optional[str] = None
-    reactant_smarts: Optional[str] = None
-    product_smarts: Optional[str] = None
+    reactant_smiles: Optional[str] = None
+    product_smiles: Optional[str] = None
     csv_path: Optional[Path] = None
     reaction_dataframe: Optional[pd.DataFrame] = None
     delete_atom: bool = True
