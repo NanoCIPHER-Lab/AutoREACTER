@@ -23,9 +23,11 @@ import datetime
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Optional
-import shutil
-
+from AutoREACTER.reaction_preparation.lunar_client.lunar_api_wrapper import LunarFiles
+from AutoREACTER.input_parser import SimulationSetup
 now = datetime.datetime.now() 
+import logging
+logger = logging.getLogger(__name__)
 
 @dataclass(slots=True)
 class DataFiles:
@@ -58,313 +60,320 @@ class REACTERFiles:
     molecule_files: list[MoleculeFile]
     template_files: list[TemplateFile]
 
-def get_ending_integer(s: str) -> int | None:
-    """
-    Extract and convert the trailing integer from a string.
-    
-    This function is useful for parsing reaction numbers from filenames
-    (e.g., extracting "1" from "pre1" or "post1").
-    
-    Args:
-        s (str): Input string that may end with an integer.
-    
-    Returns:
-        int | None: The integer found at the end of the string, 
-                   or None if no integer is found.
-    
-    Example:
-        >>> get_ending_integer("pre1")
-        1
-        >>> get_ending_integer("data2")
-        2
-        >>> get_ending_integer("molecule")
-        None
-    """
-    # Regular expression pattern to match one or more digits at the end of the string
-    # r'\d+$' matches digits (\d+) at the end ($) of the string
-    match = re.search(r'\d+$', s)
-    
-    if match:
-        # Extract the matched substring and convert to integer
-        return int(match.group())
-    else:
-        # No integer found at the end of the string
-        return None
-    
-def ensure_dir(p: str, remove_blocking_file: bool = False) -> str:
-    if os.path.exists(p) and not os.path.isdir(p):
-        if not remove_blocking_file:
-            raise FileExistsError(f"Path exists and is a file (expected dir): {p}")
-        logger.warning("ensure_dir: removing blocking file: %s", p)
-        os.remove(p)
-    os.makedirs(p, exist_ok=True)
-    return p
-
-def _col_int_list(col: str, df: pd.DataFrame) -> list[int]:
-    if col not in df.columns:
-        return []
-    s = df[col].dropna()
-    if s.empty:
-        return []
-    # preserve order while removing duplicates
-    seen = set()
-    vals = []
-    for x in s.tolist():
-        try:
-            fx = float(x)
-        except (TypeError, ValueError):
-            raise ValueError(f"{col} contains non-numeric value: {x!r}")
-        if not fx.is_integer():
-            raise ValueError(f"{col} contains non-integer value: {x!r}")
-        ix = int(fx)
-        if ix not in seen:
-            seen.add(ix)
-            vals.append(ix)
-    return vals
-
-def load_molecule_file(molecule_file):
-    """
-    Load and parse a molecule configuration file to extract structural data sections.
-    
-    This function reads a molecule file and identifies the starting indices for various
-    structural sections (Types, Charges, Coords, Bonds, Angles, Dihedrals, Impropers).
-    The file is expected to have a specific format with section headers followed by data.
-    
-    Args:
-        molecule_file (str): Path to the molecule configuration file to be loaded.
-    
-    Returns:
-        tuple: A tuple containing:
-            - lines (list): All lines from the file with whitespace stripped
-            - type_start_index (int): Starting line index for the Types section
-            - charge_start_index (int): Starting line index for the Charges section
-            - coord_start_index (int): Starting line index for the Coords section
-            - bond_start_index (int): Starting line index for the Bonds section
-            - angle_start_index (int): Starting line index for the Angles section
-            - dihedral_start_index (int): Starting line index for the Dihedrals section
-            - improper_start_index (int): Starting line index for the Impropers section
-    
-    Raises:
-        ValueError: If the file is not found or essential sections (Types, Charges, Coords)
-                   are missing from the file.
-    
-    """
-    # Open and read the molecule file
-    with open(molecule_file, 'r') as file:
-        if file is None:
-            raise ValueError(f"File {molecule_file} not found.")
-        # Strip whitespace from each line for cleaner processing
-        lines = [line.strip() for line in file]
-    
-    # Initialize section indices to None (will be set when sections are found)
-    type_start_index = None
-    charge_start_index = None
-    coord_start_index = None
-    bond_start_index = None
-    angle_start_index = None
-    dihedral_start_index = None
-    improper_start_index = None
-    
-    # Iterate through lines to find section headers and set their starting indices
-    for index, line in enumerate(lines):
-        if line.strip() == "Types":
-            type_start_index = index + 2
-        if line.strip() == "Charges":
-            charge_start_index = index + 2
-        if line.strip() == "Coords":
-            coord_start_index = index + 2
-        if line.strip() == "Bonds":
-            bond_start_index = index + 2
-        if line.strip() == "Angles":
-            angle_start_index = index + 2
-        if line.strip() == "Dihedrals":
-            dihedral_start_index = index + 2
-        if line.strip() == "Impropers":
-            improper_start_index = index + 2
-    
-    # Validate that essential sections were found
-    if type_start_index is None or charge_start_index is None or coord_start_index is None:
-        raise ValueError("Essential sections (Types, Charges, Coords) not found in the file.")
-    
-    return lines, type_start_index, charge_start_index, coord_start_index, bond_start_index, angle_start_index, dihedral_start_index, improper_start_index
-
-
-def modify_types(lines, template_indexes, type_start_index):
-    """
-    Extract, filter, and reindex atom type information from the molecule file.
-    
-    This function processes the Types section of a molecule file, keeping only atoms
-    whose indices are in the template_indexes list, and reassigns their indices sequentially.
-    The modified data is saved to a file and formatted as a string section.
-    
-    Args:
-        lines (list): All lines from the molecule file.
-        template_indexes (list): List of original atom indices to keep in the output.
-        type_start_index (int): Starting line index of the Types section.
-    
-    Returns:
-        tuple: A tuple containing:
-            - df (pd.DataFrame): DataFrame with filtered and reindexed atom type data
-            - types_section (str): Formatted string representation of the types section
-            - number_of_types (int): Total number of atom types in the filtered data
-    
-    Note:
-        - Atoms not in template_indexes are excluded from the output
-        - Atom indices are reassigned sequentially starting from 1
-    """
-    # Sort template indices for consistent processing
-    template_indexes.sort()
-    
-    # Initialize list to store parsed atom type data
-    data = []
-    
-    # Parse the Types section from the input lines
-    for line in lines[type_start_index:]:
-        # Stop processing when an empty line is encountered
-        if not line.strip():
-            break
-        
-        # Split the line into individual components
-        parts = line.split()
-        
-        # Validate that the line has sufficient data fields
-        if len(parts) >= 4:
-            # Extract atom properties from the parsed line
-            atom_index = int(parts[0])
-            atom_type = int(parts[1])
-            hash_value = parts[2]
-            atom_type_real = parts[3]
+class REACTERFilesBuilder:
+    def __init__(self, cache_dir: Path, updated_inputs_with_3d_mols: SimulationSetup):
+        self.cache_dir = Path(cache_dir) / "lunar" / "REACTER_files"
+        os.makedirs(self.cache_dir, exist_ok=True)
+        self.force_field = updated_inputs_with_3d_mols.force_field
             
-            # Append parsed atom data to the list
-            data.append({
-                "atom_index": atom_index,
-                "atom_type": atom_type,
-                "hash": hash_value,
-                "atom_type_real": atom_type_real
-            })
 
-    # Create a DataFrame from the parsed data
-    df = pd.DataFrame(data)
-    
-    # Initialize a new column for reindexed atom indices
-    df["new_atom_index"] = None 
-    
-    # Map original atom indices to new indices for atoms in template_indexes
-    for value in df["atom_index"]:
-        if value in template_indexes:
-            new_type = value
-            df.loc[df["atom_index"] == value, "new_atom_index"] = new_type
-    
-    # Identify rows where atoms are not in the template (to be removed)
-    indices_to_drop = []        
-    for index, row in df.iterrows():
-        if row["new_atom_index"] is None:
-            indices_to_drop.append(index)
-    
-    # Remove rows for atoms not in the template and reset the index
-    df = df.drop(indices_to_drop).reset_index(drop=True)        
-    
-    # Reassign new atom indices sequentially starting from 1
-    for i, value in enumerate(df["new_atom_index"]):
-        df.at[i, "new_atom_index"] = i + 1
-    
-    # Format the types section as a string with proper spacing
-    types_section = ""
-    for i, row in df.iterrows():
-        types_section += f"{row['new_atom_index']:>4}{row['atom_type']:>4}{row['hash']:>4}{row['atom_type_real']:>4}\n"
-    
-    # Calculate the total number of atom types
-    number_of_types = len(df)
-
-    index_change_dict = {}
-    for i, row in df.iterrows():
-        if row['new_atom_index']:
-            index_change_dict[row['atom_index']] = row['new_atom_index']
-    
-    return df, types_section, number_of_types, index_change_dict
-
-
-
-def modify_charges(lines, type_df, charge_start_index):
-    """
-    Extract and reindex atomic charge information based on filtered atom types.
-    
-    This function processes the Charges section of a molecule file, keeping only charges
-    for atoms that exist in the filtered type_df DataFrame, and reassigns their indices
-    to match the new atom indices from the types modification.
-    
-    Args:
-        lines (list): All lines from the molecule file.
-        type_df (pd.DataFrame): DataFrame containing filtered atom types with new indices.
-        charge_start_index (int): Starting line index of the Charges section.
-    
-    Returns:
-        str: Formatted string representation of the charges section with proper spacing.
-    
-    Note:
-        - Only charges for atoms present in type_df are retained
-        - Atom indices are updated to match the new indices from type_df
-    """
-    # Initialize list to store parsed charge data
-    charge_data = []
-    
-    # Parse the Charges section from the input lines
-    for line in lines[charge_start_index:]:
-        # Stop processing when an empty line is encountered
-        if not line.strip():
-            break
-
-        # Split the line into individual components
-        parts = line.split()
+    def _get_ending_integer(self, s: str) -> int | None:
+        """
+        Extract and convert the trailing integer from a string.
         
-        # Validate that the line has sufficient data fields
-        if len(parts) >= 3:
-            # Extract charge properties from the parsed line
-            atom_index = int(parts[0])
-            charge_value = float(parts[1])
-            hash_value = parts[2]
-            atom_type_real = parts[3]
-            
-            # Append parsed charge data to the list
-            charge_data.append({
-                "atom_index": atom_index,
-                "charge_value": charge_value,
-                "hash": hash_value,
-                "atom_type_real": atom_type_real
-            })
+        This function is useful for parsing reaction numbers from filenames
+        (e.g., extracting "1" from "pre1" or "post1").
+        
+        Args:
+            s (str): Input string that may end with an integer.
+        
+        Returns:
+            int | None: The integer found at the end of the string, 
+                    or None if no integer is found.
+        
+        Example:
+            >>> get_ending_integer("pre1")
+            1
+            >>> get_ending_integer("data2")
+            2
+            >>> get_ending_integer("molecule")
+            None
+        """
+        # Regular expression pattern to match one or more digits at the end of the string
+        # r'\d+$' matches digits (\d+) at the end ($) of the string
+        match = re.search(r'\d+$', s)
+        
+        if match:
+            # Extract the matched substring and convert to integer
+            return int(match.group())
+        else:
+            # No integer found at the end of the string
+            return None
+    
+    def _ensure_dir(self, p: str, remove_blocking_file: bool = False) -> str:
+        if os.path.exists(p) and not os.path.isdir(p):
+            if not remove_blocking_file:
+                raise FileExistsError(f"Path exists and is a file (expected dir): {p}")
+            logger.warning("ensure_dir: removing blocking file: %s", p)
+            os.remove(p)
+        os.makedirs(p, exist_ok=True)
+        return p
 
-    # Create a DataFrame from the parsed charge data
-    charge_df = pd.DataFrame(charge_data)
-    
-    # Initialize a new column for reindexed atom indices
-    charge_df["new_atom_index"] = None 
-    
-    # Map original atom indices to new indices using the type_df mapping
-    for value in charge_df["atom_index"]:
-        if value in type_df["atom_index"].values:
-            # Look up the new index from the type_df
-            new_index = type_df.loc[type_df["atom_index"] == value, "new_atom_index"].values[0]
-            charge_df.loc[charge_df["atom_index"] == value, "new_atom_index"] = new_index
-    
-    # Identify rows where atoms are not in the filtered type data (to be removed)
-    indices_to_drop = []        
-    for index, row in charge_df.iterrows():
-        if row["new_atom_index"] is None:
-            indices_to_drop.append(index)
-    
-    # Remove rows for atoms not in the filtered data and reset the index
-    charge_df = charge_df.drop(indices_to_drop).reset_index(drop=True)        
-    
-    # Reassign new atom indices sequentially starting from 1
-    for i, value in enumerate(charge_df["new_atom_index"]):
-        charge_df.at[i, "new_atom_index"] = i + 1
-    
-    # Format the charges section as a string with proper spacing
-    charge_section = ""
-    for i, row in charge_df.iterrows():
-        charge_section += f"{row['new_atom_index']:>4}{row['charge_value']:>12.6f}{row['hash']:>4}{row['atom_type_real']:>4}\n"
-    
-    return charge_section
+    def _col_int_list(self, col: str, df: pd.DataFrame) -> list[int]:
+        if col not in df.columns:
+            return []
+        s = df[col].dropna()
+        if s.empty:
+            return []
+        # preserve order while removing duplicates
+        seen = set()
+        vals = []
+        for x in s.tolist():
+            try:
+                fx = float(x)
+            except (TypeError, ValueError):
+                raise ValueError(f"{col} contains non-numeric value: {x!r}")
+            if not fx.is_integer():
+                raise ValueError(f"{col} contains non-integer value: {x!r}")
+            ix = int(fx)
+            if ix not in seen:
+                seen.add(ix)
+                vals.append(ix)
+        return vals
+
+    def _load_molecule_file(self, molecule_file):
+        """
+        Load and parse a molecule configuration file to extract structural data sections.
+        
+        This function reads a molecule file and identifies the starting indices for various
+        structural sections (Types, Charges, Coords, Bonds, Angles, Dihedrals, Impropers).
+        The file is expected to have a specific format with section headers followed by data.
+        
+        Args:
+            molecule_file (str): Path to the molecule configuration file to be loaded.
+        
+        Returns:
+            tuple: A tuple containing:
+                - lines (list): All lines from the file with whitespace stripped
+                - type_start_index (int): Starting line index for the Types section
+                - charge_start_index (int): Starting line index for the Charges section
+                - coord_start_index (int): Starting line index for the Coords section
+                - bond_start_index (int): Starting line index for the Bonds section
+                - angle_start_index (int): Starting line index for the Angles section
+                - dihedral_start_index (int): Starting line index for the Dihedrals section
+                - improper_start_index (int): Starting line index for the Impropers section
+        
+        Raises:
+            ValueError: If the file is not found or essential sections (Types, Charges, Coords)
+                    are missing from the file.
+        
+        """
+        # Open and read the molecule file
+        with open(molecule_file, 'r') as file:
+            if file is None:
+                raise ValueError(f"File {molecule_file} not found.")
+            # Strip whitespace from each line for cleaner processing
+            lines = [line.strip() for line in file]
+        
+        # Initialize section indices to None (will be set when sections are found)
+        type_start_index = None
+        charge_start_index = None
+        coord_start_index = None
+        bond_start_index = None
+        angle_start_index = None
+        dihedral_start_index = None
+        improper_start_index = None
+        
+        # Iterate through lines to find section headers and set their starting indices
+        for index, line in enumerate(lines):
+            if line.strip() == "Types":
+                type_start_index = index + 2
+            if line.strip() == "Charges":
+                charge_start_index = index + 2
+            if line.strip() == "Coords":
+                coord_start_index = index + 2
+            if line.strip() == "Bonds":
+                bond_start_index = index + 2
+            if line.strip() == "Angles":
+                angle_start_index = index + 2
+            if line.strip() == "Dihedrals":
+                dihedral_start_index = index + 2
+            if line.strip() == "Impropers":
+                improper_start_index = index + 2
+        
+        # Validate that essential sections were found
+        if type_start_index is None or charge_start_index is None or coord_start_index is None:
+            raise ValueError("Essential sections (Types, Charges, Coords) not found in the file.")
+        
+        return lines, type_start_index, charge_start_index, coord_start_index, bond_start_index, angle_start_index, dihedral_start_index, improper_start_index
+
+
+    def _modify_types(self, lines, template_indexes, type_start_index):
+        """
+        Extract, filter, and reindex atom type information from the molecule file.
+        
+        This function processes the Types section of a molecule file, keeping only atoms
+        whose indices are in the template_indexes list, and reassigns their indices sequentially.
+        The modified data is saved to a file and formatted as a string section.
+        
+        Args:
+            lines (list): All lines from the molecule file.
+            template_indexes (list): List of original atom indices to keep in the output.
+            type_start_index (int): Starting line index of the Types section.
+        
+        Returns:
+            tuple: A tuple containing:
+                - df (pd.DataFrame): DataFrame with filtered and reindexed atom type data
+                - types_section (str): Formatted string representation of the types section
+                - number_of_types (int): Total number of atom types in the filtered data
+        
+        Note:
+            - Atoms not in template_indexes are excluded from the output
+            - Atom indices are reassigned sequentially starting from 1
+        """
+        # Sort template indices for consistent processing
+        template_indexes.sort()
+        
+        # Initialize list to store parsed atom type data
+        data = []
+        
+        # Parse the Types section from the input lines
+        for line in lines[type_start_index:]:
+            # Stop processing when an empty line is encountered
+            if not line.strip():
+                break
+            
+            # Split the line into individual components
+            parts = line.split()
+            
+            # Validate that the line has sufficient data fields
+            if len(parts) >= 4:
+                # Extract atom properties from the parsed line
+                atom_index = int(parts[0])
+                atom_type = int(parts[1])
+                hash_value = parts[2]
+                atom_type_real = parts[3]
+                
+                # Append parsed atom data to the list
+                data.append({
+                    "atom_index": atom_index,
+                    "atom_type": atom_type,
+                    "hash": hash_value,
+                    "atom_type_real": atom_type_real
+                })
+
+        # Create a DataFrame from the parsed data
+        df = pd.DataFrame(data)
+        
+        # Initialize a new column for reindexed atom indices
+        df["new_atom_index"] = None 
+        
+        # Map original atom indices to new indices for atoms in template_indexes
+        for value in df["atom_index"]:
+            if value in template_indexes:
+                new_type = value
+                df.loc[df["atom_index"] == value, "new_atom_index"] = new_type
+        
+        # Identify rows where atoms are not in the template (to be removed)
+        indices_to_drop = []        
+        for index, row in df.iterrows():
+            if row["new_atom_index"] is None:
+                indices_to_drop.append(index)
+        
+        # Remove rows for atoms not in the template and reset the index
+        df = df.drop(indices_to_drop).reset_index(drop=True)        
+        
+        # Reassign new atom indices sequentially starting from 1
+        for i, value in enumerate(df["new_atom_index"]):
+            df.at[i, "new_atom_index"] = i + 1
+        
+        # Format the types section as a string with proper spacing
+        types_section = ""
+        for i, row in df.iterrows():
+            types_section += f"{row['new_atom_index']:>4}{row['atom_type']:>4}{row['hash']:>4}{row['atom_type_real']:>4}\n"
+        
+        # Calculate the total number of atom types
+        number_of_types = len(df)
+
+        index_change_dict = {}
+        for i, row in df.iterrows():
+            if row['new_atom_index']:
+                index_change_dict[row['atom_index']] = row['new_atom_index']
+        
+        return df, types_section, number_of_types, index_change_dict
+
+
+
+    def _modify_charges(self, lines, type_df, charge_start_index):
+        """
+        Extract and reindex atomic charge information based on filtered atom types.
+        
+        This function processes the Charges section of a molecule file, keeping only charges
+        for atoms that exist in the filtered type_df DataFrame, and reassigns their indices
+        to match the new atom indices from the types modification.
+        
+        Args:
+            lines (list): All lines from the molecule file.
+            type_df (pd.DataFrame): DataFrame containing filtered atom types with new indices.
+            charge_start_index (int): Starting line index of the Charges section.
+        
+        Returns:
+            str: Formatted string representation of the charges section with proper spacing.
+        
+        Note:
+            - Only charges for atoms present in type_df are retained
+            - Atom indices are updated to match the new indices from type_df
+        """
+        # Initialize list to store parsed charge data
+        charge_data = []
+        
+        # Parse the Charges section from the input lines
+        for line in lines[charge_start_index:]:
+            # Stop processing when an empty line is encountered
+            if not line.strip():
+                break
+
+            # Split the line into individual components
+            parts = line.split()
+            
+            # Validate that the line has sufficient data fields
+            if len(parts) >= 3:
+                # Extract charge properties from the parsed line
+                atom_index = int(parts[0])
+                charge_value = float(parts[1])
+                hash_value = parts[2]
+                atom_type_real = parts[3]
+                
+                # Append parsed charge data to the list
+                charge_data.append({
+                    "atom_index": atom_index,
+                    "charge_value": charge_value,
+                    "hash": hash_value,
+                    "atom_type_real": atom_type_real
+                })
+
+        # Create a DataFrame from the parsed charge data
+        charge_df = pd.DataFrame(charge_data)
+        
+        # Initialize a new column for reindexed atom indices
+        charge_df["new_atom_index"] = None 
+        
+        # Map original atom indices to new indices using the type_df mapping
+        for value in charge_df["atom_index"]:
+            if value in type_df["atom_index"].values:
+                # Look up the new index from the type_df
+                new_index = type_df.loc[type_df["atom_index"] == value, "new_atom_index"].values[0]
+                charge_df.loc[charge_df["atom_index"] == value, "new_atom_index"] = new_index
+        
+        # Identify rows where atoms are not in the filtered type data (to be removed)
+        indices_to_drop = []        
+        for index, row in charge_df.iterrows():
+            if row["new_atom_index"] is None:
+                indices_to_drop.append(index)
+        
+        # Remove rows for atoms not in the filtered data and reset the index
+        charge_df = charge_df.drop(indices_to_drop).reset_index(drop=True)        
+        
+        # Reassign new atom indices sequentially starting from 1
+        for i, value in enumerate(charge_df["new_atom_index"]):
+            charge_df.at[i, "new_atom_index"] = i + 1
+        
+        # Format the charges section as a string with proper spacing
+        charge_section = ""
+        for i, row in charge_df.iterrows():
+            charge_section += f"{row['new_atom_index']:>4}{row['charge_value']:>12.6f}{row['hash']:>4}{row['atom_type_real']:>4}\n"
+        
+        return charge_section
 
 
 def modify_coords(lines, type_df, coord_start_index):
