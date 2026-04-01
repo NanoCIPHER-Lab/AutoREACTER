@@ -94,7 +94,6 @@ class LunarFiles:
     This represents the final state of the preparation pipeline,
     containing all files necessary for a reactive MD simulation.
     """
-    merged_txt_file: Path              # merge_input.txt configuration
     force_field_data: Path             # force_field.data (FF parameters)
     in_file: Path                      # in.fix_bond_react.script (LAMMPS input)
 
@@ -561,7 +560,8 @@ class LunarAPIWrapper:
                 str(self.bond_react_merge_py),
                 "-files", "infile:merge_input.txt",
                 "-atomstyle", "full",    # Full atom style (molecular + charge)
-                "-tl", "T"               # Type labels in data file set to "T" (true) 
+                "-tl", "T",               # Type labels in data file set to "T" (true) 
+                "-wrd", "T",              # Write out Template data files
             ],
             cwd=self.cache_bond_react_merge,  # Run in output directory
             check=True
@@ -579,8 +579,8 @@ class LunarAPIWrapper:
                 molecule_files.append(MoleculeFile(
                     id=name,
                     molecule_files=DataFiles(
-                        data_file=output_dir / f"{name}_typed_IFF_merged.data",
-                        lmp_molecule_file=output_dir / f"{name}_typed_IFF_merged.lmpmol"
+                        data_file=Path(output_dir) / f"{name}_typed_IFF_merged.data",
+                        lmp_molecule_file=Path(output_dir) / f"{name}_typed_IFF_merged.lmpmol"
                     )
                 ))
             else:
@@ -590,12 +590,12 @@ class LunarAPIWrapper:
                     template_files.append(TemplateFile(
                         reaction_id=rid,
                         pre_reaction_file=DataFiles(
-                            data_file=output_dir / f"{name}_typed_IFF_merged.data",
-                            lmp_molecule_file=output_dir / f"{name}_typed_IFF_merged.lmpmol"
+                            data_file=Path(output_dir) / f"{name}_typed_IFF_merged.data",
+                            lmp_molecule_file=Path(output_dir) / f"{name}_typed_IFF_merged.lmpmol"
                         ),
                         post_reaction_file=DataFiles(
-                            data_file=output_dir / f"post{rid}_typed_IFF_merged.data",
-                            lmp_molecule_file=output_dir / f"post{rid}_typed_IFF_merged.lmpmol"
+                            data_file=Path(output_dir) / f"post{rid}_typed_IFF_merged.data",
+                            lmp_molecule_file=Path(output_dir) / f"post{rid}_typed_IFF_merged.lmpmol"
                         )
                     ))
 
@@ -615,14 +615,14 @@ class LunarAPIWrapper:
                 print(f"[LUNAR bond_react_merge] Generated template files for reaction {t.reaction_id}")
             else:
                 raise FileNotFoundError(
-                    f"Missing template files for reaction {t.reaction_id}"
+                    Path(t.pre_reaction_file.data_file) or Path(t.post_reaction_file.data_file) / f"Missing template files for reaction {t.reaction_id}"
                 )
         
         # Collect all final file paths
         lunar_files = LunarFiles(
             merged_txt_file=merge_input_file_path,
-            force_field_data=output_dir / "force_field.data",
-            in_file=self.cache_all2lmp / "in.lammps",
+            force_field_data=Path(output_dir) / "force_field.data",
+            in_file=Path(self.cache_all2lmp) / "in.lammps",
             molecule_files=molecule_files,
             template_files=template_files
         )
