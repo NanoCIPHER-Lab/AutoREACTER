@@ -42,8 +42,8 @@ class ReactionMetadata:
     Stores comprehensive metadata for a single reaction including molecular structures, 
     atom mappings, and analysis results.
     reaction_id: Unique identifier for the reaction instance
-    reactant_combined_RDmol: RDKit molecule object representing combined reactants
-    product_combined_RDmol: RDKit molecule object representing combined products
+    reactant_combined_mol: RDKit molecule object representing combined reactants
+    product_combined_mol: RDKit molecule object representing combined products
     reactant_to_product_mapping: Dictionary mapping reactant atom indices to product atom indices
     product_to_reactant_mapping: Dictionary mapping product atom indices back to reactant atom indices
     template_reactant_to_product_mapping: Optional dictionary mapping reactant indices in the template to product indices
@@ -58,14 +58,8 @@ class ReactionMetadata:
     reaction_dataframe: Optional pandas DataFrame containing detailed mapping and analysis results
     delete_atom: Boolean indicating whether the reaction involves a delete atom (byproduct)
     delete_atom_idx: Optional integer index of the reactant atom that corresponds to the byproduct
-    reactant_combined_3Dmol_path: Optional Path to the 3D optimized molecule file for the combined reactants
-    reactant_atom_typing_file_path: Optional string path to the atom typing file for the combined reactants
-    reactant_all2lmp_file_path: Optional string path to the all2lmp file for the combined reactants
-    reactant_bond_react_merge_file_path: Optional string path to the bond react merge file for the combined reactants
-    product_combined_3Dmol_path: Optional Path to the 3D optimized molecule file for the combined products
-    product_atom_typing_file_path: Optional string path to the atom typing file for the combined products
-    product_all2lmp_file_path: Optional string path to the all2lmp file for the combined products
-    product_bond_react_merge_file_path: Optional string path to the bond react merge file for the combined products
+    reactant_combined_3Dmol_path: Optional Path to the 3D structure file for the combined reactants
+    product_combined_3Dmol_path: Optional Path to the 3D structure file for the combined products
     activity_stats: Boolean indicating whether this reaction should be included in activity statistics (e.g., not a duplicate)
     """
     reaction_id: int
@@ -86,13 +80,7 @@ class ReactionMetadata:
     delete_atom: bool = True
     delete_atom_idx: Optional[int] = None
     reactant_combined_3Dmol_path: Optional[Path] = None
-    reactant_atom_typing_file_path: Optional[str] = None
-    reactant_all2lmp_file_path: Optional[str] = None
-    reactant_bond_react_merge_file_path: Optional[str] = None
     product_combined_3Dmol_path: Optional[Path] = None
-    product_atom_typing_file_path: Optional[str] = None
-    product_all2lmp_file_path: Optional[str] = None
-    product_bond_react_merge_file_path: Optional[str] = None
     activity_stats: bool = True
 
 
@@ -655,10 +643,12 @@ class PrepareReactions:
         mols = []
         highlight_lists = []
         highlight_colors = []
+        names = []
 
         for metadata in metadata_list:
             reactant = Chem.RWMol(metadata.reactant_combined_RDmol)
             product = Chem.RWMol(metadata.product_combined_RDmol)
+            names.extend([f"pre_{metadata.reaction_id}", f"post_{metadata.reaction_id}"])
 
             # Clear atom maps for clean visualization
             for atom in reactant.GetAtoms():
@@ -716,6 +706,7 @@ class PrepareReactions:
         # Generate grid image with 2 molecules per row
         img = Draw.MolsToGridImage(
             mols,
+            legends=names,
             molsPerRow=2,
             highlightAtomLists=highlight_lists,
             highlightAtomColors=highlight_colors,

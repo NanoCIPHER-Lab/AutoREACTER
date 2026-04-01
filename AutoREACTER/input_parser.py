@@ -81,7 +81,6 @@ class MonomerEntry:
         ratio: Float representing the stoichiometric ratio (used in 'stoichiometric_ratio' mode).
         rdkit_mol: The RDKit Mol object corresponding to the monomer's SMILES string.
         molecule_3Dmol_path: Optional file path to the 3Dmol.mol representation of the monomer.
-        molecule_3Dmol_file: Optional filename for the 3Dmol.mol representation as a string.
         status: Boolean indicating whether the monomer should be included in the simulation.
     """
     id: int
@@ -92,9 +91,6 @@ class MonomerEntry:
     ratio: float | None  # None only if counts mode 
     rdkit_mol: Chem.Mol | None = None # Store the RDKit Mol object
     molecule_3Dmol_path: Optional[Path] = None
-    molecule_atom_typing_file_path: Optional[str] = None
-    molecule_all2lmp_file_path: Optional[str] = None
-    molecule_bond_react_merge_file_path: Optional[str] = None
     status: bool = True
 
 @dataclass(slots=True)

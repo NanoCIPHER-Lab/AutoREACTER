@@ -107,20 +107,21 @@ class Molecule3DPreparation:
                 continue  # Skip monomers that ommitted during selections
             if entry.rdkit_mol is None:
                 raise Molecule3DPreparationError(
-                    f"RDKit Mol object is missing for molecule {entry.data_id}. "
+                    f"RDKit Mol object is missing for molecule {entry.name}. "
                     "Cannot prepare 3D geometry without it."
                 )
 
             try:
-                optimized_path, mol_block = self._optimization(
-                    molecule_name=entry.data_id,
-                    mol=entry.rdkit_mol,
+                mol = Chem.AddHs(entry.rdkit_mol)
+                optimized_path = self._optimization(
+                    molecule_name=entry.name,
+                    mol=mol,
                     cache_dir=self.molecule_3d_path,
                 )
                 entry.molecule_3Dmol_path = optimized_path
             except Exception as e:
                 raise OptimizationError(
-                    f"Error optimizing molecule {entry.data_id}: {str(e)}"
+                    f"Error optimizing molecule {entry.name}: {str(e)}"
                 ) from e
 
         # Process combined reactant and product complexes for each reaction
@@ -129,8 +130,8 @@ class Molecule3DPreparation:
                 continue  # Skip reactions that were filtered out during duplicate filtering
             if reaction.reactant_combined_RDmol is not None:
                 try:
-                    optimized_path, mol_block = self._optimization(
-                        molecule_name=f"{reaction.reaction_id}_pre",
+                    optimized_path = self._optimization(
+                        molecule_name=f"pre{reaction.reaction_id}",
                         mol=reaction.reactant_combined_RDmol,
                         cache_dir=self.full_templates_path,
                         separate_fragments=True,
@@ -143,8 +144,8 @@ class Molecule3DPreparation:
 
             if reaction.product_combined_RDmol is not None:
                 try:
-                    optimized_path, mol_block = self._optimization(
-                        molecule_name=f"{reaction.reaction_id}_post",
+                    optimized_path = self._optimization(
+                        molecule_name=f"post{reaction.reaction_id}",
                         mol=reaction.product_combined_RDmol,
                         cache_dir=self.full_templates_path,
                         separate_fragments=True,
@@ -192,7 +193,7 @@ class Molecule3DPreparation:
         # Calculate separation distance based on molecular weight
         mw = Descriptors.MolWt(mol)
         mw_magnitude = round(mw/100)
-        shift = ((mw_magnitude+1)*8.0, 0.0, 0.0)
+        shift = ((mw_magnitude+1)*4.0, 0.0, 0.0)
     
         # Get the molecule's conformation
         conf = mol.GetConformer()
@@ -278,6 +279,5 @@ class Molecule3DPreparation:
         print(f"Saving optimized {molecule_name} to {output_path}")
 
         Chem.MolToMolFile(mol, str(output_path))
-        mol_block = Chem.MolToMolBlock(mol)
 
-        return output_path, mol_block
+        return output_path
