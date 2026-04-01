@@ -118,7 +118,6 @@ class Molecule3DPreparation:
                     cache_dir=self.molecule_3d_path,
                 )
                 entry.molecule_3Dmol_path = optimized_path
-                entry.molecule_3Dmol_file = mol_block
             except Exception as e:
                 raise OptimizationError(
                     f"Error optimizing molecule {entry.data_id}: {str(e)}"
@@ -137,7 +136,6 @@ class Molecule3DPreparation:
                         separate_fragments=True,
                     )
                     reaction.reactant_combined_3Dmol_path = optimized_path
-                    reaction.reactant_combined_3Dmol_file = mol_block
                 except Exception as e:
                     raise OptimizationError(
                         f"Error optimizing reactant complex for reaction {reaction.reaction_id}: {str(e)}"
@@ -152,7 +150,6 @@ class Molecule3DPreparation:
                         separate_fragments=True,
                     )
                     reaction.product_combined_3Dmol_path = optimized_path
-                    reaction.product_combined_3Dmol_file = mol_block
                 except Exception as e:
                     raise OptimizationError(
                         f"Error optimizing product complex for reaction {reaction.reaction_id}: {str(e)}"

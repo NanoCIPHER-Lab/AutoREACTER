@@ -92,7 +92,9 @@ class MonomerEntry:
     ratio: float | None  # None only if counts mode 
     rdkit_mol: Chem.Mol | None = None # Store the RDKit Mol object
     molecule_3Dmol_path: Optional[Path] = None
-    molecule_3Dmol_file : str = None
+    molecule_atom_typing_file_path: Optional[str] = None
+    molecule_all2lmp_file_path: Optional[str] = None
+    molecule_bond_react_merge_file_path: Optional[str] = None
     status: bool = True
 
 @dataclass(slots=True)

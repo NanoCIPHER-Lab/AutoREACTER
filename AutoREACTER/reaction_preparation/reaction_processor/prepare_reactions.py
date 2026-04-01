@@ -55,12 +55,17 @@ class ReactionMetadata:
     reactant_smarts: Optional string of the combined reactant SMILES
     product_smarts: Optional string of the combined product SMILES
     csv_path: Optional Path to the CSV file containing atom mappings and analysis
-    mol_3d_path: Optional Path to a file containing 3D structures of the molecules
     reaction_dataframe: Optional pandas DataFrame containing detailed mapping and analysis results
     delete_atom: Boolean indicating whether the reaction involves a delete atom (byproduct)
     delete_atom_idx: Optional integer index of the reactant atom that corresponds to the byproduct
-    molecule_3Dmol_path: Optional file path to the 3Dmol.mol representation of the reaction
-    molecule_3Dmol_file: Optional filename for the 3Dmol.mol representation as a string
+    reactant_combined_3Dmol_path: Optional Path to the 3D optimized molecule file for the combined reactants
+    reactant_atom_typing_file_path: Optional string path to the atom typing file for the combined reactants
+    reactant_all2lmp_file_path: Optional string path to the all2lmp file for the combined reactants
+    reactant_bond_react_merge_file_path: Optional string path to the bond react merge file for the combined reactants
+    product_combined_3Dmol_path: Optional Path to the 3D optimized molecule file for the combined products
+    product_atom_typing_file_path: Optional string path to the atom typing file for the combined products
+    product_all2lmp_file_path: Optional string path to the all2lmp file for the combined products
+    product_bond_react_merge_file_path: Optional string path to the bond react merge file for the combined products
     activity_stats: Boolean indicating whether this reaction should be included in activity statistics (e.g., not a duplicate)
     """
     reaction_id: int
@@ -81,9 +86,13 @@ class ReactionMetadata:
     delete_atom: bool = True
     delete_atom_idx: Optional[int] = None
     reactant_combined_3Dmol_path: Optional[Path] = None
-    reactant_combined_3Dmol_file : str = None
+    reactant_atom_typing_file_path: Optional[str] = None
+    reactant_all2lmp_file_path: Optional[str] = None
+    reactant_bond_react_merge_file_path: Optional[str] = None
     product_combined_3Dmol_path: Optional[Path] = None
-    product_combined_3Dmol_file : str = None
+    product_atom_typing_file_path: Optional[str] = None
+    product_all2lmp_file_path: Optional[str] = None
+    product_bond_react_merge_file_path: Optional[str] = None
     activity_stats: bool = True
 
 
