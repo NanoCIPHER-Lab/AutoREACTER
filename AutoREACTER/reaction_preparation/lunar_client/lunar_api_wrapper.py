@@ -621,7 +621,7 @@ class LunarAPIWrapper:
         # Collect all final file paths
         lunar_files = LunarFiles(
             force_field_data=Path(output_dir) / "force_field.data",
-            in_file=Path(self.cache_all2lmp) / "in.lammps",
+            in_file=Path(self.cache_all2lmp) / "in.create_atoms.script",  # LUNAR's generated input script
             molecule_files=molecule_files,
             template_files=template_files
         )

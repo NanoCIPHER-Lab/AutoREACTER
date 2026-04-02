@@ -18,6 +18,7 @@ Dependencies:
 """
 
 import os
+import shutil
 import pandas as pd
 import datetime
 from pathlib import Path
@@ -32,11 +33,7 @@ from AutoREACTER.reaction_preparation.lunar_client.modifiers_molecule_files impo
     modify_types, modify_charges, modify_coords,
     modify_bonds, modify_angles, modify_dihedrals, modify_impropers,
 )
-# from AutoREACTER.reaction_preparation.lunar_client.modifiers_data_files import (
-#     modify_atoms_data,
-#     modify_bonds_data, modify_angles_data,
-#     modify_dihedrals_data, modify_impropers_data,
-# )
+
 now = datetime.datetime.now() 
 import logging
 logger = logging.getLogger(__name__)
@@ -44,8 +41,7 @@ logger = logging.getLogger(__name__)
 @dataclass(slots=True)
 class DataFiles:
     """Simple container for paired LAMMPS data and molecule files."""
-    data_file: Path             # Main *.data file for LAMMPS
-    lmp_molecule_file: Path     # Associated *.lmpmol molecule template
+    lmp_molecule_file: Path     # Associated *.molecule molecule template
 
 @dataclass(slots=True)
 class MoleculeFile:
@@ -342,7 +338,7 @@ class REACTERFilesBuilder:
                                 improper_start_index = self._load_molecule_file(template_file_path)
         
         # Process types section - returns DataFrame for mapping and formatted string
-        df_types, types_section, number_of_types, index_change_dict = modify_types(lines, template_indexes, type_start_index)
+        df_types, types_section, number_of_types, index_change_dict, legacy_mode = modify_types(lines, template_indexes, type_start_index)
         
         # Process charges section using atom mapping from types
         charge_section = modify_charges(lines, df_types, charge_start_index)
@@ -351,16 +347,16 @@ class REACTERFilesBuilder:
         coord_section = modify_coords(lines, df_types, coord_start_index)
         
         # Process bonds section and get count
-        bond_section, number_of_bonds = modify_bonds(lines, df_types, bond_start_index, legacy_mode=False)
+        bond_section, number_of_bonds = modify_bonds(lines, df_types, bond_start_index, legacy_mode=legacy_mode)
         
         # Process angles section and get count
-        angle_section, number_of_angles = modify_angles(lines, df_types, angle_start_index, legacy_mode=False)
+        angle_section, number_of_angles = modify_angles(lines, df_types, angle_start_index, legacy_mode=legacy_mode)
         
         # Process dihedrals section and get count
-        dihedral_section, number_of_dihedrals = modify_dihedrals(lines, df_types, dihedral_start_index, legacy_mode=False)
+        dihedral_section, number_of_dihedrals = modify_dihedrals(lines, df_types, dihedral_start_index, legacy_mode=legacy_mode)
         
         # Process impropers section and get count
-        improper_section, number_of_impropers = modify_impropers(lines, df_types, improper_start_index)
+        improper_section, number_of_impropers = modify_impropers(lines, df_types, improper_start_index, legacy_mode=legacy_mode)
         
         # Assemble all sections into final molecule file format
         modified_molecule_file = self._molecule_file_format(number_of_types, number_of_bonds, number_of_angles, 
@@ -607,6 +603,45 @@ class REACTERFilesBuilder:
             
 
         return pre_out, post_out, map_path
+    
+    def _copy_lunar_files_to_cache(self, lunar_files: LunarFiles) -> tuple[Path, Path, list[MoleculeFile]]:
+        """
+        Copy all LUNAR output files into cache_dir.
+        
+        Copies force_field.data, in_file, and all molecule files (.lmpmol -> .molecule).
+
+        Parameters
+        ----------
+        lunar_files : LunarFiles
+
+        Returns
+        -------
+        tuple[Path, Path, list[MoleculeFile]]
+            - force_field_data destination path
+            - in_file destination path  
+            - list of MoleculeFile with updated cache paths
+        """
+        ff_dest = self.cache_dir / lunar_files.force_field_data.name
+        try:
+            shutil.copy2(lunar_files.force_field_data, ff_dest)
+        except Exception as e:
+            print(f"Error occurred while copying force field data: {e}")
+
+
+        in_dest = self.cache_dir / lunar_files.in_file.name
+        shutil.copy2(lunar_files.in_file, in_dest)
+
+        molecule_files: list[MoleculeFile] = []
+        for mol in lunar_files.molecule_files:
+            src = mol.molecule_files.lmp_molecule_file
+            dest = self.cache_dir / f"{mol.id}.molecule"
+            shutil.copy2(src, dest)
+            molecule_files.append(MoleculeFile(
+                id=mol.id,
+                molecule_files=DataFiles(lmp_molecule_file=dest)
+            ))
+
+        return ff_dest, in_dest, molecule_files
 
 
     def molecule_template_preparation(self, lunar_files: LunarFiles, prepared_reactions_with_3d_mols: list[ReactionMetadata]) -> REACTERFiles:
@@ -630,6 +665,7 @@ class REACTERFilesBuilder:
         """
         template_files = []
         pre_and_post_files = lunar_files.template_files
+        force_field_data, in_file, molecule_files = self._copy_lunar_files_to_cache(lunar_files)
         updated_inputs_with_3d_mols= self.updated_inputs_with_3d_mols
         # Iterate each reaction entry and build templates for that single reaction only.
         for rxn in pre_and_post_files:
@@ -676,14 +712,17 @@ class REACTERFilesBuilder:
                 reaction_id = id,
                 map_file = Path(map_path),
                 pre_reaction_file = DataFiles(
-                    data_file = None,  # Placeholder, as the current workflow focuses on molecule files
                     lmp_molecule_file = Path(pre_out)
                 ),
                 post_reaction_file = DataFiles(
-                    data_file = None,  # Placeholder
                     lmp_molecule_file = Path(post_out)
                 )
             ))
 
-        return REACTERFiles(template_files=template_files)
+        return REACTERFiles(
+            force_field_data=force_field_data,
+            in_file=in_file,
+            molecule_files=molecule_files,
+            template_files=template_files
+        )
 

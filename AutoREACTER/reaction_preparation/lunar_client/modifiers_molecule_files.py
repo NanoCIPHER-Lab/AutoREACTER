@@ -135,7 +135,7 @@ def modify_charges(lines, type_df, charge_start_index):
         parts = line.split()
         
         # Validate that the line has sufficient data fields
-        if len(parts) >= 3:
+        if len(parts) >= 4:
             # Extract charge properties from the parsed line
             atom_index = int(parts[0])
             charge_value = float(parts[1])
@@ -218,7 +218,7 @@ def modify_coords(lines, type_df, coord_start_index):
         parts = line.split()
         
         # Validate that the line has sufficient data fields
-        if len(parts) >= 5:
+        if len(parts) >= 6:
             # Extract coordinate properties from the parsed line
             atom_index = int(parts[0])
             x = float(parts[1])
