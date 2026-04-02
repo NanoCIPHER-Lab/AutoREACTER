@@ -23,6 +23,7 @@ import datetime
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Optional
+import re
 from AutoREACTER.input_parser import SimulationSetup
 from AutoREACTER.reaction_preparation.lunar_client.lunar_api_wrapper import LunarFiles
 from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import ReactionMetadata 
@@ -35,7 +36,7 @@ from AutoREACTER.reaction_preparation.lunar_client.modifiers_molecule_files impo
 #     modify_atoms_data,
 #     modify_bonds_data, modify_angles_data,
 #     modify_dihedrals_data, modify_impropers_data,
-)
+# )
 now = datetime.datetime.now() 
 import logging
 logger = logging.getLogger(__name__)
@@ -77,6 +78,7 @@ class REACTERFilesBuilder:
         self.cache_dir = Path(cache_dir) / "lunar" / "REACTER_files"
         os.makedirs(self.cache_dir, exist_ok=True)
         self.force_field = updated_inputs_with_3d_mols.force_field
+        self.updated_inputs_with_3d_mols = updated_inputs_with_3d_mols
             
 
     def _get_ending_integer(self, s: str) -> int | None:
@@ -607,7 +609,7 @@ class REACTERFilesBuilder:
         return pre_out, post_out, map_path
 
 
-    def molecule_template_preparation(self, lunar_files: LunarFiles, prepared_reactions_with_3d_mols: list[ReactionMetadata], updated_inputs_with_3d_mols: SimulationSetup) -> REACTERFiles:
+    def molecule_template_preparation(self, lunar_files: LunarFiles, prepared_reactions_with_3d_mols: list[ReactionMetadata]) -> REACTERFiles:
         """
         Top-level orchestrator that loops over reactions and prepares template
         files and mappings for each reaction.
@@ -628,7 +630,7 @@ class REACTERFilesBuilder:
         """
         template_files = []
         pre_and_post_files = lunar_files.template_files
-        
+        updated_inputs_with_3d_mols= self.updated_inputs_with_3d_mols
         # Iterate each reaction entry and build templates for that single reaction only.
         for rxn in pre_and_post_files:
             id = rxn.reaction_id
