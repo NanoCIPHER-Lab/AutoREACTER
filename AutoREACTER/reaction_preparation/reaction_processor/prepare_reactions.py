@@ -388,19 +388,19 @@ class PrepareReactions:
         Returns:
             List of reactant indices corresponding to byproduct atoms
         """
-        # If delete_atoms is False, we skip byproduct detection and return an empty list
         if not delete_atoms:
             return []
 
-        # Fragment molecule and find smallest fragment
-        frags = rdmolops.GetMolFrags(product_combined, asMols=True)
-        smallest = min(frags, key=lambda m: m.GetNumAtoms())
+        # Get tuples of original atom indices for each fragment
+        frags_indices = rdmolops.GetMolFrags(product_combined)
+        
+        # Find the tuple with the smallest number of atoms
+        smallest_frag_indices = min(frags_indices, key=len)
 
         byproduct_reactant_indices = []
 
-        # Map byproduct atoms back to reactant indices
-        for atom in smallest.GetAtoms():
-            p_idx = atom.GetIdx()
+        # Map byproduct product indices back to reactant indices
+        for p_idx in smallest_frag_indices:
             if p_idx in reversed_mapping_dict:
                 byproduct_reactant_indices.append(reversed_mapping_dict[p_idx])
 
