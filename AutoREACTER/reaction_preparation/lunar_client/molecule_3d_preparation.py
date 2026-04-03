@@ -14,7 +14,6 @@ and combined reactant/product complexes for simulations.
 # Standard library imports
 import os
 from pathlib import Path
-from typing import Tuple
 
 # Third-party imports
 import numpy as np
@@ -212,7 +211,7 @@ class Molecule3DPreparation:
         mol: Mol,
         cache_dir: Path,
         separate_fragments: bool = False,
-    ) -> Tuple[Path, str]:
+    ) -> Path:
         """Embed a molecule in 3D, optionally separate fragments, optimize geometry,
         and save the result as a .mol file.
 
@@ -221,7 +220,7 @@ class Molecule3DPreparation:
         2. 3D coordinate embedding using ETKDG method
         3. Optional fragment separation for multi-molecule complexes
         4. Geometry optimization using MMFF force field
-        5. File saving and mol block generation
+        5. File saving
 
         Args:
             molecule_name: Name used for the output file.
@@ -230,9 +229,7 @@ class Molecule3DPreparation:
             separate_fragments: Whether to separate disconnected fragments before optimization.
 
         Returns:
-            Tuple containing:
-                - Path to the saved .mol file
-                - Mol block string of the optimized structure
+            Path to the saved .mol file.
 
         Raises:
             OptimizationError: If atom count changes or optimization fails.
