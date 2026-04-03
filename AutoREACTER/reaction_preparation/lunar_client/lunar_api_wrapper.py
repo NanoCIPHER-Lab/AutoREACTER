@@ -299,8 +299,16 @@ class LunarAPIWrapper:
         # Process monomer/data molecules
         monomer_entries = updated_inputs.monomers
         for entry in monomer_entries:
+            if getattr(entry, "status", True) is False:
+                continue
+
+            if not entry.molecule_3Dmol_path:
+                raise ValueError(
+                    f"Active monomer '{entry.name}' is missing molecule_3Dmol_path. "
+                    "Ensure 3D geometry preparation completed successfully before atom typing."
+                )
+
             run_atom_typing_command(entry.molecule_3Dmol_path, self.cache_atom_typing)
-            
             # Store references to expected output files
             atom_typing_result.append(
                 AtomTypingResult(
