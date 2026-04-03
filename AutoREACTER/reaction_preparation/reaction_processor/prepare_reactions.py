@@ -53,17 +53,18 @@ class ReactionMetadata:
     byproduct_indices: Optional list of reactant atom indices corresponding to detected byproducts
     reaction_smarts: Optional string of the reaction SMARTS pattern
     reactant_smarts: Optional string of the combined reactant SMILES
-    product_smiles: Optional string of the combined product SMILES
+    product_smarts: Optional string of the combined product SMILES
     csv_path: Optional Path to the CSV file containing atom mappings and analysis
-    mol_3d_path: Optional Path to a file containing 3D structures of the molecules
     reaction_dataframe: Optional pandas DataFrame containing detailed mapping and analysis results
     delete_atom: Boolean indicating whether the reaction involves a delete atom (byproduct)
     delete_atom_idx: Optional integer index of the reactant atom that corresponds to the byproduct
+    reactant_combined_3Dmol_path: Optional Path to the 3D structure file for the combined reactants
+    product_combined_3Dmol_path: Optional Path to the 3D structure file for the combined products
     activity_stats: Boolean indicating whether this reaction should be included in activity statistics (e.g., not a duplicate)
     """
     reaction_id: int
-    reactant_combined_mol: Chem.Mol
-    product_combined_mol: Chem.Mol
+    reactant_combined_RDmol: Chem.Mol
+    product_combined_RDmol: Chem.Mol
     reactant_to_product_mapping: Dict[int, int]
     product_to_reactant_mapping: Dict[int, int]
     template_reactant_to_product_mapping: Optional[Dict[int, int]] = None
@@ -72,13 +73,14 @@ class ReactionMetadata:
     initiators: Optional[List[int]] = None
     byproduct_indices: Optional[List[int]] = None
     reaction_smarts: Optional[str] = None
-    reactant_smarts: Optional[str] = None
+    reactant_smiles: Optional[str] = None
     product_smiles: Optional[str] = None
     csv_path: Optional[Path] = None
-    mol_3d_path: Optional[Path] = None
     reaction_dataframe: Optional[pd.DataFrame] = None
     delete_atom: bool = True
     delete_atom_idx: Optional[int] = None
+    reactant_combined_3Dmol_path: Optional[Path] = None
+    product_combined_3Dmol_path: Optional[Path] = None
     activity_stats: bool = True
 
 
@@ -110,7 +112,7 @@ class PrepareReactions:
             if not reaction.activity_stats:
                 continue  # Skip reactions marked as duplicates
             
-            combined_reactant_molecule_object = reaction.reactant_combined_mol
+            combined_reactant_molecule_object = reaction.reactant_combined_RDmol
             reaction_dataframe = reaction.reaction_dataframe
             csv_save_path = reaction.csv_path
             
@@ -210,8 +212,8 @@ class PrepareReactions:
         
         for reaction in reaction_metadata_list:
             # Compare current reaction's reactants and products against unique reactions collected so far
-            reactants = reaction.reactant_combined_mol
-            products = reaction.product_combined_mol
+            reactants = reaction.reactant_combined_RDmol
+            products = reaction.product_combined_RDmol
 
             # Keep reaction if it's unique, otherwise mark as duplicate
             if compare_set(unique_metadata, reactants, products):
@@ -307,8 +309,8 @@ class PrepareReactions:
                 reaction_metadata.append(
                     ReactionMetadata(
                         reaction_id=total_products,
-                        reactant_combined_mol=reactant_combined,
-                        product_combined_mol=product_combined,
+                        reactant_combined_RDmol=reactant_combined,
+                        product_combined_RDmol=product_combined,
                         reactant_to_product_mapping=mapping_dict,
                         product_to_reactant_mapping=reverse_mapping,
                         first_shell=first_shell,
@@ -386,19 +388,19 @@ class PrepareReactions:
         Returns:
             List of reactant indices corresponding to byproduct atoms
         """
-        # If delete_atoms is False, we skip byproduct detection and return an empty list
         if not delete_atoms:
             return []
 
-        # Fragment molecule and find smallest fragment
-        frags = rdmolops.GetMolFrags(product_combined, asMols=True)
-        smallest = min(frags, key=lambda m: m.GetNumAtoms())
+        # Get tuples of original atom indices for each fragment
+        frags_indices = rdmolops.GetMolFrags(product_combined)
+        
+        # Find the tuple with the smallest number of atoms
+        smallest_frag_indices = min(frags_indices, key=len)
 
         byproduct_reactant_indices = []
 
-        # Map byproduct atoms back to reactant indices
-        for atom in smallest.GetAtoms():
-            p_idx = atom.GetIdx()
+        # Map byproduct product indices back to reactant indices
+        for p_idx in smallest_frag_indices:
             if p_idx in reversed_mapping_dict:
                 byproduct_reactant_indices.append(reversed_mapping_dict[p_idx])
 
@@ -641,10 +643,12 @@ class PrepareReactions:
         mols = []
         highlight_lists = []
         highlight_colors = []
+        names = []
 
         for metadata in metadata_list:
-            reactant = Chem.RWMol(metadata.reactant_combined_mol)
-            product = Chem.RWMol(metadata.product_combined_mol)
+            reactant = Chem.RWMol(metadata.reactant_combined_RDmol)
+            product = Chem.RWMol(metadata.product_combined_RDmol)
+            names.extend([f"pre_{metadata.reaction_id}", f"post_{metadata.reaction_id}"])
 
             # Clear atom maps for clean visualization
             for atom in reactant.GetAtoms():
@@ -702,6 +706,7 @@ class PrepareReactions:
         # Generate grid image with 2 molecules per row
         img = Draw.MolsToGridImage(
             mols,
+            legends=names,
             molsPerRow=2,
             highlightAtomLists=highlight_lists,
             highlightAtomColors=highlight_colors,

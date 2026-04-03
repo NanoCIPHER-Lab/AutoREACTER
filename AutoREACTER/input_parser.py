@@ -10,13 +10,15 @@ TODO (Input Parsing Layer)
 - [ ] Output a clean, consistently-formatted dictionary to feed into main.py.
 """
 
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from typing import Any
 from rdkit import Chem
-from rdkit.Chem import Descriptors, Draw
+from rdkit.Chem import Draw
 import logging
 from typing import Literal
 from PIL.Image import Image
+from pathlib import Path
+from typing import Optional
 
 # Module-level logger for future diagnostics.
 logger = logging.getLogger(__name__)
@@ -53,16 +55,15 @@ class DuplicateMonomerError(InputError):
 
 
 # Type aliases for clarity and validation
-StatusType = Literal["active", "discarded"]
+
 CompositionMethodType = Literal["counts", "stoichiometric_ratio"]
 ForceFieldType = Literal[
     "PCFF-IFF", "PCFF", "Compass",
-    "CVFF-IFF", "CVFF", "Clay-FF",
-    "DRIEDING", "OPLS-AA"
+    "CVFF-IFF", "CVFF", "DRIEDING", 
 ]
+# Note: Since Clay-FF and OPLS-AA are not fully supported within LUNAR, they are consequently unsupported in AutoREACTER.
 
-
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True)
 class MonomerEntry:
     """
     Canonical internal representation of a monomer.
@@ -76,10 +77,11 @@ class MonomerEntry:
         data_id: Original identifier string from input (e.g., "data_1").
         name: Optional human-readable name for LAMMPS labeling (defaults to "data_{id}" if not provided).
         smiles: RDKit-canonical SMILES string representing the molecular structure.
-        rdkit_mol: The RDKit Mol object corresponding to the SMILES string.
         count: Dictionary mapping target tags to integer counts (used in 'counts' mode).
         ratio: Float representing the stoichiometric ratio (used in 'stoichiometric_ratio' mode).
-        status: Current status of the monomer (default is "active").
+        rdkit_mol: The RDKit Mol object corresponding to the monomer's SMILES string.
+        molecule_3Dmol_path: Optional file path to the 3Dmol.mol representation of the monomer.
+        status: Boolean indicating whether the monomer should be included in the simulation.
     """
     id: int
     data_id: str 
@@ -88,7 +90,8 @@ class MonomerEntry:
     count: dict | None  # None only if stoichiometric mode 
     ratio: float | None  # None only if counts mode 
     rdkit_mol: Chem.Mol | None = None # Store the RDKit Mol object
-    status: StatusType = "active"
+    molecule_3Dmol_path: Optional[Path] = None
+    status: bool = True
 
 @dataclass(slots=True)
 class SimulationSetup:

@@ -16,6 +16,7 @@ requires-python = ">=3.13"
 dependencies = [
     "numpy",
     "pandas",
+    "lammps",
     "networkx"
 ]
 [tool.setuptools.packages.find]
