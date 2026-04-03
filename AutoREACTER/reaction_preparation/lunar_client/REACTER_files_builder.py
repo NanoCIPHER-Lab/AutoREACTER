@@ -649,8 +649,14 @@ class REACTERFilesBuilder:
         try:
             shutil.copy2(lunar_files.force_field_data, ff_dest)
         except Exception as e:
-            print(f"Error occurred while copying force field data: {e}")
+            raise FileNotFoundError(
+                f"Failed to copy force field data from '{lunar_files.force_field_data}' to '{ff_dest}'."
+            ) from e
 
+        if not ff_dest.is_file():
+            raise FileNotFoundError(
+                f"Force field data was not copied successfully to '{ff_dest}'."
+            )
 
         in_dest = self.cache_dir / lunar_files.in_file.name
         shutil.copy2(lunar_files.in_file, in_dest)
