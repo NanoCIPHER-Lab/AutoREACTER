@@ -88,7 +88,7 @@ def modify_types(lines, template_indexes, type_start_index):
     # Format the types section as a string with proper spacing
     types_section = ""
     for i, row in df.iterrows():
-        types_section += f"{row['new_atom_index']:>4}{row['atom_type']:>4}{row['hash']:>4}{row['atom_type_real']:>4}\n"
+        types_section += f"{row['new_atom_index']:>4} {row['atom_type']:>4} {row['hash']:>4} {row['atom_type_real']:>4}\n"
     
     # Calculate the total number of atom types
     number_of_types = len(df)
@@ -179,7 +179,7 @@ def modify_charges(lines, type_df, charge_start_index):
     # Format the charges section as a string with proper spacing
     charge_section = ""
     for i, row in charge_df.iterrows():
-        charge_section += f"{row['new_atom_index']:>4}{row['charge_value']:>12.6f}{row['hash']:>4}{row['atom_type_real']:>4}\n"
+        charge_section += f"{row['new_atom_index']:>4} {row['charge_value']:>12.6f} {row['hash']:>4} {row['atom_type_real']:>4}\n"
     
     return charge_section
 
@@ -266,7 +266,7 @@ def modify_coords(lines, type_df, coord_start_index):
     # Format the coordinates section as a string with proper spacing
     coord_section = ""
     for i, row in coord_df.iterrows():
-        coord_section += f"{row['new_atom_index']:>4}{row['x']:>12.6f}{row['y']:>12.6f}{row['z']:>12.6f}{row['hash']:>4}{row['atom_type_real']:>4}\n"
+        coord_section += f"{row['new_atom_index']:>4} {row['x']:>12.6f} {row['y']:>12.6f} {row['z']:>12.6f} {row['hash']:>4} {row['atom_type_real']:>4}\n"
     
     return coord_section
 
@@ -368,7 +368,7 @@ def modify_bonds(lines, type_df, bond_start_index, legacy_mode):
     # Format the bonds section as a string with proper spacing
     bond_section = ""
     for i, row in bond_df.iterrows():
-        bond_section += f"{row['bond_index']:>4}{row['bond_type']:>4}{row['new_atom1_index']:>4}{row['new_atom2_index']:>4}{row['hash']:>4}{row['atom1_type_real']:>4}{row['atom2_type_real']:>4}\n"
+        bond_section += f"{row['bond_index']:>4} {row['bond_type']:>4} {row['new_atom1_index']:>4} {row['new_atom2_index']:>4} {row['hash']:>4} {row['atom1_type_real']:>4} {row['atom2_type_real']:>4}\n"
     
     # Calculate the total number of bonds
     number_of_bonds = len(bond_df)
@@ -483,7 +483,7 @@ def modify_angles(lines, type_df, angle_start_index, legacy_mode):
     # Format the angles section as a string with proper spacing
     angle_section = ""
     for i, row in angle_df.iterrows():
-        angle_section += f"{row['angle_index']:>4}{row['angle_type']:>4}{row['new_atom1_index']:>4}{row['new_atom2_index']:>4}{row['new_atom3_index']:>4}{row['hash']:>4}{row['atom1_type_real']:>4}{row['atom2_type_real']:>4}{row['atom3_type_real']:>4}\n"
+        angle_section += f"{row['angle_index']:>4} {row['angle_type']:>4} {row['new_atom1_index']:>4} {row['new_atom2_index']:>4} {row['new_atom3_index']:>4} {row['hash']:>4} {row['atom1_type_real']:>4} {row['atom2_type_real']:>4} {row['atom3_type_real']:>4}\n"
     
     # Calculate the total number of angles
     number_of_angles = len(angle_df)
@@ -611,7 +611,7 @@ def modify_dihedrals(lines, type_df, dihedral_start_index, legacy_mode):
     # Format the dihedrals section as a string with proper spacing
     dihedral_section = ""
     for i, row in dihedral_df.iterrows():
-        dihedral_section += f"{row['dihedral_index']:>4}{row['dihedral_type']:>4}{row['new_atom1_index']:>4}{row['new_atom2_index']:>4}{row['new_atom3_index']:>4}{row['new_atom4_index']:>4}{row['hash']:>4}{row['atom1_type_real']:>4}{row['atom2_type_real']:>4}{row['atom3_type_real']:>4}{row['atom4_type_real']:>4}\n"
+        dihedral_section += f"{row['dihedral_index']:>4} {row['dihedral_type']:>4} {row['new_atom1_index']:>4} {row['new_atom2_index']:>4} {row['new_atom3_index']:>4} {row['new_atom4_index']:>4} {row['hash']:>4} {row['atom1_type_real']:>4} {row['atom2_type_real']:>4} {row['atom3_type_real']:>4} {row['atom4_type_real']:>4}\n"
     
     # Calculate the total number of dihedrals
     number_of_dihedrals = len(dihedral_df)
@@ -749,7 +749,7 @@ def modify_impropers(lines, type_df, improper_start_index, legacy_mode):
     # Build formatted improper section string with proper spacing
     improper_section = ""
     for i, row in improper_df.iterrows():
-        improper_section += f"{row['improper_index']:>4}{row['improper_type']:>4}{row['new_atom1_index']:>4}{row['new_atom2_index']:>4}{row['new_atom3_index']:>4}{row['new_atom4_index']:>4}{row['hash']:>4}{row['atom1_type_real']:>4}{row['atom2_type_real']:>4}{row['atom3_type_real']:>4}{row['atom4_type_real']:>4}\n"
+        improper_section += f"{row['improper_index']:>4} {row['improper_type']:>4} {row['new_atom1_index']:>4} {row['new_atom2_index']:>4} {row['new_atom3_index']:>4} {row['new_atom4_index']:>4} {row['hash']:>4} {row['atom1_type_real']:>4} {row['atom2_type_real']:>4} {row['atom3_type_real']:>4} {row['atom4_type_real']:>4}\n"
     
     # Get final count of impropers
     number_of_impropers = len(improper_df)
