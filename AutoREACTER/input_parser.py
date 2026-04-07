@@ -161,7 +161,11 @@ class InputParser:
         validated_replicas = self._validate_replicas(
             replicas_dict, composition_method
         )
-
+        self._validate_system_monomer_keys(
+            inputs, 
+            validated_replicas["systems"], 
+            composition_method
+        )
         monomers = self._validate_monomer_entry(
             inputs,
             composition_method,
@@ -407,6 +411,49 @@ class InputParser:
                     )
 
         return composition_dict
+    
+    def _validate_system_monomer_keys(self, inputs: dict, systems: list[dict], method: str) -> None:
+        """Ensures that monomer keys in each system match the defined monomers in the inputs.
+            This method checks that the monomer names used in the 'monomer_counts' or 'monomer_ratios' fields of each system
+            correspond to the monomer names defined in the top-level 'monomers' list. It raises errors if there are
+            missing or extra monomer keys in any system compared to the defined monomers.
+        Args:
+            inputs: The raw input dictionary containing the 'monomers' list.
+            systems: List of system dictionaries from the replicas section.
+            method: The composition method ("counts" or "stoichiometric_ratio").
+        Raises:
+            InputSchemaError: If there are missing or extra monomer keys in any system compared to the defined monomers.
+        """
+        monomers = inputs.get("monomers", [])
+        allowed_names = set()
+
+        for monomer in monomers:
+            name = monomer.get("name")
+            if isinstance(name, str) and name.strip():
+                allowed_names.add(name)
+
+        for system in systems:
+            tag = system["tag"]
+
+            if method == "counts":
+                provided = set(system.get("monomer_counts", {}).keys())
+                field_name = "monomer_counts"
+            else:
+                provided = set(system.get("monomer_ratios", {}).keys())
+                field_name = "monomer_ratios"
+
+            extra = provided - allowed_names
+            missing = allowed_names - provided
+
+            if extra:
+                raise InputSchemaError(
+                    f"System '{tag}' has unknown monomer(s) in '{field_name}': {sorted(extra)}"
+                )
+
+            if missing:
+                raise InputSchemaError(
+                    f"System '{tag}' is missing monomer(s) in '{field_name}': {sorted(missing)}"
+                )
     
     
     def _validate_monomer_entry(self, 
