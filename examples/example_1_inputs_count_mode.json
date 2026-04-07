@@ -1,59 +1,52 @@
 {
-
     "simulation_name": "Example_Count_Mode",
-
     "replicas": {
-        "temperatures": [300, 400, 500],
-        "density": [0.8],
         "method": "counts",
-
         "systems": [
-
             {
                 "tag": "10k",
-
+                "temperature": 300,
+                "density": 0.8,
                 "monomer_counts": {
-                    "tmc": 220,
-                    "mpd": 220,
-                    "ethanol": 110,
-                    "data_4": 55
+                "tmc": 220,
+                "mpd": 220,
+                "data_3": 110
                 }
             },
-
             {
                 "tag": "100k",
-
+                "temperature": 400,
+                "density": 0.8,
                 "monomer_counts": {
-                    "tmc": 2200,
-                    "mpd": 2200,
-                    "ethanol": 1100,
-                    "data_4": 550
+                "tmc": 2200,
+                "mpd": 2200,
+                "data_3": 1100
+                }
+            },
+            {
+                "tag": "100k_high_temp",
+                "temperature": 500,
+                "density": 0.8,
+                "monomer_counts": {
+                "tmc": 2200,
+                "mpd": 2200,
+                "data_3": 1100
                 }
             }
-
         ]
     },
-
     "monomers": [
-
         {
-            "name": "tmc",
-            "smiles": "CC(O)C(O)CCCCc1c(C(=O)Cl)cc(C(=O)Cl)cc1C(=O)Cl"
-        },
-
-        {
-            "name": "mpd",
-            "smiles": "C1=CC(=CC(=C1)N)N"
-        },
-
-        {
-            "name": "ethanol",
-            "smiles": "CCO"
+        "name": "tmc",
+        "smiles": "ClC(=O)c1cc(cc(c1)C(Cl)=O)C(Cl)=O"
         },
         {
-            "name": "data_4",
-            "smiles": "CCN"
+        "name": "mpd",
+        "smiles": "C1=CC(=CC(=C1)N)N"
+        },
+        {
+        "name": "data_3",
+        "smiles": "CCO"
         }
-
     ]
 }
