@@ -424,26 +424,28 @@ class InputParser:
         Raises:
             InputSchemaError: If there are missing or extra monomer keys in any system compared to the defined monomers.
         """
+        
         monomers = inputs.get("monomers", [])
         allowed_names = set()
 
         for monomer in monomers:
             name = monomer.get("name")
-            if isinstance(name, str) and name.strip():
-                allowed_names.add(name)
+            if not isinstance(name, str) or not name.strip():
+                raise InputSchemaError("Each monomer must include a non-empty 'name'.")
+            allowed_names.add(name)
 
         for system in systems:
             tag = system["tag"]
 
             if method == "counts":
-                provided = set(system.get("monomer_counts", {}).keys())
                 field_name = "monomer_counts"
             else:
-                provided = set(system.get("monomer_ratios", {}).keys())
                 field_name = "monomer_ratios"
 
-            extra = provided - allowed_names
-            missing = allowed_names - provided
+            provided_names = set(system.get(field_name, {}).keys())
+
+            extra = provided_names - allowed_names
+            missing = allowed_names - provided_names
 
             if extra:
                 raise InputSchemaError(
@@ -454,7 +456,7 @@ class InputParser:
                 raise InputSchemaError(
                     f"System '{tag}' is missing monomer(s) in '{field_name}': {sorted(missing)}"
                 )
-    
+        
     
     def _validate_monomer_entry(self, 
                                 inputs: dict, 
