@@ -1,10 +1,10 @@
 from pathlib import Path
 import os
+import re
 import shutil
 import subprocess
 import datetime as dt
 from AutoREACTER.reaction_preparation.lunar_client.REACTER_files_builder import REACTERFiles
-
 
 class GetCacheDir:
     """
@@ -42,9 +42,13 @@ class GetCacheDir:
             ).strip()
             return Path(out)
         except Exception:
-            # Fallback: assume script is located at AutoREACTER/reaction_preparation/...
             script_dir = Path(__file__).resolve().parent
-            return script_dir.parent.parent.parent
+        
+            for parent in [script_dir] + list(script_dir.parents):
+                if (parent / ".git").exists() or (parent / "pyproject.toml").exists():
+                    return parent
+        
+            return script_dir.parent
 
 
 class RunDirectoryManager:
@@ -228,12 +232,17 @@ class RetentionCleanup:
             print("[INFO] Cache cleanup skipped.")
             return
 
+        pattern = re.compile(r"\d{4}-\d{2}-\d{2}")
+        protected = {"00_cache"}
+        
         if mode == "all":
             for folder in self.base_dir.iterdir():
-                if folder.is_dir():
+                if (
+                    folder.is_dir()
+                    and folder.name not in protected
+                    and pattern.match(folder.name)
+                ):
                     shutil.rmtree(folder)
-            print("[OK] All cache directories deleted.")
-            return
 
         try:
             days = int(mode)
