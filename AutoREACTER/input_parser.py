@@ -161,7 +161,11 @@ class InputParser:
         validated_replicas = self._validate_replicas(
             replicas_dict, composition_method
         )
-
+        self._validate_system_monomer_keys(
+            inputs, 
+            validated_replicas["systems"], 
+            composition_method
+        )
         monomers = self._validate_monomer_entry(
             inputs,
             composition_method,
@@ -274,26 +278,21 @@ class InputParser:
         Accepts a single number or a list of numbers. Ensures all values are positive.
 
         Args:
-            temp: Temperature input (int, float, or list).
-
+            temp: Temperature input (int or float).
+            
         Returns:
-            A list of float temperature values.
+            A float temperature value.
 
         Raises:
             NumericFieldError: If the format is invalid or values are non-positive.
         """
-        if isinstance(temp, (int, float)):
-            temp_list = [temp]
-        elif isinstance(temp, list) and all(isinstance(t, (int, float)) for t in temp):
-            temp_list = temp
-        else:
-            raise NumericFieldError(f"'temperature' must be a number or a list of numbers. Got: {temp!r}")
-        
-        for t in temp_list:
-            if t <= 0:
-                raise NumericFieldError(f"Temperature values must be positive. Got: {t!r}")
-        
-        return temp_list
+        if not isinstance(temp, (int, float)):
+            raise NumericFieldError(f"'temperature' must be a number. Got: {temp!r}")
+
+        if temp <= 0:
+            raise NumericFieldError(f"Temperature values must be positive. Got: {temp!r}")
+
+        return float(temp)
 
     def _validate_density(self, density: Any) -> float:
         """
@@ -308,24 +307,19 @@ class InputParser:
         Raises:
             NumericFieldError: If density is not a positive number.
         """
-        if isinstance(density, (int, float)):
-            density_list = [float(density)]
-
-        elif isinstance(density, list) and all(isinstance(d, (int, float)) for d in density):
-            density_list = [float(d) for d in density]
-
-        else:
+        if not isinstance(density, (int, float)):
             raise NumericFieldError(
-                f"'density' must be a number or list of numbers. Got: {density!r}"
+                f"'density' must be a number. Got: {density!r}"
             )
 
-        for d in density_list:
-            if d <= 0:
-                raise NumericFieldError(
-                    f"Density values must be positive. Got: {d!r}"
-                )
+        density_value = float(density)
 
-        return density_list
+        if density_value <= 0:
+            raise NumericFieldError(
+                f"Density values must be positive. Got: {density!r}"
+            )
+
+        return density_value
     
     def _validate_force_field(self, force_field: Any) -> str:
         """
@@ -418,6 +412,51 @@ class InputParser:
 
         return composition_dict
     
+    def _validate_system_monomer_keys(self, inputs: dict, systems: list[dict], method: str) -> None:
+        """Ensures that monomer keys in each system match the defined monomers in the inputs.
+            This method checks that the monomer names used in the 'monomer_counts' or 'monomer_ratios' fields of each system
+            correspond to the monomer names defined in the top-level 'monomers' list. It raises errors if there are
+            missing or extra monomer keys in any system compared to the defined monomers.
+        Args:
+            inputs: The raw input dictionary containing the 'monomers' list.
+            systems: List of system dictionaries from the replicas section.
+            method: The composition method ("counts" or "stoichiometric_ratio").
+        Raises:
+            InputSchemaError: If there are missing or extra monomer keys in any system compared to the defined monomers.
+        """
+        
+        monomers = inputs.get("monomers", [])
+        allowed_names = set()
+
+        for monomer in monomers:
+            name = monomer.get("name")
+            if not isinstance(name, str) or not name.strip():
+                raise InputSchemaError("Each monomer must include a non-empty 'name'.")
+            allowed_names.add(name)
+
+        for system in systems:
+            tag = system["tag"]
+
+            if method == "counts":
+                field_name = "monomer_counts"
+            else:
+                field_name = "monomer_ratios"
+
+            provided_names = set(system.get(field_name, {}).keys())
+
+            extra = provided_names - allowed_names
+            missing = allowed_names - provided_names
+
+            if extra:
+                raise InputSchemaError(
+                    f"System '{tag}' has unknown monomer(s) in '{field_name}': {sorted(extra)}"
+                )
+
+            if missing:
+                raise InputSchemaError(
+                    f"System '{tag}' is missing monomer(s) in '{field_name}': {sorted(missing)}"
+                )
+        
     
     def _validate_monomer_entry(self, 
                                 inputs: dict, 
@@ -642,13 +681,15 @@ class InputParser:
             Normalized replicas dictionary.
         """
 
-        temperatures = self._validate_temperature(
-            replicas_dict.get("temperatures")
-        )
+        if "temperatures" in replicas_dict:
+            raise InputSchemaError(
+                "'replicas.temperatures' is no longer supported. Define 'temperature' inside each system."
+            )
 
-        density = self._validate_density(
-            replicas_dict.get("density")
-        )
+        if "density" in replicas_dict:
+            raise InputSchemaError(
+                "'replicas.density' is no longer supported. Define 'density' inside each system."
+            )
 
         systems = replicas_dict.get("systems")
 
@@ -658,6 +699,8 @@ class InputParser:
             )
 
         seen_tags: set[str] = set()
+        temperatures: list[float] = []
+        density: list[float] = []
 
         # used for ratio consistency check
         reference_ratios: dict | None = None
@@ -682,6 +725,16 @@ class InputParser:
                 )
 
             seen_tags.add(tag)
+
+            system["temperature"] = self._validate_temperature(
+                system.get("temperature")
+            )
+            system["density"] = self._validate_density(
+                system.get("density")
+            )
+
+            temperatures.append(system["temperature"])
+            density.append(system["density"])
 
             # -------- ratio mode --------
             if method == "stoichiometric_ratio":
@@ -753,12 +806,12 @@ if __name__ == "__main__":
         "simulation_name": "Example_Count_Mode",
 
         "replicas": {
-            "temperatures": [300, 400, 500],
-            "density": 0.8,
             "method": "counts",
             "systems": [
                 {
                     "tag": "10k",
+                    "temperature": 300,
+                    "density": 0.8,
                     "monomer_counts": {
                         "tmc": 220,
                         "mpd": 220,
@@ -767,6 +820,8 @@ if __name__ == "__main__":
                 },
                 {
                     "tag": "100k",
+                    "temperature": 400,
+                    "density": 0.8,
                     "monomer_counts": {
                         "tmc": 2200,
                         "mpd": 2200,
@@ -798,14 +853,14 @@ if __name__ == "__main__":
         "simulation_name": "Example_Ratio_Mode",
 
         "replicas": {
-            "temperatures": [300, 400],
-            "density": [0.8],
             "method": "ratio",
 
             "systems": [
 
                 {
                     "tag": "10k_base",
+                    "temperature": 300,
+                    "density": 0.8,
                     "total_atoms": 10000,
 
                     "monomer_ratios": {
@@ -817,6 +872,8 @@ if __name__ == "__main__":
 
                 {
                     "tag": "100k_base",
+                    "temperature": 400,
+                    "density": 0.8,
                     "total_atoms": 100000,
 
                     "monomer_ratios": {
@@ -850,15 +907,15 @@ if __name__ == "__main__":
     }
     input_ff = {
         "simulation_name": "Example_Count_Mode",
-
+        "force_field": "PCFF",
         "replicas": {
-            "temperatures": [300, 400, 500],
-            "density": 0.8,
             "method": "counts",
 
             "systems": [
             {
                 "tag": "10k",
+                "temperature": 300,
+                "density": 0.8,
                 "monomer_counts": {
                 "tmc": 220,
                 "mpd": 220,
@@ -867,6 +924,8 @@ if __name__ == "__main__":
             },
             {
                 "tag": "100k",
+                "temperature": 400,
+                "density": 0.8,
                 "monomer_counts": {
                 "tmc": 2200,
                 "mpd": 2200,
@@ -875,9 +934,6 @@ if __name__ == "__main__":
             }
             ]
         },
-
-        "force_field": "PCFF",
-
         "monomers": [
             {
             "name": "tmc",
@@ -902,5 +958,3 @@ if __name__ == "__main__":
 
     print("\nValidating Force Field Input:")
     print(parser.validate_inputs(input_ff))
-
-
