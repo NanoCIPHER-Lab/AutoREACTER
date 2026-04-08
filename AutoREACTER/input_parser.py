@@ -271,15 +271,15 @@ class InputParser:
 
         return "counts" if method == "counts" else "stoichiometric_ratio"
         
-    def _validate_temperature(self, temp: Any) -> float:
+    def _validate_temperature(self, temp: Any) -> list[float]:
         """
         Validates and normalizes temperature input.
         
         Accepts a single number or a list of numbers. Ensures all values are positive.
 
         Args:
-            temp: Temperature input (int, float, or list).
-
+            temp: Temperature input (int or float).
+            
         Returns:
             A float temperature value.
 
