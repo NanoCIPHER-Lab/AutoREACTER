@@ -191,7 +191,7 @@ def AutoREACTER(input_file: str) -> None:
 
     try:
         for highlight_type, filename in [
-            (None, "templates_all.png"),
+            ("template", "templates_all.png"),
             ("edge", "templates_edge.png"),
             ("initiators", "templates_initiators.png"),
             ("delete", "templates_delete.png")
