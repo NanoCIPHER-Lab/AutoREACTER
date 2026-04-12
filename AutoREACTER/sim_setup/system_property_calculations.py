@@ -1,3 +1,6 @@
+import math
+from rdkit import Chem
+from rdkit.Chem import Descriptors
 from AutoREACTER.input_parser import SimulationSetup
 
 
@@ -19,10 +22,6 @@ class SystemPropertyCalculations:
     def calculate_density(self):
         # Implement density calculation logic
         return 1.0  # Placeholder value
-
-    def calculate_glass_transition_temperature(self):
-        # Implement glass transition temperature calculation logic
-        return 100.0  # Placeholder value
 
     def calculate_molecular_weight(self):
         # Implement molecular weight calculation logic
