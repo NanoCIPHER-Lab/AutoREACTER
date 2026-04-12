@@ -81,6 +81,8 @@ class MonomerEntry:
         ratio: Float representing the stoichiometric ratio (used in 'ratio' mode).
         rdkit_mol: The RDKit Mol object corresponding to the monomer's SMILES string.
         molecule_3Dmol_path: Optional file path to the 3Dmol.mol representation of the monomer.
+        num_atoms: The number of atoms in the monomer, derived from the RDKit Mol object.
+        molecular_weight: The molecular weight of the monomer, derived from the RDKit Mol object.
         status: Boolean indicating whether the monomer should be included in the simulation.
     """
     id: int
@@ -91,17 +93,34 @@ class MonomerEntry:
     ratio: float | None  # None only if counts mode 
     rdkit_mol: Chem.Mol | None = None # Store the RDKit Mol object
     molecule_3Dmol_path: Optional[Path] = None
+    num_atoms: int | None = None          # Will be derived from rdkit_mol
+    molecular_weight: float | None = None # Will be derived from rdkit_mol
     status: bool = True
 
 
 @dataclass(slots=True)
 class Replica:
+    """
+    Container for individual simulation replica/system definitions.
+    This dataclass encapsulates all relevant information for a single simulation target,
+    including its unique tag, temperature, density, and composition details.
+     Attributes:
+        tag: A unique identifier for the replica.
+        temperature: The temperature of the replica (Kelvin).
+        density: The density of the replica (g/cm^3).
+        monomer_counts: A dictionary mapping monomer IDs to their counts.
+        monomer_ratios: A dictionary mapping monomer IDs to their stoichiometric ratios.
+        total_atoms: The total number of atoms in the system (required for ratio mode).
+        box_volume: The estimated box volume for the system (cubic Angstroms), to be calculated based on density and total atom count.
+    """
     tag: str
     temperature: float
     density: float
     monomer_counts: dict | None = None
     monomer_ratios: dict | None = None
     total_atoms: int | None = None
+    box_volume: float | None = None    # In cubic Angstroms
+    box_length: float | None = None    # Assuming a cubic box
 
 
 @dataclass(slots=True)
