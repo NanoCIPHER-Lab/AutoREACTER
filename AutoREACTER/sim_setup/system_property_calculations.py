@@ -1,12 +1,35 @@
 import math
+import logging
 from rdkit import Chem
 from rdkit.Chem import Descriptors
 from AutoREACTER.input_parser import SimulationSetup
 
+# Avogadro's constant
+N_A = 6.02214076e23
+
+class NoneMonomerError(Exception):
+    """Custom exception for cases where a monomer is expected but not found."""
+    pass
 
 class SystemPropertyCalculations:
-    def __init__(self):
-        pass
+
+    def __init__(self, simulation_setup: SimulationSetup):
+        self.simulation_setup = simulation_setup
+        
+
+    def _populate_monomer_properties(self) -> None:
+        for monomer in self.simulation_setup.monomers:
+            if not monomer.status:
+                continue
+            
+            if monomer.rdkit_mol is None:
+                raise NoneMonomerError(f"Monomer with ID {monomer.id} has no RDKit Mol object.")
+            
+            monomer.num_atoms = monomer.rdkit_mol.GetNumAtoms()
+            monomer.molecular_weight = Descriptors.MolWt(monomer.rdkit_mol)
+                
+
+    def process_all(self) -> SimulationSetup:
 
     def calculate_properties(self):
         # Placeholder for property calculations

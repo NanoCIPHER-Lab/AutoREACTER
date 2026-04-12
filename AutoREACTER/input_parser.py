@@ -932,8 +932,8 @@ if __name__ == "__main__":
         ]
     }
         
-    # Example 2: Stoichiometric Mode
-    inputs_stoichiometric = {
+    # Example 2: Ratio  Mode
+    inputs_ratio = {
         "simulation_name": "Example_Ratio_Mode",
         "replicas": [
             {
@@ -1021,7 +1021,7 @@ if __name__ == "__main__":
     print(parser.validate_inputs(inputs))
     
     print("\nValidating Ratio Mode Input:")
-    print(parser.validate_inputs(inputs_stoichiometric))
+    print(parser.validate_inputs(inputs_ratio))
 
     print("\nValidating Force Field Input:")
     print(parser.validate_inputs(input_ff))
