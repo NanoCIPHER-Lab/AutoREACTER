@@ -96,24 +96,13 @@ class MonomerEntry:
 
 @dataclass(slots=True)
 class Replica:
-    """
-    Represents a single replica/system configuration within the simulation setup.
-    
-    This dataclass encapsulates all relevant information for a specific system replica,
-    including its unique tag, temperature, density, and composition details (either counts or ratios).
-    
-    Attributes:
-        tag: Unique string identifier for the replica/system (e.g., "system_1").
-        temperature: Temperature in Kelvin for this replica.
-        density: Density in g/cm^3 for this replica.
-        monomer_counts: Optional dictionary mapping monomer names to integer counts (used in 'counts' mode).
-        monomer_ratios: Optional dictionary mapping monomer names to float ratios (used in 'stoichiometric_ratio' mode).
-    """
     tag: str
     temperature: float
     density: float
-    monomer_counts: dict | None = None  # Only used if composition method is 'counts'
-    monomer_ratios: dict | None = None  # Only used if composition method is 'stoichiometric_ratio'
+    monomer_counts: dict | None = None
+    monomer_ratios: dict | None = None
+    total_atoms: int | None = None
+
 
 @dataclass(slots=True)
 class SimulationSetup:
