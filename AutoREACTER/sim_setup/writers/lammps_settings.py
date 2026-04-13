@@ -1,7 +1,5 @@
-from dataclasses import dataclass
-from pathlib import Paths
+from dataclasses import dataclass, fields
 
-from cairo import Path
 from AutoREACTER.reaction_preparation.lunar_client.REACTER_files_builder import REACTERFiles
 
 @dataclass(slots=True)
@@ -24,7 +22,8 @@ class LammpsSettings:
 class InitialSetupWriter:
     def __init__(self, reacter_files: REACTERFiles):
         self.reacter_files = reacter_files
-        lunar_in_file_location = reacter_files.in_file
+        self.lunar_in_file_location = reacter_files.in_file
+
 
     def _defults(self) -> LammpsSettings:
         return LammpsSettings(
@@ -44,7 +43,23 @@ class InitialSetupWriter:
             neigh_modify="delay 5 every 1"
         )
 
-    def _get_LUNAR_lammps_settings(self, output_path: Path) -> None:
-        with open(output_path, 'w') as f:
-            pass
-
+    def get_LUNAR_lammps_settings(self) -> None:
+        settings = self._defults()
+        try:
+            with open(self.lunar_in_file_location, 'w') as f:
+                lines = f.readlines()
+        except Exception as e:
+            print(f"[WARNING] Could not create LAMMPS input file at {self.lunar_in_file_location}: {e}")
+            print("[WARNING] Proceeding with default LAMMPS settings.")
+        
+        for field in fields(settings):
+            keyword = field.name.replace('_', ' ')
+            for line in lines:
+                clean_line = line.split('#')[0].strip()
+                if clean_line.startswith(keyword):
+                    value = clean_line[len(keyword):].strip()
+                    if value:
+                        setattr(settings, field.name, value)
+        return settings
+        
+        
