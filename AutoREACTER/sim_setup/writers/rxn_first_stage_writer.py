@@ -26,7 +26,7 @@ class RxnFirstStageWriter:
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         input_data = f"{tag}_pre_equilibrated.data"
-        output_base = f"{tag}_reacted_1M_3.5A"
+        output_base = f"{tag}_reacted_0M-1M_3.5A"
         
         lines = [
             f"# {tag} First Reaction Stage Script - Generated {now} by AutoREACTER\n",
