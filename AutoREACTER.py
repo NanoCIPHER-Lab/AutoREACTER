@@ -17,6 +17,7 @@ from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions impor
 from AutoREACTER.reaction_preparation.lunar_client.molecule_3d_preparation import Molecule3DPreparation
 from AutoREACTER.reaction_preparation.lunar_client.lunar_api_wrapper import LunarAPIWrapper
 from AutoREACTER.reaction_preparation.lunar_client.REACTER_files_builder import REACTERFilesBuilder
+from AutoREACTER.sim_setup.simulation_setup import SimulationSetupManager
 
 def _move_image(src: Path, dest: Path) -> None:
     """
@@ -254,6 +255,14 @@ def AutoREACTER(input_file: str) -> None:
 
     print("\n[INFO] AutoREACTER workflow completed successfully.\n")
     print(f"Final REACTER files are located in: {output_dir}")
+
+    # Debug prints (can be commented out in production)
+    # print(f"Generated REACTER files: {reacter_files}")
+    # print(f"Updated inputs with 3D molecules: {updated_inputs_3d}")
+    # print(f"Prepared reactions with 3D molecules: {prepared_reactions_3d}")
+
+    Simulation_setup_manager = SimulationSetupManager()
+    _ = Simulation_setup_manager.populate_physical_parameters(updated_inputs_3d)
 
 
 if __name__ == "__main__":
