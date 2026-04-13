@@ -54,7 +54,7 @@ class LammpsInitialSettings:
             print("[WARNING] Proceeding with default LAMMPS settings.")
         
         for field in fields(settings):
-            keyword = field.name.replace('_', ' ')
+            keyword = field.name
             for line in lines:
                 clean_line = line.split('#')[0].strip()
                 if clean_line.startswith(keyword):
