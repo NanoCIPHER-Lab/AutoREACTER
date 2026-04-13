@@ -1,9 +1,9 @@
 from pathlib import Path
 from datetime import datetime
-now = datetime.now().strftime("%Y-%m-%d")
 from AutoREACTER.reaction_preparation.lunar_client.REACTER_files_builder import REACTERFiles
 from AutoREACTER.sim_setup.writers.lammps_settings import LammpsSettings
 
+now = datetime.now().strftime("%Y-%m-%d")
 
 class DensificationWriter:
     def __init__(self, settings: LammpsSettings, reacter_files: REACTERFiles):
@@ -35,3 +35,38 @@ class DensificationWriter:
         ]
         with open(output_dir_densification / "empty_box.data", 'w') as f:
             f.write("\n".join(lines))
+        
+
+    def _get_force_field_types(self) -> dict:
+        data_file = self.reacter_files.force_field_data
+        if not data_file.exists():
+            raise FileNotFoundError(f"Force field data file not found: {data_file}")
+
+        type_counts = {
+            "atom": None,
+            "bond": None,
+            "angle": None,
+            "dihedral": None,
+            "improper": 0
+        }
+
+        with open(data_file, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                parts = line.split()
+                if len(parts) >= 3 and parts[2] == "types":
+                    type_key = parts[1]
+                    if type_key in type_counts:
+                        type_counts[type_key] = int(parts[0])
+                
+                if any(header in line for header in ["Atoms", "Masses", "Bonds"]):
+                    break
+
+        required_keys = ["atom", "bond", "angle", "dihedral"]
+        for key in required_keys:
+            if type_counts[key] is None:
+                raise ValueError(f"Required LAMMPS header '{key} types' not found in {data_file}")
+
+        return type_counts
