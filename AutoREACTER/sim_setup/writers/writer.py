@@ -1,65 +1,9 @@
-from dataclasses import dataclass, fields
-
+from AutoREACTER.sim_setup.writers.lammps_settings import LammpsInitialSettings, LammpsSettings
 from AutoREACTER.reaction_preparation.lunar_client.REACTER_files_builder import REACTERFiles
 
-@dataclass(slots=True)
-class LammpsSettings:
-    units: str 
-    dimension: str 
-    boundary: str 
-    atom_style: str 
-    bond_style: str 
-    angle_style: str
-    dihedral_style: str
-    improper_style: str
-    special_bonds: str
-    pair_style: str 
-    kspace_style: str
-    pair_modify: str 
-    neighbor: str
-    neigh_modify: str 
 
-class InitialSetupWriter:
+class Writer:
     def __init__(self, reacter_files: REACTERFiles):
         self.reacter_files = reacter_files
-        self.lunar_in_file_location = reacter_files.in_file
-
-
-    def _defults(self) -> LammpsSettings:
-        return LammpsSettings(
-            units="real",
-            dimension="3",
-            boundary="p p p",
-            atom_style="full",
-            bond_style="harmonic",
-            angle_style="harmonic",
-            dihedral_style="opls",
-            improper_style="cvff",
-            special_bonds="lj/coul 0.0 0.0 0.5",
-            pair_style="lj/cut/coul/long 10.0 10.0",
-            kspace_style="pppm 1e-4",
-            pair_modify="mix arithmetic",
-            neighbor="2.0 bin",
-            neigh_modify="delay 5 every 1"
-        )
-
-    def get_LUNAR_lammps_settings(self) -> None:
-        settings = self._defults()
-        try:
-            with open(self.lunar_in_file_location, 'w') as f:
-                lines = f.readlines()
-        except Exception as e:
-            print(f"[WARNING] Could not create LAMMPS input file at {self.lunar_in_file_location}: {e}")
-            print("[WARNING] Proceeding with default LAMMPS settings.")
-        
-        for field in fields(settings):
-            keyword = field.name.replace('_', ' ')
-            for line in lines:
-                clean_line = line.split('#')[0].strip()
-                if clean_line.startswith(keyword):
-                    value = clean_line[len(keyword):].strip()
-                    if value:
-                        setattr(settings, field.name, value)
-        return settings
-        
-        
+        self.lammps_initial_setup = LammpsInitialSettings(reacter_files)
+        self.settings: LammpsSettings = self.lammps_initial_setup.get_LUNAR_lammps_settings()

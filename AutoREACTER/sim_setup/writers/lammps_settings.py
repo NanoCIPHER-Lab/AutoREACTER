@@ -35,12 +35,12 @@ class LammpsInitialSettings:
             angle_style="harmonic",
             dihedral_style="opls",
             improper_style="cvff",
-            special_bonds="lj/coul 0.0 0.0 0.5",
-            pair_style="lj/cut/coul/long 10.0 10.0",
+            special_bonds="lj/coul 0 0 1",
+            pair_style="lj/class2/coul/long 8.5",
             kspace_style="pppm 1e-4",
-            pair_modify="mix arithmetic",
-            neighbor="2.0 bin",
-            neigh_modify="delay 5 every 1"
+            pair_modify="tail yes mix sixthpower",
+            neighbor=None,
+            neigh_modify=None
         )
 
     def get_LUNAR_lammps_settings(self) -> None:
