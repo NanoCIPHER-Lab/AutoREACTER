@@ -19,8 +19,8 @@ class DensificationWriter:
         self.write_lammps_densification_files(replica=replica,)
 
 
-    def _write_empty_box_data(self,  replica: Replica):
-        output_dir_densification = self.out_dir / "1_densification"
+    def _write_empty_box_data(self,  replica: Replica, output_dir: Path):
+        
         half_len = replica.initial_box_length / 2.0
         lo, hi = -half_len, half_len
 
@@ -42,7 +42,7 @@ class DensificationWriter:
             f"{lo:.2f} {hi:.2f} zlo zhi",
             ""
         ]
-        with open(output_dir_densification / "empty_box.data", 'w') as f:
+        with open(output_dir / "empty_box.data", 'w') as f:
             f.write("\n".join(lines))
         
     def write_lammps_densification_files(self, replica: Replica) -> None:
@@ -50,7 +50,7 @@ class DensificationWriter:
         dens_dir = self.out_dir / "1_densification"
         dens_dir.mkdir(parents=True, exist_ok=True)
 
-        self._write_empty_box_data(replica=replica)
+        self._write_empty_box_data(replica=replica, output_dir=dens_dir)
         
         types = self._get_force_field_types()
         s = self.settings
