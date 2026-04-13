@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 from AutoREACTER.sim_setup.writers.lammps_settings import LammpsInitialSettings
@@ -7,6 +6,7 @@ from AutoREACTER.sim_setup.writers.densification_writer import DensificationWrit
 from AutoREACTER.sim_setup.writers.pre_eq_writer import PreEqWriter
 from AutoREACTER.sim_setup.writers.rxn_first_stage_writer import RxnFirstStageWriter
 from AutoREACTER.sim_setup.writers.rxn_second_stage_writer import RxnSecondStageWriter
+from AutoREACTER.sim_setup.writers.post_eq_writer import PostEqWriter
 from AutoREACTER.input_parser import SimulationSetup
 
 class Writer:
@@ -18,7 +18,6 @@ class Writer:
 
     def write_all_files(self, run_dir: Path, simulation_setup: SimulationSetup) -> None:
         sim_name = simulation_setup.simulation_name
-        print(f"\n[INFO] Writing all files for simulation: {sim_name}")
         lammps_dir = run_dir / "LAMMPS_input_files"
         lammps_dir.mkdir(parents=True, exist_ok=True)
 
@@ -59,5 +58,10 @@ class Writer:
                 sim_name=sim_name
             )
 
-        print(f"[SUCCESS] All input files written to: {lammps_dir}")
+            PostEqWriter(
+                out_dir=sub_dir,
+                settings=self.settings,
+                replica=replica,
+                sim_name=sim_name
+            )
         

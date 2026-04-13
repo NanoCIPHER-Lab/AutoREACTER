@@ -42,7 +42,14 @@ class RxnSecondStageWriter:
             "",
             f"{'pair_style':<16} {s.pair_style}",
             f"{'kspace_style':<16} {s.kspace_style}",
-            f"{'pair_modify':<16} tail yes mix sixthpower",
+            f"{'pair_modify':<16} {s.pair_modify}"
+        ]
+        if s.neighbor:
+            lines.append(f"{'neighbor':<16} {s.neighbor}")
+        if s.neigh_modify:
+            lines.append(f"{'neigh_modify':<16} {s.neigh_modify}")
+
+        lines.extend([
             "",
             f"{'read_data':<16} \"{input_data}\" &",
             f"{'':<16} extra/bond/per/atom 50 &",
@@ -57,7 +64,7 @@ class RxnSecondStageWriter:
             f"{'thermo':<16} 100",
             f"{'reset_timestep':<16} 1000000",
             ""
-        ]
+        ])
 
         lines.append("#------------Define Reaction Templates------------")
         rxn_commands = []
