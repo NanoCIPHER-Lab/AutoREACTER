@@ -203,20 +203,20 @@ class DensificationWriter:
         factor = 1.25  # Add 25% buffer to ensure fix halt catches it
         if steps_needed <= 0:
             raise ValueError(f"Calculated negative steps needed for densification: {steps_needed}. Check erate and timestep values.")
-        if steps_needed < 10000:
-            round_steps = round(steps_needed * factor, -3)  # Round to nearest 10,000
+        if steps_needed >= 10000:
+            round_steps = round(steps_needed * factor, -4)  # Round to nearest 10,000
             thermo_interval = 1000
-        elif steps_needed > 1000:
-            round_steps = round(steps_needed * factor, -3)  # Round to nearest 1000
+        elif steps_needed >= 1000:
+            round_steps = round(steps_needed * factor, -3)  # Round to nearest 1,000
             thermo_interval = 100
-        elif steps_needed > 100:
-            round_steps = round(steps_needed * factor, -2) # Round to nearest 100
+        elif steps_needed >= 100:
+            round_steps = round(steps_needed * factor, -2)  # Round to nearest 100
             thermo_interval = 10
-        elif steps_needed > 10:
-            round_steps = round(steps_needed * factor, -1) # Round to nearest 10
+        elif steps_needed >= 10:
+            round_steps = round(steps_needed * factor, -1)  # Round to nearest 10
             thermo_interval = 1
         else:
-            round_steps = round(steps_needed * factor) # Round to nearest integer
+            round_steps = round(steps_needed * factor)  # Round to nearest integer
             thermo_interval = 1
         return int(round_steps), thermo_interval
 
