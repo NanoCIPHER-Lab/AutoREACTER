@@ -19,15 +19,17 @@ from AutoREACTER.reaction_preparation.lunar_client.lunar_api_wrapper import Luna
 from AutoREACTER.reaction_preparation.lunar_client.REACTER_files_builder import REACTERFilesBuilder
 from AutoREACTER.sim_setup.simulation_setup import SimulationSetupManager
 
+
 def _move_image(src: Path, dest: Path) -> None:
     """
-    Move image files from source to a dedicated 'images' subdirectory in the destination.
+    Move all image files from source directory to a dedicated 'images' subdirectory
+    within the destination run directory.
     
-    Creates the images directory if it doesn't exist and moves all PNG/JPG files.
+    Creates the images directory if it doesn't exist. Only PNG and JPEG files are moved.
     
     Args:
-        src: Source directory containing images
-        dest: Destination run directory
+        src: Source directory containing image files
+        dest: Destination run directory where images subdirectory will be created
     """
     images_dir = dest / "images"
     images_dir.mkdir(parents=True, exist_ok=True)
@@ -41,7 +43,15 @@ def _move_image(src: Path, dest: Path) -> None:
                 print(f"[ERROR] Failed to move image {p.name}: {e}")
 
 
-def loading_message(message, duration=3, interval=0.5):
+def loading_message(message: str, duration: float = 3.0, interval: float = 0.5) -> None:
+    """
+    Print a loading message with animated dots to indicate progress.
+    
+    Args:
+        message: The message to display
+        duration: Total duration of the animation in seconds
+        interval: Time between each dot in seconds
+    """
     print(f"[INFO] {message}", end="", flush=True)
     steps = int(duration / interval)
 
@@ -54,12 +64,12 @@ def loading_message(message, duration=3, interval=0.5):
 
 def save_image(img: Image.Image, path: str, label: str = "Image") -> None:
     """
-    Save a PIL Image to the specified path with error handling and user feedback.
+    Save a PIL Image to disk with robust error handling and user feedback.
     
     Args:
         img: PIL Image object to save
-        path: Destination file path
-        label: Human-readable label for logging messages
+        path: Full path where the image should be saved
+        label: Human-readable label used in log messages
     """
     if img is None:
         print(f"[WARN] {label}: Image is None, skipping save.")
@@ -74,72 +84,83 @@ def save_image(img: Image.Image, path: str, label: str = "Image") -> None:
     except Exception as e:
         print(f"[ERROR] Failed to save {label} to {path}: {e}")
 
+
 def run_cleanup(mode: str = "skip") -> None:
-    """Run cache cleanup based on the specified mode."""
+    """Run cache cleanup with the specified retention mode.
+    
+    Args:
+        mode: Cleanup mode - number of days (as string), 'all', or 'skip'
+    """
     cache_manager = GetCacheDir()
     cleanup = RetentionCleanup(cache_manager.cache_base_dir)
     cleanup.run(mode=mode)
 
+
 def help_message() -> None:
+    """Display usage instructions and available command-line options."""
     print("Usage:")
     print("  python AutoREACTER.py -i <input.json>")
     print("  python AutoREACTER.py -c <days|all|skip>")
     print()
     print("Options:")
-    print("  -i, --input        Input JSON file")
-    print("  -c, --cleanup      Cleanup cache")
+    print("  -i, --input        Path to input JSON file")
+    print("  -c, --cleanup      Run cache cleanup")
     print()
     print("Cleanup modes:")
-    print("  <days>   → delete runs older than given number of days (e.g., 7, 30)")
+    print("  <days>   → delete runs older than N days (e.g., 7, 30)")
     print("  all      → delete all cached runs")
-    print("  skip     → no cleanup")
+    print("  skip     → no cleanup (default)")
+
 
 def AutoREACTER(input_file: str) -> None:
     """
-    Main workflow orchestrator for the AutoREACTER pipeline.
+    Main orchestrator for the AutoREACTER automated reaction workflow.
     
-    This function coordinates the entire automated reaction discovery and preparation
-    workflow for polymer chemistry, including:
-      - Input validation and visualization
-      - Functional group detection
-      - Reaction discovery and selection
-      - Non-monomer (additive) detection
-      - 3D geometry preparation
-      - Integration with the Lunar API
-      - Generation of REACTER input files
+    This function coordinates the complete pipeline for polymer reaction discovery
+    and REACTER input file generation. It performs the following major steps:
+    
+    1. Input parsing and validation
+    2. Functional group detection with visualization
+    3. Reaction discovery and user-guided selection
+    4. Non-monomer (additive) detection and selection
+    5. Reaction template preparation and visualization
+    6. 3D molecular geometry optimization
+    7. Lunar API integration for advanced processing
+    8. Generation of final REACTER input files
+    9. Simulation setup
+    
+    The workflow includes multiple visualization steps and an interactive
+    confirmation point before proceeding with computationally intensive tasks.
     
     Args:
-        input_file: Path to a JSON file containing monomer definitions and parameters.
-    
-    The function creates a dated output directory, generates multiple diagnostic images,
-    and guides the user through an interactive review step before proceeding with
-    computationally intensive 3D preparation and simulation file generation.
+        input_file: Path to a JSON file containing monomer definitions,
+                    reaction parameters, and simulation settings.
     """
-    # Initialize the AutoREACTER environment and logging
+    # Initialize logging, environment, and configuration
     Initialization()
 
-    # Parse and validate user input
+    # Parse and validate user-provided input
     input_parser = InputParser()
     cache_manager = GetCacheDir()
     cache_dir = cache_manager.staging_dir
 
-    # Set up run-specific output directory
+    # Create a dated directory for this specific run
     run_manager = RunDirectoryManager(cache_manager.cache_base_dir)
     output_dir = run_manager.make_dated_run_dir()
 
     print(f"[INFO] Staging directory: {cache_dir}")
 
-    # Create directory for storing visualization images
+    # Set up directory for storing all visualization images
     images_dir = cache_dir / "images"
     os.makedirs(images_dir, exist_ok=True)
 
-    # Load and validate input data
+    # Load input data from JSON
     with open(input_file, "r") as f:
         input_data = json.load(f)
 
     validated_inputs = input_parser.validate_inputs(input_data)
 
-    # Generate and save initial monomers visualization
+    # Generate and save initial visualization of input monomers
     try:
         img = input_parser.initial_molecules_image_grid(validated_inputs)
         save_image(img, os.path.join(images_dir, "monomers.png"), "Monomers Grid")
@@ -156,9 +177,9 @@ def AutoREACTER(input_file: str) -> None:
         img = fg_detector.functional_group_highlighted_molecules_image_grid(functional_groups_imgs)
         save_image(img, os.path.join(images_dir, "functional_groups.png"), "Functional Groups")
     except Exception:
-        pass
+        pass  # Visualization is optional
 
-    # === Reaction Discovery ===
+    # === Reaction Discovery and Selection ===
     reaction_detector = ReactionDetector()
     reaction_instances = reaction_detector.reaction_detector(functional_groups)
 
@@ -210,7 +231,7 @@ def AutoREACTER(input_file: str) -> None:
         f"Please review the reaction templates before proceeding.\n"
     )
 
-    # Interactive user confirmation
+    # Interactive user confirmation before heavy computation
     ok_pass = input("Type 'ok' to continue: ").strip().lower()
     if ok_pass != "ok":
         print("[EXIT] Workflow stopped by user.")
@@ -222,7 +243,7 @@ def AutoREACTER(input_file: str) -> None:
         updated_inputs, prepared_reactions
     )
 
-    # === Lunar API Workflow ===
+    # === Lunar API Processing ===
     lunar_api = LunarAPIWrapper(cache_dir)
     lunar_results = lunar_api.lunar_workflow(
         updated_inputs_3d, prepared_reactions_3d
@@ -233,7 +254,7 @@ def AutoREACTER(input_file: str) -> None:
     time.sleep(1.5)
     print("\n")
 
-    # === Build final REACTER files ===
+    # === Build REACTER Input Files ===
     builder = REACTERFilesBuilder(
         cache_dir=cache_dir,
         updated_inputs_with_3d_mols=updated_inputs_3d
@@ -244,7 +265,7 @@ def AutoREACTER(input_file: str) -> None:
         prepared_reactions_with_3d_mols=prepared_reactions_3d
     )
 
-    # Move final files to output directory
+    # Move generated files to final output directory
     reacter_files = run_manager.move_reacter_files(
         reacter_files,
         staging_dir=cache_dir,
@@ -253,19 +274,14 @@ def AutoREACTER(input_file: str) -> None:
 
     _move_image(images_dir, output_dir)
 
-
-
-    # Debug prints (can be commented out in production)
-    # print(f"Generated REACTER files: {reacter_files}")
-    # print(f"Updated inputs with 3D molecules: {updated_inputs_3d}")
-    # print(f"Prepared reactions with 3D molecules: {prepared_reactions_3d}")
-
+    # Final simulation setup and output
     Simulation_setup_manager = SimulationSetupManager()
     updated_inputs_3d = Simulation_setup_manager.setup_and_write_simulation(
         setup=updated_inputs_3d,
         reacter_files=reacter_files,
         run_dir=output_dir
     )
+
     print("\n[INFO] AutoREACTER workflow completed successfully.\n")
     print(f"Final REACTER files are located in: {output_dir}")
 
@@ -277,12 +293,9 @@ if __name__ == "__main__":
         help_message()
         sys.exit(1)
 
-    # INPUT MODE 
+    # Handle input file mode
     if "-i" in args or "--input" in args:
-        if "-i" in args:
-            idx = args.index("-i")
-        else:
-            idx = args.index("--input")
+        idx = args.index("-i") if "-i" in args else args.index("--input")
 
         if idx + 1 >= len(args):
             print("Error: Missing input file.")
@@ -296,12 +309,9 @@ if __name__ == "__main__":
 
         AutoREACTER(input_file)
 
-    # CLEANUP MODE 
+    # Handle cache cleanup mode
     elif "-c" in args or "--cleanup" in args:
-        if "-c" in args:
-            idx = args.index("-c")
-        else:
-            idx = args.index("--cleanup")
+        idx = args.index("-c") if "-c" in args else args.index("--cleanup")
 
         if idx + 1 >= len(args):
             print("Error: Missing cleanup mode.")
