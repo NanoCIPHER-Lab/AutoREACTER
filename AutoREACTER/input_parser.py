@@ -2,9 +2,9 @@ from __future__ import annotations
 """
 TODO (Input Parsing Layer)
 - [ ] Parse user inputs (CLI / JSON / GUI later) and validate required keys.
-- [ ] Enforce: either "Number of monomers" OR "stoichiometric_ratio" must be provided (not both unless you define a rule).
-- [ ] If "stoichiometric_ratio" is given, compute "Number of monomers" based on:
-      - "Number of total atoms" target(s) (likely multiple) and
+- [ ] Enforce: either "monomer_counts" OR "monomer_ratios" must be provided (not both unless you define a rule).
+- [ ] If "monomer_ratios" is given, compute "monomer_counts" based on:
+      - "total_atoms" target(s) (likely multiple) and
       - monomer atom counts / molar masses from RDKit
 - [ ] Derive box size / initial density estimates from monomer counts + density.
 - [ ] Output a clean, consistently-formatted dictionary to feed into main.py.
@@ -77,8 +77,8 @@ class MonomerEntry:
         data_id: Original identifier string from input (e.g., "data_1").
         name: Optional human-readable name for LAMMPS labeling (defaults to "data_{id}" if not provided).
         smiles: RDKit-canonical SMILES string representing the molecular structure.
-        count: Dictionary mapping target tags to integer counts (used in 'counts' mode).
-        ratio: Float representing the stoichiometric ratio (used in 'ratio' mode).
+        count: Dictionary mapping replica tags to integer counts (used in 'counts' mode).
+        ratio: Float representing the molar ratio of the monomer (used in 'ratio' mode).
         rdkit_mol: The RDKit Mol object corresponding to the monomer's SMILES string.
         molecule_3Dmol_path: Optional file path to the 3Dmol.mol representation of the monomer.
         num_atoms: The number of atoms in the monomer, derived from the RDKit Mol object.
@@ -89,7 +89,7 @@ class MonomerEntry:
     data_id: str 
     name: str | None 
     smiles: str  
-    count: dict | None  # None only if stoichiometric mode 
+    count: dict | None  # None only if ratio mode 
     ratio: float | None  # None only if counts mode 
     rdkit_mol: Chem.Mol | None = None # Store the RDKit Mol object
     molecule_3Dmol_path: Optional[Path] = None
@@ -108,8 +108,8 @@ class Replica:
         tag: A unique identifier for the replica.
         temperature: The temperature of the replica (Kelvin).
         density: The density of the replica (g/cm^3).
-        monomer_counts: A dictionary mapping monomer IDs to their counts.
-        monomer_ratios: A dictionary mapping monomer IDs to their stoichiometric ratios.
+        monomer_counts: A dictionary mapping monomer names to their counts.
+        monomer_ratios: A dictionary mapping monomer names to their molar ratios.
         total_atoms: The total number of atoms in the system (required for ratio mode).
         initial_box_volume: The estimated initial box volume based on density and monomer counts (cubic Angstroms).
         initial_box_length: The estimated initial box length assuming a cubic box (Angstroms).
@@ -143,7 +143,7 @@ class SimulationSetup:
         monomers: List of MonomerEntry objects representing the system composition.
         composition_method: The method used to define composition ("counts" or "ratio").
         composition: Raw composition dictionary from inputs for flexible downstream use.
-        stoichiometric_ratio: Mapping of monomer IDs to ratios.
+        ratio: Mapping of monomer names to their molar ratios (used in 'ratio' mode).
         number_of_total_atoms: List of total atom counts per target (place holder to be calculated).
         box_estimates: Estimated box size based on density (placeholder).
     """
@@ -604,8 +604,8 @@ class InputParser:
         """
         Convert an integer to a dictionary format for counts mode.
         
-        Note: This is a placeholder for future support of stoichiometric mode 
-        where counts may be derived from ratios.
+        Note: This is a placeholder for future support of ratio mode 
+        where counts may be derived from ratios and total atom targets.
 
         Args:
             integer: The integer value.
