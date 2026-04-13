@@ -40,7 +40,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 @dataclass(slots=True)
-class DataFiles:
+class LMPMoleculeFiles:
     """Simple container for paired LAMMPS data and molecule files."""
     lmp_molecule_file: Path     # Associated *.molecule molecule template
 
@@ -48,7 +48,7 @@ class DataFiles:
 class MoleculeFile:
     """Wrapper associating a molecule ID with its generated data files."""
     id: str
-    molecule_files: Optional[DataFiles]
+    molecule_files: Optional[LMPMoleculeFiles]
 
 @dataclass(slots=True)
 class TemplateFile:
@@ -57,8 +57,8 @@ class TemplateFile:
     """
     reaction_id: Optional[int]
     map_file: Optional[Path]
-    pre_reaction_file: Optional[DataFiles]
-    post_reaction_file: Optional[DataFiles]
+    pre_reaction_file: Optional[LMPMoleculeFiles]
+    post_reaction_file: Optional[LMPMoleculeFiles]
 
 @dataclass(slots=True)
 class REACTERFiles:
@@ -668,7 +668,7 @@ Types
             shutil.copy2(src, dest)
             molecule_files.append(MoleculeFile(
                 id=mol.id,
-                molecule_files=DataFiles(lmp_molecule_file=dest)
+                molecule_files=LMPMoleculeFiles(lmp_molecule_file=dest)
             ))
 
         return ff_dest, in_dest, molecule_files
@@ -741,10 +741,10 @@ Types
             template_files.append(TemplateFile(
                 reaction_id = id,
                 map_file = Path(map_path),
-                pre_reaction_file = DataFiles(
+                pre_reaction_file = LMPMoleculeFiles(
                     lmp_molecule_file = Path(pre_out)
                 ),
-                post_reaction_file = DataFiles(
+                post_reaction_file = LMPMoleculeFiles(
                     lmp_molecule_file = Path(post_out)
                 )
             ))
