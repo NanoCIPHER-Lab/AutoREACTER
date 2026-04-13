@@ -12,13 +12,22 @@ class Writer:
         self.reacter_files = reacter_files
         self.lammps_initial_setup = LammpsInitialSettings(reacter_files)
         self.settings = self.lammps_initial_setup.get_LUNAR_lammps_settings()
-        self.densification_writer = DensificationWriter(self.settings, reacter_files)
 
     def write_all_files(self, run_dir: Path, simulation_setup: SimulationSetup) -> None:
-        lammps_dir = run_dir / "LAMMPS_files"
+        sim_name = simulation_setup.simulation_name
+        print(f"\n[INFO] Writing all files for simulation: {sim_name}")
+        lammps_dir = run_dir / "LAMMPS_input_files"
         lammps_dir.mkdir(parents=True, exist_ok=True)
 
         replicas = simulation_setup.replicas
         for replica in replicas:
-            self.densification_writer.write_lammps_densification_files(lammps_dir, replica)
+            sub_dir = lammps_dir / f"{sim_name}_{replica.tag}"
+            sub_dir.mkdir(parents=True, exist_ok=True)
+            DensificationWriter(
+                out_dir=sub_dir, 
+                settings=self.settings, 
+                reacter_files=self.reacter_files, 
+                replica=replica, 
+                sim_name=sim_name
+            )
         

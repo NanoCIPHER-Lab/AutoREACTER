@@ -12,14 +12,14 @@ class DensificationWriter:
     def __init__(self, out_dir: Path, settings: LammpsSettings, reacter_files: REACTERFiles, replica: Replica, sim_name: str):
         self.settings = settings
         self.reacter_files = reacter_files
+        self.erate = -0.001 
+        self.timestep = 0.01 
         self.out_dir = out_dir
         self.sim_name = sim_name
-        self.erate = -0.001 # can be adjusted based on desired densification speed and system size
-        self.timestep = 0.01  # can be adjusted based on system 
-        self.write_lammps_densification_files(replica=replica,)
+        self.in_dense_file_name = self.write_lammps_densification_files(replica=replica)
 
 
-    def _write_empty_box_data(self,  replica: Replica, output_dir: Path):
+    def _write_empty_box_data(self,  replica: Replica, output_dir: Path)-> None:
         
         half_len = replica.initial_box_length / 2.0
         lo, hi = -half_len, half_len
@@ -32,9 +32,9 @@ class DensificationWriter:
             "0 angles",
             "0 dihedrals",
             "0 impropers",
-            "# Define the simulation box dimensions",
+            "\n# Define the simulation box dimensions",
             "# The box is defined by its lower (xlo, ylo, zlo) and upper (xhi, yhi, zhi) limits",
-            f"# This box is centered at the origin and spans from {lo:.2f} to {hi:.2f} in all directions",
+            f"# This box is centered at the origin and spans from {lo:.2f} to {hi:.2f} in all directions\n",
             "# Box",
             "",
             f"{lo:.2f} {hi:.2f} xlo xhi",
@@ -55,10 +55,10 @@ class DensificationWriter:
         types = self._get_force_field_types()
         s = self.settings
         rf = self.reacter_files
-        total_steps = self._run_calculation()
+        total_steps, thermo_interval = self._run_calculation()
         
         lines = [
-            f"# {tag} Densification Script - Generated {now}",
+            f"# {tag} Densification Script - Generated {now}\n",
             "#------------Initialization------------",
             f"{'units':<16} {s.units}",
             f"{'dimension':<16} {s.dimension}",
@@ -105,7 +105,6 @@ class DensificationWriter:
             f"{'':<16} extra/dihedral/per/atom 50 &",
             f"{'':<16} extra/improper/per/atom 50 &",
             f"{'':<16} extra/special/per/atom 50",
-            ""
         ])
 
         lines.append("\n#------------Define Molecule Templates------------")
@@ -124,13 +123,15 @@ class DensificationWriter:
 
         lines.extend([
             "",
+            "#------------Filled box write------------",
             f"{'write_data':<16} {tag}_filled_box.data",
             "",
             f"{'minimize':<16} 0.0 1.0e-8 1000 100000",
             f"{'reset_timestep':<16} 0",
             f"{'velocity':<16} all create {replica.temperature} {random.randint(10000, 99999)} dist gaussian",
             f"{'timestep':<16} {self.timestep}",
-            f"{'thermo_style':<16} custom step temp pe etotal press vol density",
+            f"{'thermo_style':<16} custom step temp pe etotal press vol density\n",
+            "#------------Densification Run------------",
             f"{'dump':<16} dump_1 all xyz 1000 {tag}_shrink.xyz",
             f"{'dump_modify':<16} dump_1 types labels",
             f"{'restart':<16} 100 {tag}_shrink_backup1.restart {tag}_shrink_backup2.restart",
@@ -138,7 +139,7 @@ class DensificationWriter:
             f"{'fix':<16} fix_shrink all deform 1 x erate {self.erate} y erate {self.erate} z erate {self.erate}",
             f"{'variable':<16} my_den equal density",
             f"{'fix':<16} fix_halt all halt 1 v_my_den > {replica.density} error continue",
-            f"{'thermo':<16} 1000",
+            f"{'thermo':<16} {thermo_interval}",
             f"{'run':<16} {total_steps}",
             "",
             f"{'unfix':<16} nvt_1",
@@ -199,19 +200,25 @@ class DensificationWriter:
         # time = (l_ratio - 1) / erate
         total_time = (l_ratio - 1) / self.erate
         steps_needed = total_time / self.timestep
-        
-        # Return steps with 20% buffer to ensure fix halt catches it
+        factor = 1.25  # Add 25% buffer to ensure fix halt catches it
         if steps_needed <= 0:
             raise ValueError(f"Calculated negative steps needed for densification: {steps_needed}. Check erate and timestep values.")
-        if steps_needed > 1000:
-            round_steps = round(steps_needed * 1.2, -3)  # Round to nearest 1000
+        if steps_needed < 10000:
+            round_steps = round(steps_needed * factor, -3)  # Round to nearest 10,000
+            thermo_interval = 1000
+        elif steps_needed > 1000:
+            round_steps = round(steps_needed * factor, -3)  # Round to nearest 1000
+            thermo_interval = 100
         elif steps_needed > 100:
-            round_steps = round(steps_needed * 1.2, -2) # Round to nearest 100
+            round_steps = round(steps_needed * factor, -2) # Round to nearest 100
+            thermo_interval = 10
         elif steps_needed > 10:
-            round_steps = round(steps_needed * 1.2, -1) # Round to nearest 10
+            round_steps = round(steps_needed * factor, -1) # Round to nearest 10
+            thermo_interval = 1
         else:
-            round_steps = round(steps_needed * 1.2) # Round to nearest integer
-        return round_steps
+            round_steps = round(steps_needed * factor) # Round to nearest integer
+            thermo_interval = 1
+        return int(round_steps), thermo_interval
 
     def _copy_required_files(self, dest_dir: Path):
         rf = self.reacter_files

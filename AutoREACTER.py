@@ -262,7 +262,11 @@ def AutoREACTER(input_file: str) -> None:
     # print(f"Prepared reactions with 3D molecules: {prepared_reactions_3d}")
 
     Simulation_setup_manager = SimulationSetupManager()
-    _ = Simulation_setup_manager.populate_physical_parameters(updated_inputs_3d)
+    updated_inputs_3d = Simulation_setup_manager.populate_physical_parameters(
+        setup=updated_inputs_3d,
+        reacter_files=reacter_files,
+        run_dir=output_dir
+    )
 
 
 if __name__ == "__main__":
