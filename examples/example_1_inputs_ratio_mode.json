@@ -1,32 +1,29 @@
 {
     "simulation_name": "Example_Ratio_Mode",
-    "replicas": {
-        "method": "ratio",
-        "systems": [
-            {
-                "tag": "10k_base",
-                "temperature": 300,
-                "density": 0.8,
-                "total_atoms": 10000,
-                "monomer_ratios": {
-                    "tmc": 1.0,
-                    "mpd": 1.0,
-                    "ethanol": 0.5
-                }
-            },
-            {
-                "tag": "100k_base",
-                "temperature": 400,
-                "density": 0.8,
-                "total_atoms": 100000,
-                "monomer_ratios": {
-                    "tmc": 1.0,
-                    "mpd": 1.0,
-                    "ethanol": 0.5
-                }
+    "replicas": [
+        {
+            "tag": "10k_base",
+            "temperature": 300,
+            "density": 0.8,
+            "total_atoms": 10000,
+            "monomer_ratios": {
+                "tmc": 1.0,
+                "mpd": 1.0,
+                "ethanol": 0.5   
             }
-        ]
-    },
+        },
+        {
+            "tag": "100k_base",
+            "temperature": 400,
+            "density": 0.8,
+            "total_atoms": 100000,
+            "monomer_ratios": {
+                "tmc": 1.0,
+                "mpd": 1.0,
+                "ethanol": 0.5
+            }
+        }
+    ],
     "monomers": [
         {
             "name": "tmc",

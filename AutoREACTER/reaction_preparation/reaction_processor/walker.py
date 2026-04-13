@@ -83,10 +83,12 @@ def reactant_atom_walker(combined_reactant_molecule_object, start_atom_indexes, 
                     template_indexes[neighbor_index + 1].append(n)
             
             processed_indexes.append(atom_idx)
-    print(f"template_indexes: {template_indexes}")
+    # Debug print to show the contents of each shell after the walk is complete
+    # print(f"template_indexes: {template_indexes}")
     # Atoms at the furthest distance reached to create the edge atom section in the map file
     edge_atoms = template_indexes[max_bonds]
-    print("Edge atoms at max distance shell:", edge_atoms)
+    # Debug print to show which atoms are considered edge atoms at the max distance shell
+    # print("Edge atoms at max distance shell:", edge_atoms)
     # Flatten all shells into a single list of indices representing the local environment
     reactant_template_indexes = [x for v in template_indexes.values() for x in v]
     return reactant_template_indexes, edge_atoms

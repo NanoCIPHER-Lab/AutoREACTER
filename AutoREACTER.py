@@ -17,6 +17,7 @@ from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions impor
 from AutoREACTER.reaction_preparation.lunar_client.molecule_3d_preparation import Molecule3DPreparation
 from AutoREACTER.reaction_preparation.lunar_client.lunar_api_wrapper import LunarAPIWrapper
 from AutoREACTER.reaction_preparation.lunar_client.REACTER_files_builder import REACTERFilesBuilder
+from AutoREACTER.sim_setup.simulation_setup import SimulationSetupManager
 
 def _move_image(src: Path, dest: Path) -> None:
     """
@@ -67,7 +68,7 @@ def save_image(img: Image.Image, path: str, label: str = "Image") -> None:
     try:
         if hasattr(img, "save"):
             img.save(path)
-            print(f"[OK] {label} saved → {path}\n")
+            print(f"\n[OK] {label} saved → {path}")
         else:
             print(f"[ERROR] {label}: Object has no .save() method")
     except Exception as e:
@@ -252,6 +253,19 @@ def AutoREACTER(input_file: str) -> None:
 
     _move_image(images_dir, output_dir)
 
+
+
+    # Debug prints (can be commented out in production)
+    # print(f"Generated REACTER files: {reacter_files}")
+    # print(f"Updated inputs with 3D molecules: {updated_inputs_3d}")
+    # print(f"Prepared reactions with 3D molecules: {prepared_reactions_3d}")
+
+    Simulation_setup_manager = SimulationSetupManager()
+    updated_inputs_3d = Simulation_setup_manager.setup_and_write_simulation(
+        setup=updated_inputs_3d,
+        reacter_files=reacter_files,
+        run_dir=output_dir
+    )
     print("\n[INFO] AutoREACTER workflow completed successfully.\n")
     print(f"Final REACTER files are located in: {output_dir}")
 
