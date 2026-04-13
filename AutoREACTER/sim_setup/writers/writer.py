@@ -4,6 +4,7 @@ from pathlib import Path
 from AutoREACTER.sim_setup.writers.lammps_settings import LammpsInitialSettings
 from AutoREACTER.reaction_preparation.lunar_client.REACTER_files_builder import REACTERFiles
 from AutoREACTER.sim_setup.writers.densification_writer import DensificationWriter
+from AutoREACTER.sim_setup.writers.pre_eq_writer import PreEqWriter
 from AutoREACTER.input_parser import SimulationSetup
 
 class Writer:
@@ -30,4 +31,11 @@ class Writer:
                 replica=replica, 
                 sim_name=sim_name
             )
+            PreEqWriter(
+                out_dir=sub_dir, 
+                settings=self.settings, 
+                replica=replica, 
+                sim_name=sim_name
+            )
+
         

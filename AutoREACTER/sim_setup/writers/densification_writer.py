@@ -16,7 +16,7 @@ class DensificationWriter:
         self.timestep = 0.01 
         self.out_dir = out_dir
         self.sim_name = sim_name
-        self.in_dense_file_name = self.write_lammps_densification_files(replica=replica)
+        self.in_dense_file_name = self.write_lammps_densification_file(replica=replica)
 
 
     def _write_empty_box_data(self,  replica: Replica, output_dir: Path)-> None:
@@ -45,7 +45,7 @@ class DensificationWriter:
         with open(output_dir / "empty_box.data", 'w') as f:
             f.write("\n".join(lines))
         
-    def write_lammps_densification_files(self, replica: Replica) -> None:
+    def write_lammps_densification_file(self, replica: Replica) -> None:
         tag = f"{self.sim_name}_{replica.tag}"
         dens_dir = self.out_dir / "1_densification"
         dens_dir.mkdir(parents=True, exist_ok=True)
@@ -58,7 +58,7 @@ class DensificationWriter:
         total_steps, thermo_interval = self._run_calculation()
         
         lines = [
-            f"# {tag} Densification Script - Generated {now}\n",
+            f"# {tag} Densification Script - Generated {now} by AutoREACTER\n",
             "#------------Initialization------------",
             f"{'units':<16} {s.units}",
             f"{'dimension':<16} {s.dimension}",
