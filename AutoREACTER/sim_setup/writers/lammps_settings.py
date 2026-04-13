@@ -16,8 +16,8 @@ class LammpsSettings:
     pair_style: str 
     kspace_style: str
     pair_modify: str 
-    neighbor: str
-    neigh_modify: str 
+    neighbor: str | None
+    neigh_modify: str | None
 
 class LammpsInitialSettings:
     def __init__(self, reacter_files: REACTERFiles):
@@ -43,8 +43,9 @@ class LammpsInitialSettings:
             neigh_modify=None
         )
 
-    def get_LUNAR_lammps_settings(self) -> None:
+    def get_LUNAR_lammps_settings(self) -> LammpsSettings:
         settings = self._defults()
+        lines = []
         try:
             with open(self.lunar_in_file_location, 'r') as f:
                 lines = f.readlines()
