@@ -111,7 +111,8 @@ class Replica:
         monomer_counts: A dictionary mapping monomer IDs to their counts.
         monomer_ratios: A dictionary mapping monomer IDs to their stoichiometric ratios.
         total_atoms: The total number of atoms in the system (required for ratio mode).
-        box_volume: The estimated box volume for the system (cubic Angstroms), to be calculated based on density and total atom count.
+        initial_box_volume: The estimated initial box volume based on density and monomer counts (cubic Angstroms).
+        initial_box_length: The estimated initial box length assuming a cubic box (Angstroms).
     """
     tag: str
     temperature: float
@@ -119,8 +120,8 @@ class Replica:
     monomer_counts: dict | None = None
     monomer_ratios: dict | None = None
     total_atoms: int | None = None
-    box_volume: float | None = None    # In cubic Angstroms
-    box_length: float | None = None    # Assuming a cubic box
+    initial_box_volume: float | None = None    # In cubic Angstroms
+    initial_box_length: float | None = None    # Assuming a cubic box
 
 
 @dataclass(slots=True)
