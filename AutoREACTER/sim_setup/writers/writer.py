@@ -5,6 +5,8 @@ from AutoREACTER.sim_setup.writers.lammps_settings import LammpsInitialSettings
 from AutoREACTER.reaction_preparation.lunar_client.REACTER_files_builder import REACTERFiles
 from AutoREACTER.sim_setup.writers.densification_writer import DensificationWriter
 from AutoREACTER.sim_setup.writers.pre_eq_writer import PreEqWriter
+from AutoREACTER.sim_setup.writers.rxn_first_stage_writer import RxnFirstStageWriter
+from AutoREACTER.sim_setup.writers.rxn_second_stage_writer import RxnSecondStageWriter
 from AutoREACTER.input_parser import SimulationSetup
 
 class Writer:
@@ -24,6 +26,7 @@ class Writer:
         for replica in replicas:
             sub_dir = lammps_dir / f"{sim_name}_{replica.tag}"
             sub_dir.mkdir(parents=True, exist_ok=True)
+            
             DensificationWriter(
                 out_dir=sub_dir, 
                 settings=self.settings, 
@@ -31,6 +34,7 @@ class Writer:
                 replica=replica, 
                 sim_name=sim_name
             )
+            
             PreEqWriter(
                 out_dir=sub_dir, 
                 settings=self.settings, 
@@ -38,4 +42,22 @@ class Writer:
                 sim_name=sim_name
             )
 
+            RxnFirstStageWriter(
+                out_dir=sub_dir,
+                settings=self.settings,
+                reacter_files=self.reacter_files,
+                replica=replica,
+                sim_name=sim_name
+            )
+
+
+            RxnSecondStageWriter(
+                out_dir=sub_dir,
+                settings=self.settings,
+                reacter_files=self.reacter_files,
+                replica=replica,
+                sim_name=sim_name
+            )
+
+        print(f"[SUCCESS] All input files written to: {lammps_dir}")
         
