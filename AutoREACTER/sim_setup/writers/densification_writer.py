@@ -55,7 +55,7 @@ class DensificationWriter:
         types = self._get_force_field_types()
         s = self.settings
         rf = self.reacter_files
-        total_steps = self._run_calculation(replica)
+        total_steps = self._run_calculation()
         
         lines = [
             f"# {tag} Densification Script - Generated {now}",
@@ -152,7 +152,9 @@ class DensificationWriter:
         with open(in_dest_location, 'w') as f:
             f.write("\n".join(lines))
         
-        return in_dest_location
+        self._copy_required_files(dest_dir=dens_dir)
+
+        return in_dest_location.name
 
     def _get_force_field_types(self) -> dict:
         data_file = self.reacter_files.force_field_data
@@ -188,7 +190,7 @@ class DensificationWriter:
 
         return type_counts
     
-    def _run_calculation(self, replica) -> int:
+    def _run_calculation(self) -> int:
         # We start at 1/4 density, so target volume is 0.25 of initial
         # L_target / L_initial = cuberoot(0.25)
         l_ratio = (0.25) ** (1/3)
@@ -199,4 +201,26 @@ class DensificationWriter:
         steps_needed = total_time / self.timestep
         
         # Return steps with 20% buffer to ensure fix halt catches it
-        return int(steps_needed * 1.2)
+        if steps_needed <= 0:
+            raise ValueError(f"Calculated negative steps needed for densification: {steps_needed}. Check erate and timestep values.")
+        if steps_needed > 1000:
+            round_steps = round(steps_needed * 1.2, -3)  # Round to nearest 1000
+        elif steps_needed > 100:
+            round_steps = round(steps_needed * 1.2, -2) # Round to nearest 100
+        elif steps_needed > 10:
+            round_steps = round(steps_needed * 1.2, -1) # Round to nearest 10
+        else:
+            round_steps = round(steps_needed * 1.2) # Round to nearest integer
+        return round_steps
+
+    def _copy_required_files(self, dest_dir: Path):
+        rf = self.reacter_files
+        
+        if rf.force_field_data.exists():
+            shutil.copy2(rf.force_field_data, dest_dir / rf.force_field_data.name)
+        
+        for mol in rf.molecule_files:
+            if mol.molecule_files and mol.molecule_files.lmp_molecule_file.exists():
+                src = mol.molecule_files.lmp_molecule_file
+                shutil.copy2(src, dest_dir / src.name)
+    
