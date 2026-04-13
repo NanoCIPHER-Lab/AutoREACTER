@@ -19,7 +19,7 @@ class LammpsSettings:
     neighbor: str
     neigh_modify: str 
 
-class LammpsInitialSettings:
+class InitialSetupWriter:
     def __init__(self, reacter_files: REACTERFiles):
         self.reacter_files = reacter_files
         self.lunar_in_file_location = reacter_files.in_file
@@ -46,10 +46,10 @@ class LammpsInitialSettings:
     def get_LUNAR_lammps_settings(self) -> None:
         settings = self._defults()
         try:
-            with open(self.lunar_in_file_location, 'r') as f:
+            with open(self.lunar_in_file_location, 'w') as f:
                 lines = f.readlines()
         except Exception as e:
-            print(f"[WARNING] Could not read LAMMPS input file at {self.lunar_in_file_location}: {e}")
+            print(f"[WARNING] Could not create LAMMPS input file at {self.lunar_in_file_location}: {e}")
             print("[WARNING] Proceeding with default LAMMPS settings.")
         
         for field in fields(settings):
