@@ -39,4 +39,4 @@ python AutoREACTER.py -c all
 2. Use all with caution — this will permanently delete all cached runs
 3. Using a numeric value (e.g., 7) is safer for routine cleanup
 4. Jupyter Notebook examples are available in the examples directory
-4. If not, you can simply delete manually the `cache/` folder in the root directory.
+5. If not, you can simply delete manually the `cache/` folder in the root directory.
