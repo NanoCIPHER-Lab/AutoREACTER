@@ -22,12 +22,12 @@ mode = 'all'
 ### Cache cleanup via (CLI)
 
 Run the interactive cleanup utility from the command line:
-```python
+```bash
 # Delete runs older than N days (e.g., 7, 30)
 python AutoREACTER.py --cleanup N
 python AutoREACTER.py -c N
 ```
-```python
+```bash
 # Delete all cached runs
 python AutoREACTER.py --cleanup all
 python AutoREACTER.py -c all
