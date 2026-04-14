@@ -21,7 +21,7 @@ There are two primary ways to define your system composition: **Ratio Mode** and
 Regardless of which mode you use, every `input.json` needs global settings and a list of your chemical building blocks.
 
 * **`simulation_name`**: A string used to name your output directories and files.
-* **`force_field`**: *(Optional)* Specifies the force field LUNAR should use to assign atom types and charges (e.g., `"PCFF"`).If omitted, AutoREACTER defaults to PCFF unless you specify a force field.
+* **`force_field`**: *(Optional)* Specifies the force field LUNAR should use to assign atom types and charges (e.g., `"PCFF"`). If omitted, AutoREACTER defaults to `"PCFF"`.
 
 ---
 
