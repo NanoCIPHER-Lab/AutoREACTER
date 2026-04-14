@@ -135,7 +135,7 @@ For each object inside the `replicas` list, you must define:
 * **`density`**: The initial target density of the simulation box (in g/cm³).
 * **Composition Setup:** Either provide `total_atoms` alongside `monomer_ratios` (Ratio Mode) **OR** provide `monomer_counts` (Count Mode). **Do not mix them in the same replica**.
 ---
-### 4. Specifing the monomers or molecules.
+### 4. Specifying the monomers or molecules.
 
 In the monomers section, you define each molecule as a dictionary entry.
 Each monomer (or molecule) must include:
