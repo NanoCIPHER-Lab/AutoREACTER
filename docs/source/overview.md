@@ -1,11 +1,11 @@
 ![AutoREACTER Logo](_static/logo.png)
 # Welcome to AutoREACTER
 
-**AutoREACTER v0.2.0**
+**AutoREACTER v0.2-beta.0**
 
 AutoREACTER is a Python-based toolkit for managing and automating reaction modeling in LAMMPS, developed as part of the Multiscale Polymer Toolkit (MuPT).
 
-**Note: AutoREACTER is currently in v0.2-beta. It is under active development, and APIs or functionality may change as we continue to expand the reaction library and force field support.**
+**Note: AutoREACTER is currently in v0.2-beta.0. It is under active development, and APIs or functionality may change as we continue to expand the reaction library and force field support.**
 
 AutoREACTER is a powerful Python-based toolkit designed to automate the setup and modeling of complex chemical reactions in LAMMPS. AutoREACTER bridges the gap between raw chemical structures and REACTER-ready LAMMPS input files for atomistic simulations.
 
