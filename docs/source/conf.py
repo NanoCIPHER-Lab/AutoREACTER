@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.abspath('../../'))
 project = 'AutoREACTER'
 copyright = '2026, Janitha Mahanthe, Jacob Gissinger'
 author = 'Janitha Mahanthe, Jacob Gissinger'
-release = '0.2.0'
+release = '0.2-beta.0'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
