@@ -80,7 +80,7 @@ AutoREACTER will automatically calculate the correct number of molecules to hit 
 ```
 
 #### Option B: Count Mode (Exact Molecule Count)
-Use Count Mode when you you know number of molecules instead of number of atoms. Instead of providing a total atom target, you explicitly define the exact number of each molecule using `monomer_counts`.
+Use Count Mode when you know number of molecules instead of number of atoms. Instead of providing a total atom target, you explicitly define the exact number of each molecule using `monomer_counts`.
 
 **Example `input.json` (Count Mode):**
 ```json
