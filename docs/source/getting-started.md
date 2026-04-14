@@ -52,7 +52,7 @@ cd examples
 
 ```bash
 python -m pip install -U pip
-python -m pip install -e .
+python -m pip install -e ..
 ```
 *Register the Jupyter Kernel*
 
