@@ -1,0 +1,39 @@
+name: "Build and Deploy Docs"
+
+on:
+  push:
+    branches:
+      - main
+
+# Required to allow the GitHub Actions bot to push to the gh-pages branch
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip" # Added caching to speed up future workflow runs
+
+      - name: Install dependencies
+        run: |
+          pip install sphinx myst-parser furo
+
+      - name: Build documentation
+        run: |
+          cd docs
+          make html
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/_build/html # Note: Sphinx default is usually _build/html. Change back to build/html if you customized your Makefile.
