@@ -75,10 +75,10 @@ If want to generate the LAMMPS files quickly, you can run AutoREACTER directly f
 Ensure you are in the root AutoREACTER directory, then run the `AutoREACTER.py` script with relative path to an your `input.json` file:
 
 ```bash
-python AutoREACTER.py -i examples/example_input.json
+python AutoREACTER.py -i examples/example_1_inputs_ratio_mode.json
 ```
 
-**Note:** Replace examples/example_input.json with the actual relative path of a JSON file in your computer.
+**Note:** Replace `examples/example_1_inputs_ratio_mode.json` with the actual relative path of a JSON file in your computer.
 
 AutoREACTER will read the JSON, process the chemistry, output your LAMMPS setup scripts into a newly generated, timestamped run directory.
 
