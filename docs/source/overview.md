@@ -19,7 +19,7 @@ AutoREACTER removes this manual process of defining reaction templates, preparin
 
 2. **Automatic Reaction Detection:** Molecules are first filtered based on functional group availability. Based on these functional groups, the necessary reaction templates for REACTER are automatically generated.
 
-3. **Automated Force Field Integration:** Fully integrated with the LUNAR API to automatically assign partial charges, and for all reactant and product templates. The available force fields are listed in AutoREACTER-Supported Force Fields documentation.
+3. **Automated Force Field Integration:** Fully integrated with the LUNAR API to automatically assign partial charges for all reactant and product templates. Available force field options are selected through the input configuration workflow.
 
 4. **Smart File Generation:** Automatically generates fully configured LAMMPS input scripts, including system densification, pre-equilibration, and multi-stage reaction files based on temperature, density, and monomer/molecule ratios or counts.
 
