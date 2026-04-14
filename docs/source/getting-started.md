@@ -3,7 +3,7 @@
 
 This guide will guide you through setting up your environment, installing the required dependencies, and running reaction modeling setup for REACTER. 
 
-AutoREACTER relies heavily on cheminformatics libraries like RDKit, and numeric computing libraries like NumPy and Pandas, so we strongly recommend using **Conda** to manage your Python environment. 
+AutoREACTER relies heavily on cheminformatics libraries like RDKit, and numeric computing libraries like Pandas, so we strongly recommend using **Conda** to manage your Python environment. 
 
 ---
 
