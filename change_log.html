@@ -267,62 +267,61 @@ This serves two purposes:
     At release time, you can move the Unreleased section changes into a new release version section.
  -->
 <hr class="docutils" />
-<section id="v0-2-0-2026-04-17">
-<h2>v0.2.0 - 2026-04-17<a class="headerlink" href="#v0-2-0-2026-04-17" title="Link to this heading">¶</a></h2>
-<section id="breaking-changes">
-<h3>BREAKING CHANGES<a class="headerlink" href="#breaking-changes" title="Link to this heading">¶</a></h3>
-<ol class="arabic simple">
-<li><p><strong>Architectural Shift: Migrated from a script-based workflow to a Class-Based Architecture. Not backward compatible</strong></p></li>
-<li><p>Input Schema (input.json): Replicas now require explicit per-instance density and temperature definitions. Added force field specification on input.json.</p></li>
-<li><p>Atom Mapping: Switched from RDKit map numbers to isotope numbers. 0.1.0v relying on map numbers for atom tracking will require migration.</p></li>
-<li><p>Directory Structure: Outputs are no longer saved to the root directory; they are now stored in dated run folders.</p></li>
-<li><p>Library-Driven Workflow: Included functional_groups_library.py and reactions_library.py” to store structured dictionary definitions and SMIRKS transformations for automated reaction discovery.</p></li>
-</ol>
+<section id="id1">
+<h2>[0.2.0] - 2026-04-17<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h2>
+<section id="breaking">
+<h3>Breaking<a class="headerlink" href="#breaking" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Migrated to a class-based architecture (not backward compatible).</p></li>
+<li><p>Updated input schema: explicit density and temperature per replica required.</p></li>
+<li><p>Replaced RDKit atom map numbers with isotope-based tracking.</p></li>
+<li><p>Changed output structure to dated run directories.</p></li>
+<li><p>Introduced library-driven workflow for reactions and functional groups.</p></li>
+</ul>
 </section>
 <section id="added">
 <h3>Added<a class="headerlink" href="#added" title="Link to this heading">¶</a></h3>
-<ol class="arabic simple">
-<li><p>Command-Line Interface (CLI): Introduced AutoREACTER.py as the primary entry point, supporting automated workflows with –help and –cleanup flags.</p></li>
-<li><p>Interactive Visualizations: Added Jupyter Notebook integration for step-by-step visual validation of monomers, functional groups, and reactant/product templates.</p></li>
-<li><p>Modern Atom Typing: Native support for string-based LAMMPS atom types (e.g., PCFF) through internal integration.</p></li>
-<li><p>Force Field Selection: Users can now explicitly specify supported force fields directly within the input.json configuration.</p></li>
-<li><p>Retention Utility: Added RetentionCleanup to manage disk space by removing aged simulation runs.</p></li>
-<li><p>Full Logic Separation: Each stage now has its own dedicated detector and library (e.g., functional_groups, reactions), allowing for isolated debugging and cleaner updates.</p></li>
-<li><p>Non-Monomer Control: Added a specialized detector for non-reactive species, giving users the choice to keep or discard them in the final simulation.</p></li>
-</ol>
+<ul class="simple">
+<li><p>CLI interface (AutoREACTER.py) with –help and –cleanup support.</p></li>
+<li><p>Jupyter-based interactive visualization tools.</p></li>
+<li><p>Support for string-based LAMMPS atom types (e.g., PCFF).</p></li>
+<li><p>Force field selection via input.json.</p></li>
+<li><p>Retention cleanup utility for managing old runs.</p></li>
+<li><p>Modular detectors and libraries for workflow stages.</p></li>
+<li><p>Control over non-reactive species retention.</p></li>
+</ul>
 </section>
 <section id="changed">
 <h3>Changed<a class="headerlink" href="#changed" title="Link to this heading">¶</a></h3>
-<ol class="arabic simple">
-<li><p>Core Logic: Refactored workflow into modular classes: InputParser, Detector, ReactionSelection, TemplateBuilder, and LUNARClient.</p></li>
-<li><p>Mapping Robustness: Atom tracking now utilizes isotopes (will be deleted after completion of atom mapping) to prevent the loss of metadata during chemical reactions.</p></li>
-<li><p>Input Optimization: Refactored the preparation logic to generate only necessary LAMMPS input files based on explicit replica definitions, reducing file bloat.</p></li>
-</ol>
+<ul class="simple">
+<li><p>Refactored core workflow into modular classes.</p></li>
+<li><p>Improved atom mapping robustness using isotopes.</p></li>
+<li><p>Optimized input generation to reduce unnecessary LAMMPS files.</p></li>
+</ul>
 </section>
 <section id="fixed">
 <h3>Fixed<a class="headerlink" href="#fixed" title="Link to this heading">¶</a></h3>
-<ol class="arabic simple">
-<li><p>Path Validation: Implemented strict directory validation for LUNAR, the system now rejects invalid paths during the input phase.</p></li>
-<li><p>Index Corruption: Resolved an issue where reaction indices were lost when dropping reactions. By utilizing Python dataclasses and setting an <code class="docutils literal notranslate"><span class="pre">active_status</span> <span class="pre">=</span> <span class="pre">False</span></code>, the system now preserves the original data structure and prevents data leaks or data losses.</p></li>
-<li><p>Duplicate Handling: Fixed bugs causing duplicate reaction instances during the discovery phase. The system now uses dataclass-based validation to flag duplicates as inactive <code class="docutils literal notranslate"><span class="pre">(active_status</span> <span class="pre">=</span> <span class="pre">False)</span></code> rather than removing them, preventing data crashes and ensuring a clean run.</p></li>
-</ol>
+<ul class="simple">
+<li><p>Enforced strict validation of external tool paths.</p></li>
+<li><p>Prevented reaction index corruption during filtering.</p></li>
+<li><p>Eliminated duplicate reactions during discovery.</p></li>
+</ul>
 </section>
 </section>
 <hr class="docutils" />
-<section id="v0-1-0-2026-02-17">
-<h2>v0.1.0 - 2026-02-17<a class="headerlink" href="#v0-1-0-2026-02-17" title="Link to this heading">¶</a></h2>
-<section id="id1">
-<h3>Added<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h3>
-<ol class="arabic simple">
-<li><p>Initial Release: Formal launch of AutoREACTER as a script-based automation workflow for polymer simulation preparation.</p></li>
-<li><p>Jupyter-Exclusive Execution: Initial workflow designed specifically for interactive execution within Jupyter Notebook environments.</p></li>
-<li><p>SMARTS-Based Detection: Implementation of a core Functional Group Detector using SMARTS-based pattern matching to classify monomers (only supported for step growth monomers only).</p></li>
-<li><p>Library-Driven Workflow: Included functional_groups_library.py and reactions_library.py to store structured dictionary definitions and SMIRKS transformations for automated reaction discovery.</p></li>
-<li><p>LUNAR Integration: Automated passing of monomer and non-monomer MOL files to LUNAR for 3D geometry and initial property preparation.</p></li>
-<li><p>Deterministic Reindexing: Implementation of NumPy-based reindexing to generate consistent reaction template molecules and mapping files for REACTER.</p></li>
-<li><p>LAMMPS Support: Generation of ready-to-run REACTER input files for LAMMPS, utilizing legacy integer-based atom typing.</p></li>
-<li><p>Unified Input Parsing: Introduced input_parser.py to validate a single structured inputs.json file defining temperatures, densities, and SMILES-based monomer compositions.</p></li>
-</ol>
+<section id="id2">
+<h2>[0.1.0] - 2026-02-17<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h2>
+<section id="id3">
+<h3>Added<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Initial release of AutoREACTER as a script-based workflow for polymer simulation preparation.</p></li>
+<li><p>Support for Jupyter Notebook–based interactive execution.</p></li>
+<li><p>Functional group detection using SMARTS-based pattern matching (step-growth monomers only).</p></li>
+<li><p>Library-driven workflow with structured definitions for functional groups and reactions.</p></li>
+<li><p>Deterministic reindexing for consistent reaction templates and mapping files.</p></li>
+<li><p>Generation of REACTER-compatible LAMMPS input files using integer-based atom typing.</p></li>
+<li><p>Unified input parsing via a single structured input file for simulation configuration.</p></li>
+</ul>
 </section>
 </section>
 </section>
@@ -383,15 +382,15 @@ This serves two purposes:
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">Change Log</a><ul>
-<li><a class="reference internal" href="#v0-2-0-2026-04-17">v0.2.0 - 2026-04-17</a><ul>
-<li><a class="reference internal" href="#breaking-changes">BREAKING CHANGES</a></li>
+<li><a class="reference internal" href="#id1">[0.2.0] - 2026-04-17</a><ul>
+<li><a class="reference internal" href="#breaking">Breaking</a></li>
 <li><a class="reference internal" href="#added">Added</a></li>
 <li><a class="reference internal" href="#changed">Changed</a></li>
 <li><a class="reference internal" href="#fixed">Fixed</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#v0-1-0-2026-02-17">v0.1.0 - 2026-02-17</a><ul>
-<li><a class="reference internal" href="#id1">Added</a></li>
+<li><a class="reference internal" href="#id2">[0.1.0] - 2026-02-17</a><ul>
+<li><a class="reference internal" href="#id3">Added</a></li>
 </ul>
 </li>
 </ul>
