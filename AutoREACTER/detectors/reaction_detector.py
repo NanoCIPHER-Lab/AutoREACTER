@@ -25,6 +25,7 @@ TODO: Missing Polymerization Mechanisms
 - Spiro Polymers
 - Pseudopolyrotaxanes and Polyrotaxanes
 - Polymerization in Supercritical Carbon Dioxide
+- CF2=CF2 (Tetrafluoroethylene) Polymerization : Seprate case from typical CH2=CHY vinyl polymerization due to unique reactivity and applications. 
 """
 
 import pathlib
