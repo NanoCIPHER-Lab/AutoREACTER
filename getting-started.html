@@ -200,8 +200,9 @@
 <li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="input-configuration.html">Input Configuration.</a></li>
 <li class="toctree-l1"><a class="reference internal" href="supported-reactions.html">Supported Reactions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="supported-reactions.html#future-expansions">Future Expansions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="supported-force-fields.html">Supported Force Fields</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clean_up.html">Cleanup Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="change_log.html">Change Log</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contact.html">Contact us</a></li>
 </ul>
 
@@ -267,6 +268,12 @@
 </pre></div>
 </div>
 <p><strong>Note</strong>: You must run conda activate autoRX every time you open a new terminal to use AutoREACTER.</p>
+<section id="step-2-1-download-and-prepare-lunar-prerequisite">
+<h3>Step 2.1: Download and Prepare LUNAR (Prerequisite)<a class="headerlink" href="#step-2-1-download-and-prepare-lunar-prerequisite" title="Link to this heading">¶</a></h3>
+<p>AutoREACTER requires the LUNAR package to handle atom typing. You must have this downloaded before running any examples.</p>
+<p>Download LUNAR: Clone or download the repository from <a class="reference external" href="https://github.com/CMMRLab/LUNAR">https://github.com/CMMRLab/LUNAR</a>.</p>
+<p>Note the Path: Keep track of the full directory path where LUNAR is saved on your computer (e.g., /home/user/software/LUNAR). During your first run, AutoREACTER will prompt you to enter this directory path. The path is then saved locally within the AutoREACTER.</p>
+</section>
 </section>
 <section id="step-3-run-your-first-example">
 <h2>Step 3: Run Your First Example<a class="headerlink" href="#step-3-run-your-first-example" title="Link to this heading">¶</a></h2>
@@ -371,7 +378,10 @@ python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </sp
             <ul>
 <li><a class="reference internal" href="#">Getting Started</a><ul>
 <li><a class="reference internal" href="#step-1-clone-the-repository">Step 1: Clone the Repository</a></li>
-<li><a class="reference internal" href="#step-2-set-up-the-conda-environment">Step 2: Set Up the Conda Environment</a></li>
+<li><a class="reference internal" href="#step-2-set-up-the-conda-environment">Step 2: Set Up the Conda Environment</a><ul>
+<li><a class="reference internal" href="#step-2-1-download-and-prepare-lunar-prerequisite">Step 2.1: Download and Prepare LUNAR (Prerequisite)</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#step-3-run-your-first-example">Step 3: Run Your First Example</a><ul>
 <li><a class="reference internal" href="#option-a-the-interactive-notebook-recommended-for-beginners">Option A: The Interactive Notebook (Recommended for Beginners)</a></li>
 <li><a class="reference internal" href="#option-b-the-automated-cli">Option B: The Automated CLI</a></li>

@@ -15,7 +15,7 @@ Welcome to the AutoREACTER documentation.
 AutoREACTER is a tool for automated reaction-based molecular system generation.
 This guide covers setup, input configuration, and supported reactions.
 
-**Note: AutoREACTER is currently in v0.2-beta. It is under active development, and APIs or functionality may change as we continue to expand the reaction library and force field support.**
+**Note: AutoREACTER is currently in v0.2-beta and under active development. APIs, configuration schemas, and core functionality may change or break without notice as we expand reaction library and force field support**
 
 .. toctree::
    :maxdepth: 1
@@ -25,7 +25,9 @@ This guide covers setup, input configuration, and supported reactions.
    getting-started.md
    input-configuration.md
    supported-reactions.md
+   supported-force-fields.md
    clean_up.md
+   change_log.md  
    contact.md
 
 .. toctree::

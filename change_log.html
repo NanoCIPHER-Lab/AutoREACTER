@@ -3,11 +3,11 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Change Log" href="change_log.html"><link rel="prev" title="Supported Force Fields" href="supported-force-fields.html">
+<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Contact us" href="contact.html"><link rel="prev" title="Cleanup Mode" href="clean_up.html">
         <link rel="prefetch" href="_static/logo.png" as="image">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
-        <title>Cleanup Mode - AutoREACTER 0.2-beta.0 documentation</title>
+        <title>Change Log - AutoREACTER 0.2-beta.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -201,8 +201,8 @@
 <li class="toctree-l1"><a class="reference internal" href="input-configuration.html">Input Configuration.</a></li>
 <li class="toctree-l1"><a class="reference internal" href="supported-reactions.html">Supported Reactions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="supported-force-fields.html">Supported Force Fields</a></li>
-<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Cleanup Mode</a></li>
-<li class="toctree-l1"><a class="reference internal" href="change_log.html">Change Log</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clean_up.html">Cleanup Mode</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Change Log</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contact.html">Contact us</a></li>
 </ul>
 
@@ -224,7 +224,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="_sources/clean_up.md.txt" title="View this page">
+  <a class="muted-link" href="_sources/change_log.md.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -243,42 +243,87 @@
         </div>
         <article role="main" id="furo-main-content">
           <p><img alt="AutoREACTER Logo" src="_images/logo.png" /></p>
-<section id="cleanup-mode">
-<h1>Cleanup Mode<a class="headerlink" href="#cleanup-mode" title="Link to this heading">¶</a></h1>
-<p>This feature allows you to clean up cached data based on retention time or remove all cached runs.<br />
-It is useful for freeing disk space and maintaining a clean working environment.</p>
-<p>Cleanup can be performed via both the CLI and Jupyter Notebook.</p>
+<section id="change-log">
+<h1>Change Log<a class="headerlink" href="#change-log" title="Link to this heading">¶</a></h1>
+<p>All notable changes to this project will be documented in this file.</p>
+<p>The format is based on <a class="reference external" href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>, and this project adheres to <a class="reference external" href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
+<!--
+DRAFT - USE THIS FOR FUTURE RELEASES
+
+Use this section to track changes you are currently working on but haven't "officially" labeled as a version yet.
+
+## [X.Y.Z] - YYYY-MM- DD keep data format ISO standard
+Added : for new features.
+Changed:  for changes in existing functionality.
+Deprecated: for soon-to-be removed features.
+Removed: for now removed features.
+Fixed: for any bug fixes.
+Security: in case of vulnerabilities.
+
+
+You can keep Unreleased changes here until you are ready to label a new version. Once you label a version, move the unreleased changes to a new section with the version number and date.
+This serves two purposes:
+    People can see what changes they might expect in upcoming releases
+    At release time, you can move the Unreleased section changes into a new release version section.
+ -->
 <hr class="docutils" />
-<section id="cache-cleanup-via-jupyter-notebook">
-<h2>Cache cleanup via Jupyter Notebook<a class="headerlink" href="#cache-cleanup-via-jupyter-notebook" title="Link to this heading">¶</a></h2>
-<p>In this cell, you just have to specify the number of dates backward or <code class="docutils literal notranslate"><span class="pre">all</span></code> as the mode.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># &#39;all&#39; → remove all cached data</span>
-<span class="c1"># int   → keep last N days (e.g., mode=3 keeps last 3 days)</span>
-<span class="n">mode</span> <span class="o">=</span> <span class="s1">&#39;all&#39;</span>
-</pre></div>
-</div>
-</section>
-<section id="cache-cleanup-via-cli">
-<h2>Cache cleanup via (CLI)<a class="headerlink" href="#cache-cleanup-via-cli" title="Link to this heading">¶</a></h2>
-<p>Run the interactive cleanup utility from the command line:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Delete runs older than N days (e.g., 7, 30)</span>
-python<span class="w"> </span>AutoREACTER.py<span class="w"> </span>--cleanup<span class="w"> </span>N
-python<span class="w"> </span>AutoREACTER.py<span class="w"> </span>-c<span class="w"> </span>N
-</pre></div>
-</div>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Delete all cached runs</span>
-python<span class="w"> </span>AutoREACTER.py<span class="w"> </span>--cleanup<span class="w"> </span>all
-python<span class="w"> </span>AutoREACTER.py<span class="w"> </span>-c<span class="w"> </span>all
-</pre></div>
-</div>
-<p><strong>Notes:</strong></p>
+<section id="v0-2-0-2026-04-17">
+<h2>v0.2.0 - 2026-04-17<a class="headerlink" href="#v0-2-0-2026-04-17" title="Link to this heading">¶</a></h2>
+<section id="breaking-changes">
+<h3>BREAKING CHANGES<a class="headerlink" href="#breaking-changes" title="Link to this heading">¶</a></h3>
 <ol class="arabic simple">
-<li><p>In each mode, the yyyy-mm-dd folder for today will not be deleted</p></li>
-<li><p>Use all with caution — this will permanently delete all cached runs</p></li>
-<li><p>Using a numeric value (e.g., 7) is safer for routine cleanup</p></li>
-<li><p>Jupyter Notebook examples are available in the examples directory</p></li>
-<li><p>If not, you can simply delete manually the <code class="docutils literal notranslate"><span class="pre">cache/</span></code> folder in the root directory.</p></li>
+<li><p><strong>Architectural Shift: Migrated from a script-based workflow to a Class-Based Architecture. Not backward compatible</strong></p></li>
+<li><p>Input Schema (input.json): Replicas now require explicit per-instance density and temperature definitions. Added force field specification on input.json.</p></li>
+<li><p>Atom Mapping: Switched from RDKit map numbers to isotope numbers. 0.1.0v relying on map numbers for atom tracking will require migration.</p></li>
+<li><p>Directory Structure: Outputs are no longer saved to the root directory; they are now stored in dated run folders.</p></li>
+<li><p>Library-Driven Workflow: Included functional_groups_library.py and reactions_library.py” to store structured dictionary definitions and SMIRKS transformations for automated reaction discovery.</p></li>
 </ol>
+</section>
+<section id="added">
+<h3>Added<a class="headerlink" href="#added" title="Link to this heading">¶</a></h3>
+<ol class="arabic simple">
+<li><p>Command-Line Interface (CLI): Introduced AutoREACTER.py as the primary entry point, supporting automated workflows with –help and –cleanup flags.</p></li>
+<li><p>Interactive Visualizations: Added Jupyter Notebook integration for step-by-step visual validation of monomers, functional groups, and reactant/product templates.</p></li>
+<li><p>Modern Atom Typing: Native support for string-based LAMMPS atom types (e.g., PCFF) through internal integration.</p></li>
+<li><p>Force Field Selection: Users can now explicitly specify supported force fields directly within the input.json configuration.</p></li>
+<li><p>Retention Utility: Added RetentionCleanup to manage disk space by removing aged simulation runs.</p></li>
+<li><p>Full Logic Separation: Each stage now has its own dedicated detector and library (e.g., functional_groups, reactions), allowing for isolated debugging and cleaner updates.</p></li>
+<li><p>Non-Monomer Control: Added a specialized detector for non-reactive species, giving users the choice to keep or discard them in the final simulation.</p></li>
+</ol>
+</section>
+<section id="changed">
+<h3>Changed<a class="headerlink" href="#changed" title="Link to this heading">¶</a></h3>
+<ol class="arabic simple">
+<li><p>Core Logic: Refactored workflow into modular classes: InputParser, Detector, ReactionSelection, TemplateBuilder, and LUNARClient.</p></li>
+<li><p>Mapping Robustness: Atom tracking now utilizes isotopes (will be deleted after completion of atom mapping) to prevent the loss of metadata during chemical reactions.</p></li>
+<li><p>Input Optimization: Refactored the preparation logic to generate only necessary LAMMPS input files based on explicit replica definitions, reducing file bloat.</p></li>
+</ol>
+</section>
+<section id="fixed">
+<h3>Fixed<a class="headerlink" href="#fixed" title="Link to this heading">¶</a></h3>
+<ol class="arabic simple">
+<li><p>Path Validation: Implemented strict directory validation for LUNAR, the system now rejects invalid paths during the input phase.</p></li>
+<li><p>Index Corruption: Resolved an issue where reaction indices were lost when dropping reactions. By utilizing Python dataclasses and setting an <code class="docutils literal notranslate"><span class="pre">active_status</span> <span class="pre">=</span> <span class="pre">False</span></code>, the system now preserves the original data structure and prevents data leaks or data losses.</p></li>
+<li><p>Duplicate Handling: Fixed bugs causing duplicate reaction instances during the discovery phase. The system now uses dataclass-based validation to flag duplicates as inactive <code class="docutils literal notranslate"><span class="pre">(active_status</span> <span class="pre">=</span> <span class="pre">False)</span></code> rather than removing them, preventing data crashes and ensuring a clean run.</p></li>
+</ol>
+</section>
+</section>
+<hr class="docutils" />
+<section id="v0-1-0-2026-02-17">
+<h2>v0.1.0 - 2026-02-17<a class="headerlink" href="#v0-1-0-2026-02-17" title="Link to this heading">¶</a></h2>
+<section id="id1">
+<h3>Added<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h3>
+<ol class="arabic simple">
+<li><p>Initial Release: Formal launch of AutoREACTER as a script-based automation workflow for polymer simulation preparation.</p></li>
+<li><p>Jupyter-Exclusive Execution: Initial workflow designed specifically for interactive execution within Jupyter Notebook environments.</p></li>
+<li><p>SMARTS-Based Detection: Implementation of a core Functional Group Detector using SMARTS-based pattern matching to classify monomers (only supported for step growth monomers only).</p></li>
+<li><p>Library-Driven Workflow: Included functional_groups_library.py and reactions_library.py to store structured dictionary definitions and SMIRKS transformations for automated reaction discovery.</p></li>
+<li><p>LUNAR Integration: Automated passing of monomer and non-monomer MOL files to LUNAR for 3D geometry and initial property preparation.</p></li>
+<li><p>Deterministic Reindexing: Implementation of NumPy-based reindexing to generate consistent reaction template molecules and mapping files for REACTER.</p></li>
+<li><p>LAMMPS Support: Generation of ready-to-run REACTER input files for LAMMPS, utilizing legacy integer-based atom typing.</p></li>
+<li><p>Unified Input Parsing: Introduced input_parser.py to validate a single structured inputs.json file defining temperatures, densities, and SMILES-based monomer compositions.</p></li>
+</ol>
+</section>
 </section>
 </section>
 
@@ -287,23 +332,23 @@ python<span class="w"> </span>AutoREACTER.py<span class="w"> </span>-c<span clas
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="change_log.html">
+          <a class="next-page" href="contact.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Change Log</div>
+                <div class="title">Contact us</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="supported-force-fields.html">
+          <a class="prev-page" href="clean_up.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">Supported Force Fields</div>
+                <div class="title">Cleanup Mode</div>
                 
               </div>
             </a>
@@ -337,9 +382,18 @@ python<span class="w"> </span>AutoREACTER.py<span class="w"> </span>-c<span clas
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">Cleanup Mode</a><ul>
-<li><a class="reference internal" href="#cache-cleanup-via-jupyter-notebook">Cache cleanup via Jupyter Notebook</a></li>
-<li><a class="reference internal" href="#cache-cleanup-via-cli">Cache cleanup via (CLI)</a></li>
+<li><a class="reference internal" href="#">Change Log</a><ul>
+<li><a class="reference internal" href="#v0-2-0-2026-04-17">v0.2.0 - 2026-04-17</a><ul>
+<li><a class="reference internal" href="#breaking-changes">BREAKING CHANGES</a></li>
+<li><a class="reference internal" href="#added">Added</a></li>
+<li><a class="reference internal" href="#changed">Changed</a></li>
+<li><a class="reference internal" href="#fixed">Fixed</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#v0-1-0-2026-02-17">v0.1.0 - 2026-02-17</a><ul>
+<li><a class="reference internal" href="#id1">Added</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>

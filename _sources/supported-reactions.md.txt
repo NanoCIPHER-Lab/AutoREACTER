@@ -10,7 +10,7 @@ The core `Detector` module automatically identifies the following functional gro
 ---
 
 ### 1. Polyesterification
-These reactions form ester linkages (`-COO-`) and typically release water (`H₂O`) or hydrogen halides (e.g., `HCl`) as byproducts. AutoREACTER tracks and handles these byproducts natively.
+These reactions form ester linkages (`-COO-`) and typically release water (`H₂O`) or hydrogen halides (e.g., `HCl`) as byproducts. 
 
 * **Hydroxy–Carboxylic Acid Polycondensation**
   * *Reactants:* `-OH` + `-COOH`
@@ -24,7 +24,7 @@ These reactions form ester linkages (`-COO-`) and typically release water (`H₂
 ---
 
 ### 2. Polyamidation
-These reactions form amide linkages (`-CONH-`), which are critical for synthesizing nylons, Kevlar, and structural proteins. 
+These reactions form amide linkages (`-CONH-`)
 
 * **Amino Acid Polycondensation**
   * *Reactants:* `-NH₂` + `-COOH`
@@ -33,12 +33,6 @@ These reactions form amide linkages (`-CONH-`), which are critical for synthesiz
 * **Diamine + Di-Carboxylic Acid Halide Polycondensation**
   * *Reactants:* Two `-NH₂` groups + Two `-COX` groups
 
----
 
-## Future Expansions
-
-The NanoCIPHER team is actively working to expand this library.  
-Future versions of AutoREACTER will include support for additional reactions.
-
-If you would like support for a specific reaction, please open an issue on  
-[AutoREACTER GitHub Repository](https://github.com/NanoCIPHER-Lab/AutoREACTER).
+NOTE: If you would like support for a specific reaction, please open an issue on  
+&emsp;[AutoREACTER GitHub Repository](https://github.com/NanoCIPHER-Lab/AutoREACTER).

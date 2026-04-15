@@ -3,7 +3,7 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Cleanup Mode" href="clean_up.html"><link rel="prev" title="Input Configuration." href="input-configuration.html">
+<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Supported Force Fields" href="supported-force-fields.html"><link rel="prev" title="Input Configuration." href="input-configuration.html">
         <link rel="prefetch" href="_static/logo.png" as="image">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
@@ -200,8 +200,9 @@
 <li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="input-configuration.html">Input Configuration.</a></li>
 <li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Supported Reactions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#future-expansions">Future Expansions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="supported-force-fields.html">Supported Force Fields</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clean_up.html">Cleanup Mode</a></li>
+<li class="toctree-l1"><a class="reference internal" href="change_log.html">Change Log</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contact.html">Contact us</a></li>
 </ul>
 
@@ -250,7 +251,7 @@
 <hr class="docutils" />
 <section id="polyesterification">
 <h2>1. Polyesterification<a class="headerlink" href="#polyesterification" title="Link to this heading">¶</a></h2>
-<p>These reactions form ester linkages (<code class="docutils literal notranslate"><span class="pre">-COO-</span></code>) and typically release water (<code class="docutils literal notranslate"><span class="pre">H₂O</span></code>) or hydrogen halides (e.g., <code class="docutils literal notranslate"><span class="pre">HCl</span></code>) as byproducts. AutoREACTER tracks and handles these byproducts natively.</p>
+<p>These reactions form ester linkages (<code class="docutils literal notranslate"><span class="pre">-COO-</span></code>) and typically release water (<code class="docutils literal notranslate"><span class="pre">H₂O</span></code>) or hydrogen halides (e.g., <code class="docutils literal notranslate"><span class="pre">HCl</span></code>) as byproducts.</p>
 <ul class="simple">
 <li><p><strong>Hydroxy–Carboxylic Acid Polycondensation</strong></p>
 <ul>
@@ -277,7 +278,7 @@
 <hr class="docutils" />
 <section id="polyamidation">
 <h2>2. Polyamidation<a class="headerlink" href="#polyamidation" title="Link to this heading">¶</a></h2>
-<p>These reactions form amide linkages (<code class="docutils literal notranslate"><span class="pre">-CONH-</span></code>), which are critical for synthesizing nylons, Kevlar, and structural proteins.</p>
+<p>These reactions form amide linkages (<code class="docutils literal notranslate"><span class="pre">-CONH-</span></code>)</p>
 <ul class="simple">
 <li><p><strong>Amino Acid Polycondensation</strong></p>
 <ul>
@@ -295,15 +296,9 @@
 </ul>
 </li>
 </ul>
-<hr class="docutils" />
+<p>NOTE: If you would like support for a specific reaction, please open an issue on<br />
+ <a class="reference external" href="https://github.com/NanoCIPHER-Lab/AutoREACTER">AutoREACTER GitHub Repository</a>.</p>
 </section>
-</section>
-<section id="future-expansions">
-<h1>Future Expansions<a class="headerlink" href="#future-expansions" title="Link to this heading">¶</a></h1>
-<p>The NanoCIPHER team is actively working to expand this library.<br />
-Future versions of AutoREACTER will include support for additional reactions.</p>
-<p>If you would like support for a specific reaction, please open an issue on<br />
-<a class="reference external" href="https://github.com/NanoCIPHER-Lab/AutoREACTER">AutoREACTER GitHub Repository</a>.</p>
 </section>
 
         </article>
@@ -311,12 +306,12 @@ Future versions of AutoREACTER will include support for additional reactions.</p
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="clean_up.html">
+          <a class="next-page" href="supported-force-fields.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Cleanup Mode</div>
+                <div class="title">Supported Force Fields</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
@@ -366,7 +361,6 @@ Future versions of AutoREACTER will include support for additional reactions.</p
 <li><a class="reference internal" href="#polyamidation">2. Polyamidation</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#future-expansions">Future Expansions</a></li>
 </ul>
 
           </div>

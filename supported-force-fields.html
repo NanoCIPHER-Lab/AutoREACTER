@@ -3,11 +3,11 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Change Log" href="change_log.html"><link rel="prev" title="Supported Force Fields" href="supported-force-fields.html">
+<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Cleanup Mode" href="clean_up.html"><link rel="prev" title="Supported Reactions" href="supported-reactions.html">
         <link rel="prefetch" href="_static/logo.png" as="image">
 
     <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
-        <title>Cleanup Mode - AutoREACTER 0.2-beta.0 documentation</title>
+        <title>Supported Force Fields - AutoREACTER 0.2-beta.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -173,7 +173,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
         <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
       </label>
     </div>
@@ -200,8 +200,8 @@
 <li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="input-configuration.html">Input Configuration.</a></li>
 <li class="toctree-l1"><a class="reference internal" href="supported-reactions.html">Supported Reactions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="supported-force-fields.html">Supported Force Fields</a></li>
-<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Cleanup Mode</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Supported Force Fields</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clean_up.html">Cleanup Mode</a></li>
 <li class="toctree-l1"><a class="reference internal" href="change_log.html">Change Log</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contact.html">Contact us</a></li>
 </ul>
@@ -224,7 +224,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="_sources/clean_up.md.txt" title="View this page">
+  <a class="muted-link" href="_sources/supported-force-fields.md.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -237,49 +237,24 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
             <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
           </label>
         </div>
         <article role="main" id="furo-main-content">
           <p><img alt="AutoREACTER Logo" src="_images/logo.png" /></p>
-<section id="cleanup-mode">
-<h1>Cleanup Mode<a class="headerlink" href="#cleanup-mode" title="Link to this heading">¶</a></h1>
-<p>This feature allows you to clean up cached data based on retention time or remove all cached runs.<br />
-It is useful for freeing disk space and maintaining a clean working environment.</p>
-<p>Cleanup can be performed via both the CLI and Jupyter Notebook.</p>
-<hr class="docutils" />
-<section id="cache-cleanup-via-jupyter-notebook">
-<h2>Cache cleanup via Jupyter Notebook<a class="headerlink" href="#cache-cleanup-via-jupyter-notebook" title="Link to this heading">¶</a></h2>
-<p>In this cell, you just have to specify the number of dates backward or <code class="docutils literal notranslate"><span class="pre">all</span></code> as the mode.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># &#39;all&#39; → remove all cached data</span>
-<span class="c1"># int   → keep last N days (e.g., mode=3 keeps last 3 days)</span>
-<span class="n">mode</span> <span class="o">=</span> <span class="s1">&#39;all&#39;</span>
-</pre></div>
-</div>
-</section>
-<section id="cache-cleanup-via-cli">
-<h2>Cache cleanup via (CLI)<a class="headerlink" href="#cache-cleanup-via-cli" title="Link to this heading">¶</a></h2>
-<p>Run the interactive cleanup utility from the command line:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Delete runs older than N days (e.g., 7, 30)</span>
-python<span class="w"> </span>AutoREACTER.py<span class="w"> </span>--cleanup<span class="w"> </span>N
-python<span class="w"> </span>AutoREACTER.py<span class="w"> </span>-c<span class="w"> </span>N
-</pre></div>
-</div>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Delete all cached runs</span>
-python<span class="w"> </span>AutoREACTER.py<span class="w"> </span>--cleanup<span class="w"> </span>all
-python<span class="w"> </span>AutoREACTER.py<span class="w"> </span>-c<span class="w"> </span>all
-</pre></div>
-</div>
-<p><strong>Notes:</strong></p>
+<section id="supported-force-fields">
+<h1>Supported Force Fields<a class="headerlink" href="#supported-force-fields" title="Link to this heading">¶</a></h1>
+<p>All classical force fields integrated into <strong>AutoREACTER</strong> are processed via the <a class="reference external" href="https://github.com/CMMRLab/LUNAR">LUNAR</a> Package.</p>
 <ol class="arabic simple">
-<li><p>In each mode, the yyyy-mm-dd folder for today will not be deleted</p></li>
-<li><p>Use all with caution — this will permanently delete all cached runs</p></li>
-<li><p>Using a numeric value (e.g., 7) is safer for routine cleanup</p></li>
-<li><p>Jupyter Notebook examples are available in the examples directory</p></li>
-<li><p>If not, you can simply delete manually the <code class="docutils literal notranslate"><span class="pre">cache/</span></code> folder in the root directory.</p></li>
+<li><p><strong>PCFF-IFF</strong></p></li>
+<li><p><strong>PCFF</strong></p></li>
+<li><p><strong>Compass</strong></p></li>
+<li><p><strong>CVFF-IFF</strong></p></li>
+<li><p><strong>CVFF</strong></p></li>
+<li><p><strong>DRIEDING</strong></p></li>
 </ol>
-</section>
+<p><strong>Note: Proper installation and path configuration for LUNAR is required in <code class="docutils literal notranslate"><span class="pre">AutoREACTER</span></code> to utilize these force fields.</strong></p>
 </section>
 
         </article>
@@ -287,23 +262,23 @@ python<span class="w"> </span>AutoREACTER.py<span class="w"> </span>-c<span clas
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="change_log.html">
+          <a class="next-page" href="clean_up.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Change Log</div>
+                <div class="title">Cleanup Mode</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="supported-force-fields.html">
+          <a class="prev-page" href="supported-reactions.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">Supported Force Fields</div>
+                <div class="title">Supported Reactions</div>
                 
               </div>
             </a>
@@ -325,28 +300,8 @@ python<span class="w"> </span>AutoREACTER.py<span class="w"> </span>-c<span clas
         
       </footer>
     </div>
-    <aside class="toc-drawer">
+    <aside class="toc-drawer no-toc">
       
-      
-      <div class="toc-sticky toc-scroll">
-        <div class="toc-title-container">
-          <span class="toc-title">
-            On this page
-          </span>
-        </div>
-        <div class="toc-tree-container">
-          <div class="toc-tree">
-            <ul>
-<li><a class="reference internal" href="#">Cleanup Mode</a><ul>
-<li><a class="reference internal" href="#cache-cleanup-via-jupyter-notebook">Cache cleanup via Jupyter Notebook</a></li>
-<li><a class="reference internal" href="#cache-cleanup-via-cli">Cache cleanup via (CLI)</a></li>
-</ul>
-</li>
-</ul>
-
-          </div>
-        </div>
-      </div>
       
       
     </aside>
