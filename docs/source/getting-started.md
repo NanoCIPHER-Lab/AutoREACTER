@@ -33,6 +33,13 @@ conda activate autoRX
 ```
 **Note**: You must run conda activate autoRX every time you open a new terminal to use AutoREACTER.
 
+#### Step 2.1: Download and Prepare LUNAR (Prerequisite)
+AutoREACTER requires the LUNAR package to handle atom typing. You must have this downloaded before running any examples. 
+
+Download LUNAR: Clone or download the repository from [https://github.com/CMMRLab/LUNAR](https://github.com/CMMRLab/LUNAR).
+
+Note the Path: Keep track of the full directory path where LUNAR is saved on your computer (e.g., /home/user/software/LUNAR). During your first run, AutoREACTER will prompt you to enter this directory path. The path is then saved locally within the AutoREACTER.
+
 ### Step 3: Run Your First Example
 AutoREACTER provides two different ways to build your LAMMPS reaction files: \
 &emsp; 1. An interactive, visual Jupyter Notebook. \
