@@ -26,6 +26,7 @@ from typing import Optional
 from AutoREACTER.input_parser import SimulationSetup
 from AutoREACTER.reaction_preparation.lunar_client.locate_lunar import get_LUNAR_loc
 from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import ReactionMetadata
+from AutoREACTER.reaction_preparation.lunar_client.ff_validator import FFValidator
 
 
 # =============================================================================
@@ -633,6 +634,8 @@ class LunarAPIWrapper:
             molecule_files=molecule_files,
             template_files=template_files
         )
+
+        FFValidator(lunar_files)  # Validate the generated force field file
 
         return lunar_files
 
