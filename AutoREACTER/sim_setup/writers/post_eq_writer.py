@@ -87,9 +87,8 @@ class PostEqWriter:
 
         # Base LAMMPS setup: units, topology style, and force-field definitions.
         lines = [
-            f"# Script for {tag}:",
-            "# Post-reaction equilibration",
-            f"# Generated {now}\n",
+            f"#{tag} Post-Equilibration Script - Generated {now} by AutoREACTER",
+            "",
             f"{'units':<16} {s.units}",
             f"{'dimension':<16} {s.dimension}",
             f"{'boundary':<16} {s.boundary}",
