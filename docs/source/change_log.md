@@ -49,8 +49,6 @@ This serves two purposes:
 
 ### Fixed
 - Enforced strict validation of external tool paths.
-- Prevented reaction index corruption during filtering.
-- Eliminated duplicate reactions during discovery.
 
 ---
 
