@@ -32,3 +32,6 @@ Desktop.ini
 docs/build/
 *.doctree
 *.pickle
+
+# Local config
+AutoREACTER/reaction_preparation/lunar_client/config.py
