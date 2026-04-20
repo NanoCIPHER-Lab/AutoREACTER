@@ -35,17 +35,8 @@ from dataclasses import dataclass
 from PIL import Image, ImageDraw, ImageFont
 from rdkit import Chem
 from rdkit.Chem import Draw, rdChemReactions
-
-# Attempt to import internal library components
-try:
-    from reactions_library import ReactionLibrary
-except (ImportError, ModuleNotFoundError):
-    from .reactions_library import ReactionLibrary
-
-try:
-    from .functional_groups_detector import FunctionalGroupInfo, MonomerRole
-except (ImportError, ModuleNotFoundError):
-    from functional_groups_detector import FunctionalGroupInfo, MonomerRole
+from AutoREACTER.detectors.reactions_library import ReactionLibrary
+from AutoREACTER.detectors.functional_groups_detector import FunctionalGroupInfo, MonomerRole
 
 class SMARTSerror(Exception):
     """Error from developer-defined SMARTS patterns not producing expected products.
@@ -84,6 +75,13 @@ class ReactionInstance:
     functional_group_1: FunctionalGroupInfo
     monomer_2: Optional[MonomerRole] = None
     functional_group_2: Optional[FunctionalGroupInfo] = None
+
+class ReactantPool:
+    """
+    A pool of reactants for possible reactions for multiple reaction loops.
+    """
+    loop_no : int
+    pool : List[MonomerRole] 
 
 class ReactionDetector:
     """
@@ -234,7 +232,8 @@ class ReactionDetector:
                                         functional_group_2=fg_2
                                     )
                                 )
-        return reaction_instances
+        reactants_pool = ReactantPool(loop_no=1, pool=[monomer_roles]) 
+        return reaction_instances, reactants_pool
 
     def create_reaction_image(self, reactant_a_smiles: str, reactant_b_smiles: str, 
                               reaction_smarts: str, reaction_name: str) -> Image.Image:
@@ -376,312 +375,3 @@ class ReactionDetector:
         return selected
 
 
-if __name__ == "__main__":
-    # --- Test Setup ---
-    def convert_dict_to_monomer_roles(monomer_dictionary: dict) -> List[MonomerRole]:
-        """Helper to convert raw dictionary data into MonomerRole objects."""
-        monomer_roles = []
-        for _, entry in monomer_dictionary.items():
-            smiles = entry["smiles"]
-            functionalities = []
-            for key, value in entry.items():
-                if not isinstance(key, int): continue
-                functionalities.append(
-                    FunctionalGroupInfo(
-                        functionality_type=value["functionality_type"],
-                        fg_name=value["functional_group_name"],
-                        fg_smarts_1=value.get("functional_group_smarts_1"),
-                        fg_count_1=value.get("functional_count_1", 0),
-                        fg_smarts_2=value.get("functional_group_smarts_2"),
-                        fg_count_2=value.get("functional_count_2", 0),
-                    )
-                )
-            monomer_roles.append(MonomerRole(smiles=smiles, name=smiles, functionalities=tuple(functionalities)))
-        return monomer_roles
-    
-    # Mock monomer data for testing detection logic
-    monomer_dictionary = {
-        1: {
-            "smiles": "C=CCO",
-            1: {
-                "functionality_type": "vinyl",
-                "functional_group_name": "vinyl",
-                "functional_group_smarts_1": "[C]=[C;D1]",
-                "functional_count_1": 1
-            }
-        },
-
-        2: {
-            "smiles": "CCCCCCC=C",
-            1: {
-                "functionality_type": "vinyl",
-                "functional_group_name": "vinyl",
-                "functional_group_smarts_1": "[C]=[C;D1]",
-                "functional_count_1": 1
-            }
-        },
-
-        3: {
-            "smiles": " CC=C1CC2CC1C=C2",
-            1: {
-                "functionality_type": "mono",
-                "functional_group_name": "cyclic_olefin",
-                "functional_group_smarts_1": "[CX3;R:1]=[CX3;R:2]",
-                "functional_count_1": 1
-            }
-        },
-
-        4: {
-            "smiles": "C1=CC2CCC1C2",
-            1: {
-                "functionality_type": "mono",
-                "functional_group_name": "cyclic_olefin",
-                "functional_group_smarts_1": "[CX3;R:1]=[CX3;R:2]",
-                "functional_count_1": 1
-            }
-        },
-
-        5: {
-            "smiles": "C1CCC(=O)OCC1",
-            1: {
-                "functionality_type": "mono",
-                "functional_group_name": "lactone",
-                "functional_group_smarts_1": "[CX3;R:1](=[OX1])[OX2;R:2]",
-                "functional_count_1": 1
-            }
-        },
-
-        6: {
-            "smiles": "OCCC(O)=O",
-            1: {
-                "functionality_type": "di_different",
-                "functional_group_name": "hydroxy_carboxylic_acid",
-                "functional_group_smarts_1": "[OX2H1;!$(OC=*):1]",
-                "functional_count_1": 1,
-                "functional_group_smarts_2": "[CX3:2](=[O])[OX2H1]",
-                "functional_count_2": 1
-            }
-        },
-
-        7: {
-            "smiles": "C1=CC=C(C(=C1)C(=O)O)O",
-            1: {
-                "functionality_type": "di_different",
-                "functional_group_name": "hydroxy_carboxylic_acid",
-                "functional_group_smarts_1": "[OX2H1;!$(OC=*):1]",
-                "functional_count_1": 1,
-                "functional_group_smarts_2": "[CX3:2](=[O])[OX2H1]",
-                "functional_count_2": 1
-            }
-        },
-
-        8: {
-            "smiles": "O=C(O)CCCCC(=O)O",
-            1: {
-                "functionality_type": "di_identical",
-                "functional_group_name": "di_carboxylic_acid",
-                "functional_group_smarts_1": "[CX3:1](=[O])[OX2H1]",
-                "functional_count_1": 2
-            }
-        },
-
-        9: {
-            "smiles": "O=C(Cl)c1ccc(cc1)C(=O)Cl",
-            1: {
-                "functionality_type": "di_identical",
-                "functional_group_name": "di_carboxylic_acidhalide",
-                "functional_group_smarts_1": "[CX3:1](=[O])[Cl,Br]",
-                "functional_count_1": 2
-            }
-        },
-
-        10: {
-            "smiles": "OCCO",
-            1: {
-                "functionality_type": "di_identical",
-                "functional_group_name": "diol",
-                "functional_group_smarts_1": "[O,S;X2;H1;!$([O,S]C=*):3]",
-                "functional_count_1": 2
-            }
-        },
-
-        11: {
-            "smiles": "O=C1OC(=O)C=C1",
-            1: {
-                "functionality_type": "mono",
-                "functional_group_name": "cyclic_olefin",
-                "functional_group_smarts_1": "[CX3;R:1]=[CX3;R:2]",
-                "functional_count_1": 1
-            },
-            2: {
-                "functionality_type": "mono",
-                "functional_group_name": "lactone",
-                "functional_group_smarts_1": "[CX3;R:1](=[OX1])[OX2;R:2]",
-                "functional_count_1": 2
-            },
-            3: {
-                "functionality_type": "mono",
-                "functional_group_name": "cyclic_anhydride",
-                "functional_group_smarts_1":
-                    "[C,c;R:1][CX3,c;R](=[OX1])[OX2,o;R]"
-                    "[CX3,c;R](=[OX1])[C,c;R:2]",
-                "functional_count_1": 1
-            }
-        },
-
-        12: {
-            "smiles": "C1CO1",
-            1: {
-                "functionality_type": "mono",
-                "functional_group_name": "epoxide",
-                "functional_group_smarts_1": "[CX4;R:3]1[OX2;R:4][CX4;R:5]1",
-                "functional_count_1": 1
-            }
-        },
-
-        13: {
-            "smiles": "O=C1CCCCN1",
-            1: {
-                "functionality_type": "mono",
-                "functional_group_name": "lactam",
-                "functional_group_smarts_1": "[CX3;R:1](=[OX1])[NX3;R:2]",
-                "functional_count_1": 1
-            }
-        },
-
-        14: {
-            "smiles": "NCC(=O)O",
-            1: {
-                "functionality_type": "di_different",
-                "functional_group_name": "amino_acid",
-                "functional_group_smarts_1": "[NH2;!$(NC=O)]",
-                "functional_count_1": 1,
-                "functional_group_smarts_2": "[CX3:2](=[O])[OX2H1]",
-                "functional_count_2": 1
-            }
-        },
-
-        15: {
-            "smiles": "NCCCC(=O)O",
-            1: {
-                "functionality_type": "di_different",
-                "functional_group_name": "amino_acid",
-                "functional_group_smarts_1": "[NH2;!$(NC=O)]",
-                "functional_count_1": 1,
-                "functional_group_smarts_2": "[CX3:2](=[O])[OX2H1]",
-                "functional_count_2": 1
-            }
-        },
-
-        16: {
-            "smiles": "NCCN",
-            1: {
-                "functionality_type": "di_identical",
-                "functional_group_name": "di_amine",
-                "functional_group_smarts_1": "[N&X3;H2,H1;!$(NC=*):3]",
-                "functional_count_1": 2
-            },
-            2: {
-                "functionality_type": "di_identical",
-                "functional_group_name": "di_primery_amine",
-                "functional_group_smarts_1": "[C,c:6][NX3;H2;!$(N[C,S]=*)]",
-                "functional_count_1": 2
-            }
-        },
-
-        17: {
-            "smiles": "NCCCCCCN",
-            1: {
-                "functionality_type": "di_identical",
-                "functional_group_name": "di_amine",
-                "functional_group_smarts_1": "[N&X3;H2,H1;!$(NC=*):3]",
-                "functional_count_1": 2
-            },
-            2: {
-                "functionality_type": "di_identical",
-                "functional_group_name": "di_primery_amine",
-                "functional_group_smarts_1": "[C,c:6][NX3;H2;!$(N[C,S]=*)]",
-                "functional_count_1": 2
-            }
-        },
-
-        18: {
-            "smiles": "O=C1OC(=O)c2cc(C3OC(=O)C=CC3=O)ccc2C1=O",
-            1: {
-                "functionality_type": "mono",
-                "functional_group_name": "cyclic_olefin",
-                "functional_group_smarts_1": "[CX3;R:1]=[CX3;R:2]",
-                "functional_count_1": 1
-            },
-            2: {
-                "functionality_type": "mono",
-                "functional_group_name": "lactone",
-                "functional_group_smarts_1": "[CX3;R:1](=[OX1])[OX2;R:2]",
-                "functional_count_1": 3
-            },
-            3: {
-                "functionality_type": "mono",
-                "functional_group_name": "cyclic_anhydride",
-                "functional_group_smarts_1":
-                    "[C,c;R:1][CX3,c;R](=[OX1])[OX2,o;R]"
-                    "[CX3,c;R](=[OX1])[C,c;R:2]",
-                "functional_count_1": 1
-            }
-        },
-
-        19: {
-            "smiles": "O=C=N-C-N=C=O",
-            1: {
-                "functionality_type": "di_identical",
-                "functional_group_name": "di_isocyanate",
-                "functional_group_smarts_1": "[NX2:1]=[CX2]=[OX1,SX1:2]",
-                "functional_count_1": 2
-            }
-        },
-
-        20: {
-            "smiles": "C1=CC(=CC=C1C(C2=CC=CC=C2)(O)CC3CO3)CC4CO4",
-            1: {
-                "functionality_type": "mono",
-                "functional_group_name": "epoxide",
-                "functional_group_smarts_1": "[CX4;R:3]1[OX2;R:4][CX4;R:5]1",
-                "functional_count_1": 2
-            },
-            2: {
-                "functionality_type": "di_identical",
-                "functional_group_name": "di_epoxide",
-                "functional_group_smarts_1":
-                    "[CX4;H2,H1,H0;R:1]1[OX2;R:2][CX4;H1,H0;R:3]1",
-                "functional_count_1": 2
-            }
-        }
-    }
-
-
-    detector = ReactionDetector()
-    monomer_roles = convert_dict_to_monomer_roles(monomer_dictionary)
-    reaction_instances = detector.reaction_detector(monomer_roles)
-
-    # --- Save Results ---
-    autoreacter_dir = pathlib.Path(__file__).parent.parent.parent.resolve()
-    save_dir = autoreacter_dir / "cache" / "_cache_test" / "reaction_visualization"
-    os.makedirs(save_dir, exist_ok=True)
-    
-    file_path = save_dir / "reaction_instances.png"
-    img = detector.create_reaction_image_grid(reaction_instances)
-    
-    if img:
-        img.save(file_path)
-        print(f"Reaction grid image saved to: {file_path}")
-    
-    # Optional interactive selection
-    selected_reactions = detector.reaction_selection(reaction_instances)
-
-    print(f"Total detected reactions: {len(selected_reactions)}")
-    for i, rx in enumerate(selected_reactions, start=1):
-        print(f"{i}. {rx.reaction_name} - {rx.monomer_1.smiles} ({rx.functional_group_1.fg_name})", end="")
-        if rx.monomer_2:
-            print(f" + {rx.monomer_2.smiles} ({rx.functional_group_2.fg_name})")
-        else:
-            print()
-    print(selected_reactions)
