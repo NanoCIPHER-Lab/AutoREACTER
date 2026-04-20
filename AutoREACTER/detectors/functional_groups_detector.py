@@ -104,7 +104,7 @@ from rdkit.Chem import Draw
 from rdkit.Chem import Descriptors, rdchem
 import logging
 import json
-from typing import Dict, Tuple, Optional
+from typing import Dict, List, Tuple, Optional
 import pathlib, os
 from PIL.Image import Image
 from AutoREACTER.input_parser import MonomerEntry
@@ -155,6 +155,13 @@ class MonomerRole:
     name: str
     indexes: Tuple[int, ...]
     functionalities: Tuple[FunctionalGroupInfo, ...]  # Tuple of detected functionalities for the monomer
+
+class ReactantPool:
+    """
+    A pool of reactants for possible reactions for multiple reaction loops.
+    """
+    loop_no : int
+    pool : List[MonomerRole] 
 
 @dataclass(slots=True)
 class FunctionalGroupVisualization:
@@ -541,6 +548,7 @@ class FunctionalGroupsDetector:
             if index_set.intersection(tup):
                 return tup
         return None
+    
 
 
     def functional_group_highlighted_molecules_image_grid(self, monomer_roles_visualization: list[FunctionalGroupVisualization]) -> Image:

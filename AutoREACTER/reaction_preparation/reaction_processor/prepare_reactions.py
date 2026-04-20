@@ -26,6 +26,7 @@ from AutoREACTER.reaction_preparation.reaction_processor.utils import (
     add_dict_as_new_columns, add_column_safe, compare_set, prepare_paths
 )
 from AutoREACTER.reaction_preparation.reaction_processor.walker import reaction_atom_walker
+from AutoREACTER.reaction_preparation.reaction_processor.reaction_propagation import ReactionPropagation
 
 
 class MappingError(Exception):
@@ -82,12 +83,6 @@ class ReactionMetadata:
     reactant_combined_3Dmol_path: Optional[Path] = None
     product_combined_3Dmol_path: Optional[Path] = None
     activity_stats: bool = True
-
-@dataclass(slots=True)
-class TemplateIndexedMolecule:
-    mol: Chem.Mol
-    indexes: List[int]
-    name : Optional[str] = None
 
 class PrepareReactions:
     """Processes chemical reactions: builds atom mappings, identifies reaction centers, and detects byproducts."""
@@ -155,36 +150,10 @@ class PrepareReactions:
             # Store the template mapping in the metadata for later use
             reaction.template_reactant_to_product_mapping = template_mapped_dict
 
+        reaction_propagation = ReactionPropagation()
+        reactions_metadata = reaction_propagation.run_propagation_loop(reactions_metadata)  # Example: run propagation for generations 2 and 3
         return reaction_metadata
     
-    def _prepare_for_second_loop(self, reaction_metadata_list: list[ReactionMetadata]) -> list[TemplateIndexedMolecule]:
-        """
-        JUST A PLACEHOLDER FOR NOW - THIS FUNCTION CAN BE EXPANDED TO PERFORM ANY NECESSARY PREPARATION STEPS BEFORE THE SECOND LOOP OF PROCESSING.
-        Prepares reaction metadata for a second loop of processing by ensuring all necessary fields are populated.
-        
-        Args:
-            reaction_metadata_list: List of ReactionMetadata objects to prepare
-
-        Returns:
-            List of TemplateIndexedMolecule objects containing molecules and their corresponding template indices
-        """
-        template_indexed_molecules = []
-        
-        for reaction in reaction_metadata_list:
-            if not reaction.activity_stats:
-                continue  # Skip reactions marked as duplicates
-            
-            if reaction.product_combined_RDmol:
-                template_product_to_reactant_to_product_mapping = {v: k for k, v in reaction.template_reactant_to_product_mapping.items()}
-                template_indexed_molecules.append(
-                    TemplateIndexedMolecule(
-                        mol=reaction.product_combined_RDmol,
-                        indexes=list(template_product_to_reactant_to_product_mapping.keys()),
-                        name=f"reaction_{reaction.reaction_id}_product"
-                    )
-                )
-        
-        return template_indexed_molecules
     
     # --- PIPELINE STEPS (PRIVATE) ---
     

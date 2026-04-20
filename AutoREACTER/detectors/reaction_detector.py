@@ -81,12 +81,6 @@ class ReactionInstance:
     monomer_2: Optional[MonomerRole] = None
     functional_group_2: Optional[FunctionalGroupInfo] = None
 
-class ReactantPool:
-    """
-    A pool of reactants for possible reactions for multiple reaction loops.
-    """
-    loop_no : int
-    pool : List[MonomerRole] 
 
 class ReactionDetector:
     """
@@ -139,7 +133,8 @@ class ReactionDetector:
         
         Args:
             monomer_roles: List of monomers with their detected functional groups.
-            
+            reactants_pool: Pool of reactants for possible reactions.
+
         Returns:
             A list of ReactionInstance objects representing valid matches.
         """
@@ -237,8 +232,8 @@ class ReactionDetector:
                                         functional_group_2=fg_2
                                     )
                                 )
-        reactants_pool = ReactantPool(loop_no=1, pool=[monomer_roles]) 
-        return reaction_instances, reactants_pool
+        
+        return reaction_instances, monomer_roles
     
     def index_reaction_simulation(self, rxn_smarts: str, reactant_1: Chem.Mol, reactant_2: Chem.Mol, indexes: List[int]) -> tuple[List[int], List[int]]:
         """
