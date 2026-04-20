@@ -38,6 +38,11 @@ from rdkit.Chem import Draw, rdChemReactions
 from AutoREACTER.detectors.reactions_library import ReactionLibrary
 from AutoREACTER.detectors.functional_groups_detector import FunctionalGroupInfo, MonomerRole
 
+MAX_ITERATIONS = 10  # Maximum iterations for reaction pooling to prevent infinite loops
+class InfiniteReactionLoopError(Exception):
+    """Raised when the reaction pooling process exceeds a reasonable number of iterations, indicating a potential infinite loop."""
+    pass
+
 class SMARTSerror(Exception):
     """Error from developer-defined SMARTS patterns not producing expected products.
     Please contact the developer to resolve this issue. 
@@ -234,6 +239,27 @@ class ReactionDetector:
                                 )
         reactants_pool = ReactantPool(loop_no=1, pool=[monomer_roles]) 
         return reaction_instances, reactants_pool
+    
+    def pool_reactions(self, reactant_pool: ReactantPool) -> List[ReactionInstance]:
+        """
+        Detects reactions within a given pool of reactants for a specific loop.
+        
+        Args:
+            reactant_pool: A ReactantPool object containing the current loop number and list of monomer roles.
+
+        Returns:
+            A list of detected reaction instances.
+        """
+        reaction_instances = []
+        reactant_pool.loop_no += 1  # Increment loop number for tracking
+        if reactant_pool.loop_no > MAX_ITERATIONS:
+            raise InfiniteReactionLoopError(f"Exceeded maximum iterations ({MAX_ITERATIONS}) in reaction pooling. Potential infinite loop detected.Please raise an issue at https://github.com/NanoCIPHER-Lab/AutoREACTER/issues to investigate this case.")
+        
+        for monomer_role in reactant_pool.pool:
+            # Implementation for pooling reactions within the given pool
+            pass
+
+        return reaction_instances
 
     def create_reaction_image(self, reactant_a_smiles: str, reactant_b_smiles: str, 
                               reaction_smarts: str, reaction_name: str) -> Image.Image:
