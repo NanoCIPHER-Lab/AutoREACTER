@@ -4,18 +4,24 @@ from typing import List, Optional
 from rdkit import Chem
 
 from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import ReactionMetadata
-from AutoREACTER.detectors.functional_groups_detector import FunctionalGroupInfo
+from AutoREACTER.detectors.functional_groups_detector import FunctionalGroupsDetector, MonomerRole
 
 @dataclass(slots=True)
 class TemplateIndexedMolecule:
     mol: Chem.Mol
     indexes: List[int]
     name : Optional[str] = None
+
 class ReactionPropagation:
+
+    def __init__(self):
+        self.fg_detector = FunctionalGroupsDetector()
 
     def run_propagation_loop(self, reactions_metadata: list[ReactionMetadata]) -> list[ReactionMetadata]:
         template_indexed_molecules = self._prepare_for_second_loop(reactions_metadata)
-
+        detected_roles = self.fg_detector.index_based_functional_groups_detector(
+            template_indexed_molecules
+        )
 
     def _prepare_for_second_loop(self, reaction_metadata_list: list[ReactionMetadata]) -> list[TemplateIndexedMolecule]:
         """

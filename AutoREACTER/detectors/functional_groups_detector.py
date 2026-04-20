@@ -195,7 +195,7 @@ class FunctionalGroupsDetector:
         self.functional_group_library = FunctionalGroupsLibrary()
         self.monomer_types = self.functional_group_library.monomer_types
 
-    def detect_monomer_functionality(
+    def _detect_monomer_functionality(
         self, mol: Chem.Mol, functionality_type: str, smarts_1: str, smarts_2: Optional[str] = None
         ) -> Tuple[int, Optional[int], Optional[int], Optional[Tuple[Tuple[int, ...], ...]]]:
         """
@@ -283,7 +283,7 @@ class FunctionalGroupsDetector:
                 
         return 0, 0, None, ()  # No matches found
     
-    def index_based_detect_monomer_functionality(self, mol: Chem.Mol, indexes: list[int], functionality_type: str, smarts_1: str, smarts_2: Optional[str] = None
+    def _index_based_detect_monomer_functionality(self, mol: Chem.Mol, indexes: list[int], functionality_type: str, smarts_1: str, smarts_2: Optional[str] = None
         ) -> Tuple[int, Optional[int], Optional[int], Optional[Tuple[Tuple[int, ...], ...]]]:
         """
         Detect functional groups in a post-reaction template by restricting the search to specific atom indices.
@@ -414,7 +414,7 @@ class FunctionalGroupsDetector:
                 ftype = functional_group["functionality_type"]
                 smarts_1 = functional_group["smarts_1"]
                 smarts_2 = functional_group.get("smarts_2")  # May be None for non-di_different types.
-                functionality_count, count_1, count_2, functional_matches = self.detect_monomer_functionality(
+                functionality_count, count_1, count_2, functional_matches = self._detect_monomer_functionality(
                     monomer.rdkit_mol, ftype, smarts_1, smarts_2
                 )
 
@@ -497,7 +497,7 @@ class FunctionalGroupsDetector:
                 smarts_2 = functional_group.get("smarts_2")
 
                 functionality_count, count_1, count_2, functional_matches = (
-                    self.index_based_detect_monomer_functionality(
+                    self._index_based_detect_monomer_functionality(
                         mol=mol,
                         indexes=indexes,
                         functionality_type=ftype,
