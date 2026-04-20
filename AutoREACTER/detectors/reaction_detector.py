@@ -38,7 +38,7 @@ from rdkit.Chem import Draw, rdChemReactions
 from AutoREACTER.detectors.reactions_library import ReactionLibrary
 from AutoREACTER.detectors.functional_groups_detector import FunctionalGroupInfo, MonomerRole
 
-MAX_ITERATIONS = 10  # Maximum iterations for reaction pooling to prevent infinite loops
+MAX_ITERATIONS = 5  # Maximum iterations for reaction pooling to prevent infinite loops
 class InfiniteReactionLoopError(Exception):
     """Raised when the reaction pooling process exceeds a reasonable number of iterations, indicating a potential infinite loop."""
     pass
@@ -239,6 +239,22 @@ class ReactionDetector:
                                 )
         reactants_pool = ReactantPool(loop_no=1, pool=[monomer_roles]) 
         return reaction_instances, reactants_pool
+    
+    def index_reaction_simulation(self, rxn_smarts: str, reactant_1: Chem.Mol, reactant_2: Chem.Mol, indexes: List[int]) -> tuple[List[int], List[int]]:
+        """
+        Simulates a reaction using RDKit with a focus on specific atom indices to validate the reaction mechanism.
+        
+        Args:
+            rxn_smarts: The SMARTS string defining the reaction.
+            reactant_1: The first reactant molecule.
+            reactant_2: The second reactant molecule.
+            indexes: List of atom indices to focus on for the reaction simulation.
+            
+        Returns:
+            A list of tuples containing the reacted indices and the resulting product molecules.
+        """
+        # place holder for index-based reaction simulation logic
+        return reactant_1_valid_indexes, reactant_2_valid_indexes
     
     def pool_reactions(self, reactant_pool: ReactantPool) -> List[ReactionInstance]:
         """
