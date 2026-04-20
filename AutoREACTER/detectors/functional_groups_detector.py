@@ -107,28 +107,9 @@ import json
 from typing import Dict, Tuple, Optional
 import pathlib, os
 from PIL.Image import Image
-
-try:
-    from AutoREACTER.input_parser import MonomerEntry
-except (ImportError, ModuleNotFoundError):
-    @dataclass(slots=True)
-    class MonomerEntry:
-        id: int
-        data_id: str
-        smiles: str
-        name: Optional[str] = None
-        count: Optional[Dict] = None
-        ratio: Optional[float] = None
-        atom_count: int = 0
-        molar_mass: float = 0.0
-        rdkit_mol: Optional[Chem.Mol] = None
-
-
-# Conditional import for FunctionalGroupsLibrary to support both installed and local usage.
-try:
-    from functional_groups_library import FunctionalGroupsLibrary
-except (ImportError, ModuleNotFoundError):
-    from .functional_groups_library import FunctionalGroupsLibrary
+from AutoREACTER.input_parser import MonomerEntry
+from AutoREACTER.detectors.functional_groups_library import FunctionalGroupsLibrary
+from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import TemplateIndexedMolecule
 
 logger = logging.getLogger(__name__)  # Module-level logger for future diagnostics.
 
@@ -218,7 +199,7 @@ class FunctionalGroupsDetector:
         (>=1 match each of two patterns), or no match.
 
         Args:
-            smiles (str): SMILES representation of the monomer.
+            mol (Chem.Mol): RDKit molecule object.
             functionality_type (str): Expected type (e.g., 'mono', 'di_identical', 'di_different', 'vinyl').
             smarts_1 (str): Primary SMARTS pattern for matching.
             smarts_2 (str, optional): Secondary SMARTS pattern for 'di_different' types. Defaults to None.
@@ -293,8 +274,102 @@ class FunctionalGroupsDetector:
                     return 1, functional_count_1, None, functional_matches  
                 
         return 0, 0, None, ()  # No matches found
+    
+    def index_based_functional_group_detection(self, mol: Chem.Mol, indexes: list[int], functionality_type: str, smarts_1: str, smarts_2: Optional[str] = None
+        ) -> Tuple[int, Optional[int], Optional[int], Optional[Tuple[Tuple[int, ...], ...]]]:
+        """
+        Detect functional groups in a post-reaction template by restricting the search to specific atom indices.
 
-    def functional_groups_detector(self, monomers: list[MonomerEntry]) -> list[MonomerRole]:
+        This function is intended for a second-pass functionality check after reaction-template generation.
+        It focuses matching on mapped atom indices from a pre-reacted molecule so that functional groups are
+        identified only at the relevant reacted sites. This is especially useful when the generated
+        post-reaction template contains multiple functional groups, and only the secondary or site-specific
+        functionalities need to be detected. It is also useful when atom types change during the reaction
+        and the functional groups must be re-identified in the post-reaction template.
+
+        Args:
+            mol (Chem.Mol):
+                RDKit molecule object representing the post-reaction template molecule.
+            indexes (list[int]):
+                List of atom indices used to restrict matching to specific substructures or mapped sites.
+            functionality_type (str):
+                Expected functionality type. Examples include 'mono', 'di_identical',
+                'di_different', and 'vinyl'.
+            smarts_1 (str):
+                Primary SMARTS pattern used for functional group matching.
+            smarts_2 (str, optional):
+                Secondary SMARTS pattern used only when `functionality_type` is
+                'di_different'. Defaults to None.
+
+        Returns:
+            Tuple[int, Optional[int], Optional[int], Optional[Tuple[Tuple[int, ...], ...]]]:
+                A tuple containing:
+                    - functionality_count:
+                        0 if no valid match is found,
+                        1 if a single functional group is found,
+                        2 if two functional groups are found.
+                    - count_1:
+                        Number of matches for `smarts_1`, or 0 if `smarts_1` is invalid.
+                    - count_2:
+                        Number of matches for `smarts_2`, or None if not applicable.
+                    - functional_matches:
+                        Tuple of tuples containing the atom indices of the matched functional groups.
+
+        Notes:
+            - If the molecule or SMARTS patterns are invalid, the function returns
+            (0, None, None, None).
+            - For 'di_identical', at least two matches of `smarts_1` are required.
+            - For 'di_different', both SMARTS patterns may be required depending on the logic.
+            - This function is designed for targeted substructure detection and does not validate
+            SMARTS complexity or optimize performance for large molecules.
+        """
+        if mol is None:
+            logger.warning(f"Invalid SMILES: {smiles}")
+            return 0, None, None, None
+
+        # Create pattern from primary SMARTS and validate.
+        patt1 = Chem.MolFromSmarts(smarts_1)
+        if patt1 is None:
+            logger.warning(f"Invalid primary SMARTS: {smarts_1}")
+            return 0, None, None, None
+
+        if smarts_2:
+            patt2 = Chem.MolFromSmarts(smarts_2)
+            if patt2 is None:
+                logger.warning(f"Invalid secondary SMARTS: {smarts_2}")
+                return 0, None, None, None
+            matches2 = mol.GetSubstructMatches(patt2)
+        else:
+            patt2 = []  # Ensure patt2 is defined for later logic, even if not used.
+            # Count matches once (avoid duplicate calls)
+        matches1 = mol.GetSubstructMatches(patt1)
+            
+
+        functional_count_1 = len(matches1)
+        functional_count_2 = len(matches2)
+
+        # Combine safely (always tuple of tuples)
+        functional_matches = matches1 + matches2
+
+        # Debug
+        # print(
+        #     f"SMILES: {smiles}, "
+        #     f"Pattern 1 Matches: {functional_count_1}, "
+        #     f"Pattern 2 Matches: {functional_count_2}"
+        # )
+
+        if functional_count_1 >= 1 or functional_count_2 >= 1:
+            matches1_valid = self._find_matching_tuple(indexes, matches1)
+            matches2_valid = self._find_matching_tuple(indexes, matches2)
+            valid_matches = tuple(
+                m for m in (matches1_valid, matches2_valid) if m is not None
+            )
+            if matches1_valid or matches2_valid:
+                 return 2, functional_count_1, functional_count_2, functional_matches, valid_matches
+                
+        return 0, 0, None, ()  # No matches found
+
+    def functional_groups_detector(self, monomers: list[MonomerEntry]) -> Tuple[list[MonomerRole], list[FunctionalGroupVisualization]]:
         """
         Detect functional groups across a list of monomers and categorize them into roles.
 
@@ -307,6 +382,7 @@ class FunctionalGroupsDetector:
         Returns:
             list[MonomerRole]: List of monomers with detected functionalities.
                 Each MonomerRole contains smiles, name, and tuple of FunctionalGroupInfo.
+            list[FunctionalGroupVisualization]: List of visualization data for detected functional groups.
 
         Notes:
             - Matches criteria: 'vinyl'/'mono' (>=1 primary), 'di_identical' (>=2 primary),
@@ -376,6 +452,93 @@ class FunctionalGroupsDetector:
                         indexes_to_highlight=tuple(all_matches)
                     ))
         return monomer_roles, monomer_roles_visualization
+    
+    def index_based_functional_groups_detector(
+        self,
+        dimers: list[TemplateIndexedMolecule]
+    ) -> Tuple[list[MonomerRole], list[FunctionalGroupVisualization]]:
+        """
+        Detect functional groups in template/product molecules by restricting
+        matching to user-provided atom indices.
+        copy of functional_groups_detector but with index-based detection for post-reaction templates.
+
+        Args:
+            dimers (list[TemplateIndexedMolecule]):
+                List of objects containing:
+                    - mol: RDKit molecule
+                    - indexes: atom indices to focus detection on
+
+        Returns:
+            Tuple[list[MonomerRole], list[FunctionalGroupVisualization]]:
+                - Detected functional roles
+                - Visualization metadata with matched atom indices
+        """
+        monomer_roles = []
+
+        for monomer in dimers:
+            mol = monomer.mol
+            indexes = monomer.indexes
+
+            detected_functionalities = []
+            all_matches = []
+
+            for functional_group in self.monomer_types.values():
+                ftype = functional_group["functionality_type"]
+                smarts_1 = functional_group["smarts_1"]
+                smarts_2 = functional_group.get("smarts_2")
+
+                functionality_count, count_1, count_2, functional_matches = (
+                    self.index_based_functional_group_detection(
+                        mol=mol,
+                        indexes=indexes,
+                        functionality_type=ftype,
+                        smarts_1=smarts_1,
+                        smarts_2=smarts_2,
+                    )
+                )
+
+                if functionality_count > 0:
+                    all_matches.extend(functional_matches)
+
+                    detected_functionalities.append(
+                        FunctionalGroupInfo(
+                            functionality_type=ftype,
+                            fg_name=functional_group["group_name"],
+                            fg_smarts_1=smarts_1,
+                            fg_count_1=count_1,
+                            fg_smarts_2=smarts_2,
+                            fg_count_2=count_2,
+                        )
+                    )
+
+            if detected_functionalities:
+                monomer_roles.append(
+                    MonomerRole(
+                        smiles="",   # placeholder: user does not want MolToSmiles()
+                        name=monomer.name,     # placeholder: user does not want to use name even though it's available in the object; can be adjusted as needed
+                        functionalities=tuple(detected_functionalities),
+                    )
+                )
+
+        return monomer_roles
+    
+    def _find_matching_tuple(self, indexes, tuple_list):
+        """
+        Find the first tuple in tuple_list that contains at least one index from indexes.
+
+        Args:
+            indexes (list[int]): Atom indices to match against.
+            tuple_list (list[tuple[int, ...]]): Candidate tuples of atom indices.
+
+        Returns:
+            tuple[int, ...] | None: First matching tuple, or None if no match.
+        """
+        index_set = set(indexes)
+        for tup in tuple_list:
+            if index_set.intersection(tup):
+                return tup
+        return None
+
 
     def functional_group_highlighted_molecules_image_grid(self, monomer_roles_visualization: list[FunctionalGroupVisualization]) -> Image:
             """Convert monomer roles with detected functionalities into visualizations.
