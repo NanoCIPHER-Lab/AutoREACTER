@@ -76,10 +76,14 @@ class ReactionInstance:
     delete_atom: bool
     references: dict
     same_reactants: bool
+
     monomer_1: MonomerRole
     functional_group_1: FunctionalGroupInfo
+    monomer_1_indexes: Tuple[int, ...] = ()
+
     monomer_2: Optional[MonomerRole] = None
     functional_group_2: Optional[FunctionalGroupInfo] = None
+    monomer_2_indexes: Tuple[int, ...] = ()
 
 
 class ReactionDetector:
@@ -155,16 +159,17 @@ class ReactionDetector:
                         if pair_key not in seen_pairs:
                             seen_pairs.add(pair_key)
                             reaction_instances.append(
-                                ReactionInstance(
-                                    reaction_name=reaction_name,
-                                    reaction_smarts=reaction_info["reaction"],
-                                    delete_atom=reaction_info["delete_atom"],
-                                    references=reaction_info["reference"],
-                                    same_reactants=same_reactants,
-                                    monomer_1=monomer_role,
-                                    functional_group_1=fg
+                                    ReactionInstance(
+                                        reaction_name=reaction_name,
+                                        reaction_smarts=reaction_info["reaction"],
+                                        delete_atom=reaction_info["delete_atom"],
+                                        references=reaction_info["reference"],
+                                        same_reactants=same_reactants,
+                                        monomer_1=monomer_role,
+                                        functional_group_1=fg,
+                                        monomer_1_indexes=tuple(monomer_role.indexes),
+                                    )
                                 )
-                            )
 
             # CASE 2: CO-POLYMERIZATION (e.g., A + B)
             else:
@@ -194,10 +199,13 @@ class ReactionDetector:
                                             same_reactants=same_reactants,
                                             monomer_1=monomer_role_i,
                                             functional_group_1=fg_i,
+                                            monomer_1_indexes=tuple(monomer_role_i.indexes),
                                             monomer_2=monomer_role_j,
-                                            functional_group_2=fg_j
+                                            functional_group_2=fg_j,
+                                            monomer_2_indexes=tuple(monomer_role_j.indexes),
+                                            )
                                         )
-                                    )
+                    
             # case 1.1: If same reacants has two functional groups (e.g., A + A with FG1 and FG2)
             if not same_reactants and reactant_2_name is not None:
                 for monomer_role in monomer_roles:
@@ -228,49 +236,15 @@ class ReactionDetector:
                                         same_reactants=same_reactants,
                                         monomer_1=monomer_role,
                                         functional_group_1=fg_1,
+                                        monomer_1_indexes=tuple(monomer_role.indexes),
                                         monomer_2=monomer_role,
-                                        functional_group_2=fg_2
+                                        functional_group_2=fg_2,
+                                        monomer_2_indexes=tuple(monomer_role.indexes),
+                                        )
                                     )
-                                )
         
-        return reaction_instances, monomer_roles
-    
-    def index_reaction_simulation(self, rxn_smarts: str, reactant_1: Chem.Mol, reactant_2: Chem.Mol, indexes: List[int]) -> tuple[List[int], List[int]]:
-        """
-        Simulates a reaction using RDKit with a focus on specific atom indices to validate the reaction mechanism.
-        
-        Args:
-            rxn_smarts: The SMARTS string defining the reaction.
-            reactant_1: The first reactant molecule.
-            reactant_2: The second reactant molecule.
-            indexes: List of atom indices to focus on for the reaction simulation.
-            
-        Returns:
-            A list of tuples containing the reacted indices and the resulting product molecules.
-        """
-        # place holder for index-based reaction simulation logic
-        return reactant_1_valid_indexes, reactant_2_valid_indexes
-    
-    def pool_reactions(self, reactant_pool: ReactantPool) -> List[ReactionInstance]:
-        """
-        Detects reactions within a given pool of reactants for a specific loop.
-        
-        Args:
-            reactant_pool: A ReactantPool object containing the current loop number and list of monomer roles.
-
-        Returns:
-            A list of detected reaction instances.
-        """
-        reaction_instances = []
-        reactant_pool.loop_no += 1  # Increment loop number for tracking
-        if reactant_pool.loop_no > MAX_ITERATIONS:
-            raise InfiniteReactionLoopError(f"Exceeded maximum iterations ({MAX_ITERATIONS}) in reaction pooling. Potential infinite loop detected.Please raise an issue at https://github.com/NanoCIPHER-Lab/AutoREACTER/issues to investigate this case.")
-        
-        for monomer_role in reactant_pool.pool:
-            # Implementation for pooling reactions within the given pool
-            pass
-
         return reaction_instances
+    
 
     def create_reaction_image(self, reactant_a_smiles: str, reactant_b_smiles: str, 
                               reaction_smarts: str, reaction_name: str) -> Image.Image:
@@ -409,6 +383,7 @@ class ReactionDetector:
 
         selected = [reaction_instances[i-1] for i in indices]
         print(f"Selected {len(selected)} reactions.")
+
         return selected
 
 

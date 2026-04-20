@@ -139,6 +139,7 @@ class FunctionalGroupInfo:
     fg_count_1: int
     fg_smarts_2: Optional[str] = None
     fg_count_2: Optional[int] = None
+    matched_indexes: Tuple[Tuple[int, ...], ...] = () 
 
 
 @dataclass(slots=True, frozen=True)
@@ -464,32 +465,28 @@ class FunctionalGroupsDetector:
     
     def index_based_functional_groups_detector(
         self,
-        dimers: list[TemplateIndexedMolecule]
-    ) -> Tuple[list[MonomerRole], list[FunctionalGroupVisualization]]:
+        dimers: list[TemplateIndexedMolecule],
+    ) -> list[MonomerRole]:
         """
-        Detect functional groups in template/product molecules by restricting
-        matching to user-provided atom indices.
-        copy of functional_groups_detector but with index-based detection for post-reaction templates.
-
+        Detect functional groups in post-reaction templates by restricting the search to specific atom indices.
+        This function is intended for a second-pass functionality check after reaction-template generation.
+        It focuses matching on mapped atom indices from a pre-reacted molecule so that functional groups are
+        identified only at the relevant reacted sites. This is especially useful when the generated
+        post-reaction template contains multiple functional groups, and only the secondary or site-specific
+        functionalities need to be detected. It is also useful when atom types change during the reaction
+        and the functional groups must be re-identified in the post-reaction template.
         Args:
-            dimers (list[TemplateIndexedMolecule]):
-                List of objects containing:
-                    - mol: RDKit molecule
-                    - indexes: atom indices to focus detection on
-
+            dimers (list[TemplateIndexedMolecule]): List of TemplateIndexedMolecule objects representing post-reaction templates with mapped atom indices.
         Returns:
-            Tuple[list[MonomerRole], list[FunctionalGroupVisualization]]:
-                - Detected functional roles
-                - Visualization metadata with matched atom indices
+            list[MonomerRole]: List of MonomerRole objects representing the detected functional groups.
         """
-        monomer_roles = []
+        detected_roles: list[MonomerRole] = []
 
         for monomer in dimers:
             mol = monomer.mol
             indexes = monomer.indexes
 
             detected_functionalities = []
-            all_matches = []
 
             for functional_group in self.monomer_types.values():
                 ftype = functional_group["functionality_type"]
@@ -507,8 +504,6 @@ class FunctionalGroupsDetector:
                 )
 
                 if functionality_count > 0:
-                    all_matches.extend(functional_matches)
-
                     detected_functionalities.append(
                         FunctionalGroupInfo(
                             functionality_type=ftype,
@@ -517,20 +512,21 @@ class FunctionalGroupsDetector:
                             fg_count_1=count_1,
                             fg_smarts_2=smarts_2,
                             fg_count_2=count_2,
+                            matched_indexes=functional_matches if functional_matches else (),
                         )
                     )
 
             if detected_functionalities:
-                monomer_roles.append(
+                detected_roles.append(
                     MonomerRole(
-                        smiles="",   # placeholder: user does not want MolToSmiles()
-                        name=monomer.name,     # placeholder: user does not want to use name even though it's available in the object; can be adjusted as needed
+                        smiles="",
+                        name=monomer.name,
                         indexes=tuple(indexes),
                         functionalities=tuple(detected_functionalities),
                     )
                 )
 
-        return monomer_roles
+        return detected_roles
     
     def _find_matching_tuple(self, indexes, tuple_list):
         """
@@ -552,38 +548,38 @@ class FunctionalGroupsDetector:
 
 
     def functional_group_highlighted_molecules_image_grid(self, monomer_roles_visualization: list[FunctionalGroupVisualization]) -> Image:
-            """Convert monomer roles with detected functionalities into visualizations.
-            Args:
-                monomer_roles_visualization (list[FunctionalGroupVisualization]): List of monomer roles with detected functionalities for visualization.
-            Returns:
-                PIL.Image.Image: A single grid image of the monomers with highlighted functional groups.
-            """
-            molecules = []
-            indextohighlight = []
-            names = []
-            for viz in monomer_roles_visualization:  # <-- use actual objects, not dict version
-                mol = viz.monomer
-                name = viz.name
-                matches = viz.indexes_to_highlight or ()
+        """Convert monomer roles with detected functionalities into visualizations.
+        Args:
+            monomer_roles_visualization (list[FunctionalGroupVisualization]): List of monomer roles with detected functionalities for visualization.
+        Returns:
+            PIL.Image.Image: A single grid image of the monomers with highlighted functional groups.
+        """
+        molecules = []
+        indextohighlight = []
+        names = []
+        for viz in monomer_roles_visualization:  # <-- use actual objects, not dict version
+            mol = viz.monomer
+            name = viz.name
+            matches = viz.indexes_to_highlight or ()
 
-                # Flatten tuple-of-tuples into unique atom indices
-                highlight_atoms = sorted(
-                    {atom for match in matches for atom in match}
-                )
-
-                molecules.append(mol)
-                indextohighlight.append(highlight_atoms)
-                names.append(name)
-
-            img = Draw.MolsToGridImage(
-                molecules,
-                molsPerRow=3,
-                legends=names,
-                subImgSize=(500, 500),
-                highlightAtomLists=indextohighlight
+            # Flatten tuple-of-tuples into unique atom indices
+            highlight_atoms = sorted(
+                {atom for match in matches for atom in match}
             )
 
-            return img
+            molecules.append(mol)
+            indextohighlight.append(highlight_atoms)
+            names.append(name)
+
+        img = Draw.MolsToGridImage(
+            molecules,
+            molsPerRow=3,
+            legends=names,
+            subImgSize=(500, 500),
+            highlightAtomLists=indextohighlight
+        )
+
+        return img
 
 if __name__ == "__main__":
 
