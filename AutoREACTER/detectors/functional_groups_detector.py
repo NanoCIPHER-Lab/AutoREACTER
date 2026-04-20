@@ -153,6 +153,7 @@ class MonomerRole:
     """
     smiles: str
     name: str
+    indexes: Tuple[int, ...]
     functionalities: Tuple[FunctionalGroupInfo, ...]  # Tuple of detected functionalities for the monomer
 
 @dataclass(slots=True)
@@ -275,7 +276,7 @@ class FunctionalGroupsDetector:
                 
         return 0, 0, None, ()  # No matches found
     
-    def index_based_functional_group_detection(self, mol: Chem.Mol, indexes: list[int], functionality_type: str, smarts_1: str, smarts_2: Optional[str] = None
+    def index_based_detect_monomer_functionality(self, mol: Chem.Mol, indexes: list[int], functionality_type: str, smarts_1: str, smarts_2: Optional[str] = None
         ) -> Tuple[int, Optional[int], Optional[int], Optional[Tuple[Tuple[int, ...], ...]]]:
         """
         Detect functional groups in a post-reaction template by restricting the search to specific atom indices.
@@ -340,7 +341,7 @@ class FunctionalGroupsDetector:
                 return 0, None, None, None
             matches2 = mol.GetSubstructMatches(patt2)
         else:
-            patt2 = []  # Ensure patt2 is defined for later logic, even if not used.
+            matches2 = ()
             # Count matches once (avoid duplicate calls)
         matches1 = mol.GetSubstructMatches(patt1)
             
@@ -365,7 +366,7 @@ class FunctionalGroupsDetector:
                 m for m in (matches1_valid, matches2_valid) if m is not None
             )
             if matches1_valid or matches2_valid:
-                 return 2, functional_count_1, functional_count_2, functional_matches, valid_matches
+                return 2, functional_count_1, functional_count_2, valid_matches
                 
         return 0, 0, None, ()  # No matches found
 
@@ -442,6 +443,7 @@ class FunctionalGroupsDetector:
                     MonomerRole(
                         smiles=smiles,
                         name=monomer.name,
+                        indexes=(),  # Placeholder: no index-based detection in the first loop. 
                         functionalities=tuple(detected_functionalities)
                     )
                 )
@@ -488,7 +490,7 @@ class FunctionalGroupsDetector:
                 smarts_2 = functional_group.get("smarts_2")
 
                 functionality_count, count_1, count_2, functional_matches = (
-                    self.index_based_functional_group_detection(
+                    self.index_based_detect_monomer_functionality(
                         mol=mol,
                         indexes=indexes,
                         functionality_type=ftype,
@@ -516,6 +518,7 @@ class FunctionalGroupsDetector:
                     MonomerRole(
                         smiles="",   # placeholder: user does not want MolToSmiles()
                         name=monomer.name,     # placeholder: user does not want to use name even though it's available in the object; can be adjusted as needed
+                        indexes=tuple(indexes),
                         functionalities=tuple(detected_functionalities),
                     )
                 )
