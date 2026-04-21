@@ -209,7 +209,7 @@ def AutoREACTER(input_file: str) -> None:
 
     # === Reaction Template Preparation ===
     prepare_reactions = PrepareReactions(cache_dir)
-    prepared_reactions = prepare_reactions.prepare_reactions(selected_reactions)
+    prepared_reactions = prepare_reactions.prepare_reactions(selected_reactions, monomer_roles=functional_groups)  # Pass monomer roles for propagation 
 
     try:
         for highlight_type, filename in [
