@@ -54,6 +54,17 @@ class FunctionalGroupsLibrary:
                 "group_name": "di_carboxylic_acid_halide",
                 "comments": None,
             },
+            "di_epoxide_monomer": {
+                "functionality_type": "di_identical",
+                "smarts_1": "[C:1]1[O:2][C:3]1",
+                "group_name": "di_epoxide"
+            },
+            
+            "di_amine_monomer": {
+                "functionality_type": "di_identical",
+                "smarts_1": "[N;H2,H1:4]",
+                "group_name": "di_amine"
+            }
             # "di_cyclic_anhydride_monomer": {
             #     "functionality_type": "di_identical",
             #     "smarts_1": "[CX3,c;R:1](=[OX1])[OX2,o;R][CX3,c;R:2](=[OX1])",

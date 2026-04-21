@@ -136,6 +136,15 @@ class ReactionLibrary:
                 "reaction": "[CX3:1](=[O:3])[Cl,Br,I:4].[N;H2,H1;!$(NC=*):2][H:5]>>[CX3:1](=[O:3])[NX3;!$(NC=*):2].[Cl,Br,I:4]([H:5])",
                 "reference": {"smarts": ["https://pubs.acs.org/doi/10.1021/acs.jcim.3c00329"],
                             "reaction_and_mechanism": ["https://pubs.acs.org/doi/10.1021/ed048pA734"]},
+            },
+            "Di-Epoxide and Di-Amine Polyamination": {
+                "same_reactants": False,
+                "reactant_1": "di_epoxide",
+                "reactant_2": "di_amine",
+                "product": "polyamine_chain",
+                "delete_atom": False,
+                "reaction": "[C:1]1[O:2][C:3]1.[N:4]-[H:5]>>[H:5]-[O:2]-[C:1]-[C:3]-[N:4]",
+                "reference": {},
             }
             # "Di-Amine and Di-Carboxylic Acid Polycondensation (Polyamidation)": {
             #     "same_reactants": False,
