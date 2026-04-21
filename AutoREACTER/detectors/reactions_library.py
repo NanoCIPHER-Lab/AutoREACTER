@@ -143,7 +143,7 @@ class ReactionLibrary:
                 "reactant_2": "di_amine",
                 "product": "polyamine_chain",
                 "delete_atom": False,
-                "reaction": "[C:1]1[O:2][C:3]1.[N:4]-[H:5]>>[H:5]-[O:2]-[C:1]-[C:3]-[N:4]",
+                "reaction": "[C:4]1[O:3][C:2]1.[N:1]-[H:5]>>[H:5]-[O:3]-[C:4]-[C:2]-[N:1]",
                 "reference": {},
             }
             # "Di-Amine and Di-Carboxylic Acid Polycondensation (Polyamidation)": {
