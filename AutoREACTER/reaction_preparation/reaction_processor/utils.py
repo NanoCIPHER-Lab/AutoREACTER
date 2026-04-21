@@ -144,6 +144,15 @@ def compare_rdkit_molecules_canonical(data_smiles_list, mol_smi_2):
 
 
 def prep_for_3d_molecule_generation(data_smiles_list, molecule_dict_csv_path_dict):
+    """
+    Prepares a dictionary of RDKit molecule objects for 3D generation.
+    Combines molecules from a list of SMILES strings and a dictionary of CSV paths.
+    Args:
+        data_smiles_list (list): List of SMILES strings to convert to RDKit molecules.
+        molecule_dict_csv_path_dict (dict): Dictionary containing reactant and product molecules from CSV paths.
+    Returns:
+        dict: A dictionary where keys are identifiers (e.g., 'data_1', 'pre_1', 'post_1') and values are RDKit molecule objects.
+    """
     molecule_dict = {}
     for i, smiles in enumerate(data_smiles_list):
         key = f"data_{i+1}"
