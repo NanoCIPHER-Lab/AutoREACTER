@@ -173,7 +173,6 @@ class PrepareReactions:
             
         return reaction_metadata
 
-
     # --- PRIVATE ---
 
     def _process_reaction_instances(self, detected_reactions: list[ReactionInstance]) -> list[ReactionMetadata]:
