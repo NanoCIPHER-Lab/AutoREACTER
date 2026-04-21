@@ -1,0 +1,49 @@
+{
+    "simulation_name": "Epoxy_Amine_Curing",
+    "replicas": [
+        {
+            "tag": "10k",
+            "temperature": 300,
+            "density": 1.1,
+            "monomer_counts": {
+                "di_epoxide_monomer": 200,
+                "di_amine_monomer": 100,
+                "mono_amine_capper": 20
+            }
+        },
+        {
+            "tag": "100k",
+            "temperature": 400,
+            "density": 1.1,
+            "monomer_counts": {
+                "di_epoxide_monomer": 2000,
+                "di_amine_monomer": 1000,
+                "mono_amine_capper": 200
+            }
+        },
+        {
+            "tag": "100k_high_temp",
+            "temperature": 500,
+            "density": 1.1,
+            "monomer_counts": {
+                "di_epoxide_monomer": 2000,
+                "di_amine_monomer": 1000,
+                "mono_amine_capper": 200
+            }
+        }
+    ],
+    "monomers": [
+        {
+            "name": "di_epoxide_monomer",
+            "smiles": "C1OC1COCCOC2CO2"
+        },
+        {
+            "name": "di_amine_monomer",
+            "smiles": "NCCN"
+        },
+        {
+            "name": "mono_amine_capper",
+            "smiles": "CN"
+        }
+    ]
+}
