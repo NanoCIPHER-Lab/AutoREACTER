@@ -12,12 +12,22 @@ from AutoREACTER.detectors.reaction_detector import (
     ReactionInstance,
 )
 
-
+MAX_ITERATIONS = 6  # Maximum iterations for reaction pooling to prevent infinite loops
 @dataclass(slots=True)
 class TemplateIndexedMolecule:
     mol: Chem.Mol
     indexes: List[int]
     name: Optional[str] = None
+
+class ReactantPool:
+    """
+    A pool of reactants for possible reactions for multiple reaction loops.
+    """
+    loop_no : int
+    pool : List[MonomerRole] 
+
+class InfiniteReactionLoopError(Exception):
+    """Raised when the reaction pooling process exceeds a reasonable number of iterations, indicating a potential infinite loop."""
 
 
 class ReactionPropagation:
@@ -36,26 +46,35 @@ class ReactionPropagation:
         2. Detect functional groups only at relevant mapped indices
         3. Detect which polymerization reactions are now possible
         """
-        template_indexed_molecules = self._prepare_for_second_loop(reactions_metadata)
+        for iteration in range(MAX_ITERATIONS + 1):
+            if iteration >= MAX_ITERATIONS:
+                raise InfiniteReactionLoopError(
+                    f"Exceeded maximum iterations ({MAX_ITERATIONS}) in reaction propagation loop. "
+                    "Potential infinite loop detected. "
+                    "Try increasing MAX_ITERATIONS if this is a false positive. "
+                    "If the issue persists, please raise an issue with the problematic reaction instances at: "
+                    "https://github.com/NanoCIPHER-Lab/AutoREACTER/issues"
+                )
+            template_indexed_molecules = self._prepare_for_second_loop(reactions_metadata)
 
-        if monomer_roles is None:
-            raise ValueError("Monomer roles must be provided for the second loop of processing.")
+            if monomer_roles is None:
+                raise ValueError("Monomer roles must be provided for the second loop of processing.")
 
-        # Second-pass / index-based functional group detection
-        detected_roles = self.fg_detector.index_based_functional_groups_detector(
-            template_indexed_molecules
-        )
+            # Second-pass / index-based functional group detection
+            detected_roles = self.fg_detector.index_based_functional_groups_detector(
+                template_indexed_molecules
+            )
 
-        # If nothing reactive remains, propagation stops here
-        if not detected_roles:
-            return []
+            # If nothing reactive remains, propagation stops here
+            if not detected_roles:
+                return reactions_metadata
 
-        # Detect reactions from the newly detected indexed roles
-        reaction_instances = self.rxn_detector.index_based_reaction_detector(
-            detected_roles
-        )
+            # Detect reactions from the newly detected indexed roles
+            reaction_instances = self.rxn_detector.index_based_reaction_detector(
+                detected_roles
+            )
 
-        return reaction_instances
+            return reaction_instances
 
     def _prepare_for_second_loop(
         self,

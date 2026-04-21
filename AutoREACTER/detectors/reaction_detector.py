@@ -38,7 +38,6 @@ from rdkit.Chem import Draw, rdChemReactions
 from AutoREACTER.detectors.reactions_library import ReactionLibrary
 from AutoREACTER.detectors.functional_groups_detector import FunctionalGroupInfo, MonomerRole
 
-MAX_ITERATIONS = 5  # Maximum iterations for reaction pooling to prevent infinite loops
 class InfiniteReactionLoopError(Exception):
     """Raised when the reaction pooling process exceeds a reasonable number of iterations, indicating a potential infinite loop."""
     pass

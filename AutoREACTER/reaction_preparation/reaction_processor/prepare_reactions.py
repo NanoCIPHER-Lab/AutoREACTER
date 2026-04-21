@@ -1,4 +1,3 @@
-
 """
 Module for preparing chemical reactions for analysis, including atom mapping between reactants and products,
 reaction metadata extraction, and visualization utilities using RDKit.
@@ -17,24 +16,30 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from rdkit import Chem
-from rdkit.Chem import AllChem, Draw, rdmolops
+from rdkit.Chem import Draw
+from rdkit.Chem.rdChemReactions import ChemicalReaction
 from PIL.Image import Image
 import pandas as pd
 
 from AutoREACTER.detectors.reaction_detector import ReactionInstance
 from AutoREACTER.reaction_preparation.reaction_processor.utils import (
-    add_dict_as_new_columns, add_column_safe, compare_set, prepare_paths
+    add_dict_as_new_columns, add_column_safe, prepare_paths
 )
 from AutoREACTER.reaction_preparation.reaction_processor.walker import reaction_atom_walker
-from AutoREACTER.reaction_preparation.reaction_processor.reaction_propagation import ReactionPropagation
-
-
-class MappingError(Exception):
-    """Custom exception raised when atom mapping between reactants and products fails or is inconsistent."""
-
-
-class SMARTSParsingError(Exception):
-    """Custom exception raised when parsing SMILES or reaction SMARTS fails."""
+from AutoREACTER.reaction_preparation.reaction_processor.reaction_processing_support import (
+    assign_first_shell_and_initiators,
+    assign_atom_map_numbers_and_set_isotopes,
+    build_atom_index_mapping,
+    build_reaction,
+    build_reactants,
+    build_reaction_tuple,
+    clear_isotopes,
+    detect_byproducts,
+    detect_duplicates,
+    reassign_atom_map_numbers_by_isotope,
+    reveal_template_map_numbers,
+    validate_mapping,
+)
 
 
 @dataclass(slots=True)
@@ -84,6 +89,7 @@ class ReactionMetadata:
     product_combined_3Dmol_path: Optional[Path] = None
     activity_stats: bool = True
 
+
 class PrepareReactions:
     """Processes chemical reactions: builds atom mappings, identifies reaction centers, and detects byproducts."""
 
@@ -105,9 +111,9 @@ class PrepareReactions:
             List of processed ReactionMetadata objects with template mappings and edge atoms
         """
         reactions_metadata = self._process_reaction_instances(reaction_instances)
-        reaction_metadata = self._detect_duplicates(reactions_metadata)
+        reaction_metadata = detect_duplicates(reactions_metadata)
         
-        for reaction in reactions_metadata:
+        for reaction in reaction_metadata:
             # Skip reactions marked as duplicates
             if not reaction.activity_stats:
                 continue  # Skip reactions marked as duplicates
@@ -150,24 +156,19 @@ class PrepareReactions:
             # Store the template mapping in the metadata for later use
             reaction.template_reactant_to_product_mapping = template_mapped_dict
 
-        reaction_propagation = ReactionPropagation()
-        reactions_metadata = reaction_propagation.run_propagation_loop(reactions_metadata)  # Example: run propagation for generations 2 and 3
         return reaction_metadata
-    
-    
-    # --- PIPELINE STEPS (PRIVATE) ---
-    
+            
     def _process_reaction_instances(self, detected_reactions: list[ReactionInstance]) -> list[ReactionMetadata]:
         """
         Converts ReactionInstance objects into ReactionMetadata by building molecules and running reactions.
         
         Args:
             detected_reactions: List of detected reaction instances
-            
+            csv_cache: Path to the CSV cache file
         Returns:
             List of ReactionMetadata objects with atom mappings
         """
-        csv_cache = self.csv_cache
+        csv_cache = self.csv_cache  # Ensure csv_cache is available for processing
         reaction_metadata = []
 
         for reaction in detected_reactions:
@@ -184,11 +185,11 @@ class PrepareReactions:
             delete_atoms = reaction.delete_atom
 
             # Build reaction and reactant molecules
-            rxn = self._build_reaction(rxn_smarts)
+            rxn = build_reaction(rxn_smarts)
             # This function also runs the reaction and builds metadata for each product set, including atom mappings and byproduct detection
-            mol_reactant_1, mol_reactant_2 = self._build_reactants(reactant_smiles_1, reactant_smiles_2)
+            mol_reactant_1, mol_reactant_2 = build_reactants(reactant_smiles_1, reactant_smiles_2)
             # Build reaction tuple based on whether reactants are the same or different. If same, only one ordering is needed. If different, both orderings are processed to account for reaction directionality.
-            reaction_tuple = self._build_reaction_tuple(same_reactants, mol_reactant_1, mol_reactant_2)
+            reaction_tuple = build_reaction_tuple(same_reactants, mol_reactant_1, mol_reactant_2)
 
             # Process products and build metadata
             reaction_metadata = self._process_reaction_products(
@@ -200,34 +201,9 @@ class PrepareReactions:
             )
         
         return reaction_metadata
-
-    def _detect_duplicates(self, reaction_metadata_list: list[ReactionMetadata]) -> list[ReactionMetadata]:
-        """
-        Filters duplicate reactions based on reactant and product molecules.
-        
-        Args:
-            reaction_metadata_list: List of reaction metadata to filter
-            
-        Returns:
-            List of unique reactions; duplicates marked with activity_stats=False
-        """
-        unique_metadata: list[ReactionMetadata] = []
-        
-        for reaction in reaction_metadata_list:
-            # Compare current reaction's reactants and products against unique reactions collected so far
-            reactants = reaction.reactant_combined_RDmol
-            products = reaction.product_combined_RDmol
-
-            # Keep reaction if it's unique, otherwise mark as duplicate
-            if compare_set(unique_metadata, reactants, products):
-                unique_metadata.append(reaction)
-            else:
-                reaction.activity_stats = False
-                
-        return unique_metadata
     
     def _process_reaction_products(self, 
-                                   rxn: Chem.rdChemReactions.ChemicalReaction, 
+                                   rxn: ChemicalReaction, 
                                    csv_cache: Path, 
                                    reaction_tuple: list, 
                                    delete_atoms: bool = True,
@@ -253,7 +229,7 @@ class PrepareReactions:
             r1, r2 = Chem.Mol(pair[0]), Chem.Mol(pair[1])
             
             # Assign unique map numbers and isotopes to track atoms through reaction
-            self._assign_atom_map_numbers_and_set_isotopes(r1, r2)
+            assign_atom_map_numbers_and_set_isotopes(r1, r2)
             # Run the reaction to get products
             products = rxn.RunReactants((r1, r2))
             
@@ -270,27 +246,27 @@ class PrepareReactions:
                 product_combined = Chem.CombineMols(*product_set)
 
                 # Restore atom map numbers from isotopes (which survive the reaction)
-                self._reassign_atom_map_numbers_by_isotope(product_combined)
+                reassign_atom_map_numbers_by_isotope(product_combined)
                 
                 # Build bidirectional atom index mappings
-                mapping_dict, df = self._build_atom_index_mapping(reactant_combined, product_combined)
+                mapping_dict, df = build_atom_index_mapping(reactant_combined, product_combined)
                 reverse_mapping = {v: k for k, v in mapping_dict.items()}
 
                 # Restore map numbers for visualization
-                self._reveal_template_map_numbers(product_combined)
+                reveal_template_map_numbers(product_combined)
 
                 # Validate mapping consistency
-                self._validate_mapping(df, reactant_combined, product_combined)
+                validate_mapping(df, reactant_combined, product_combined)
 
                 # Identify atoms involved in reaction center and initiators
-                first_shell, initiator_idxs = self._assign_first_shell_and_initiators(
+                first_shell, initiator_idxs = assign_first_shell_and_initiators(
                     reactant_combined,
                     product_combined,
                     reverse_mapping
                 )
 
                 # Detect byproducts (smallest fragments)
-                byproduct_reactant_idxs = self._detect_byproducts(product_combined, reverse_mapping, delete_atoms)
+                byproduct_reactant_idxs = detect_byproducts(product_combined, reverse_mapping, delete_atoms)
 
                 # Combine all mapping data into single dataframe
                 df_combined = pd.concat([
@@ -303,7 +279,7 @@ class PrepareReactions:
                 total_products = len(reaction_metadata) + 1
 
                 # Clear isotopes before saving to restore normal chemistry
-                self._clear_isotopes(reactant_combined, product_combined)
+                clear_isotopes(reactant_combined, product_combined)
 
                 # Save mapping dataframe to CSV
                 df_combined.to_csv(csv_cache / f"reaction_{total_products}.csv", index=False)
@@ -329,303 +305,7 @@ class PrepareReactions:
 
         return reaction_metadata
     
-    # --- CORE REACTION LOGIC ---
     
-    def _assign_first_shell_and_initiators(self, 
-                                           reactant_combined: Chem.Mol, 
-                                           product_combined: Chem.Mol, 
-                                           reversed_mapping_dict: dict[int, int]) -> tuple[list[int], list[int]]:
-        """
-        Identifies atoms in the first coordination shell (atoms with map numbers < 999) and initiator atoms.
-        Initiators are atoms with map numbers 1 or 2 (typically the reactive centers).
-        
-        Args:
-            reactant_combined: Combined reactant molecule
-            product_combined: Combined product molecule
-            reversed_mapping_dict: Product idx -> Reactant idx mapping
-            
-        Returns:
-            Tuple of (first_shell atom indices, initiator atom indices)
-            
-        Raises:
-            ValueError: If exactly 2 initiators are not found
-        """
-        first_shell = []
-        initiator_idxs = []
-
-        for p_atom in product_combined.GetAtoms():
-            # Only process atoms with valid map numbers (< 999 indicates non-byproduct)
-            if p_atom.GetAtomMapNum() < 999:
-                p_idx = p_atom.GetIdx()
-
-                if p_idx not in reversed_mapping_dict:
-                    raise ValueError(f"Mapping error: product atom {p_idx} not found in mapping_dict")
-
-                r_idx = reversed_mapping_dict[p_idx]
-                atom = reactant_combined.GetAtomWithIdx(r_idx)
-                atom.SetAtomMapNum(p_atom.GetAtomMapNum())
-
-                first_shell.append(r_idx)
-
-                # Initiators are atoms with map numbers 1 or 2
-                if p_atom.GetAtomMapNum() in [1, 2]:
-                    initiator_idxs.append(r_idx)
-        
-        if len(initiator_idxs) != 2:
-            raise ValueError(f"Expected 2 initiators, got {len(initiator_idxs)}: {initiator_idxs}")
-
-        return first_shell, initiator_idxs
-    
-    def _detect_byproducts(self, 
-                          product_combined: Chem.Mol, 
-                          reversed_mapping_dict: dict[int, int], 
-                          delete_atoms: bool) -> list[int]:
-        """
-        Identifies byproduct atoms (smallest molecular fragment) and maps them back to reactant space.
-        
-        Args:
-            product_combined: Combined product molecule
-            reversed_mapping_dict: Product idx -> Reactant idx mapping
-            delete_atoms: Whether to perform byproduct detection
-            
-        Returns:
-            List of reactant indices corresponding to byproduct atoms
-        """
-        if not delete_atoms:
-            return []
-
-        # Get tuples of original atom indices for each fragment
-        frags_indices = rdmolops.GetMolFrags(product_combined)
-        
-        # Find the tuple with the smallest number of atoms
-        smallest_frag_indices = min(frags_indices, key=len)
-
-        byproduct_reactant_indices = []
-
-        # Map byproduct product indices back to reactant indices
-        for p_idx in smallest_frag_indices:
-            if p_idx in reversed_mapping_dict:
-                byproduct_reactant_indices.append(reversed_mapping_dict[p_idx])
-
-        return byproduct_reactant_indices
-    
-    def _validate_mapping(self, df: pd.DataFrame, reactant: Chem.Mol, product: Chem.Mol) -> None:
-        """
-        Validates atom mapping consistency: checks for required columns, duplicates, bounds, and completeness.
-        
-        Args:
-            df: Dataframe containing reactant_idx and product_idx columns
-            reactant: Reactant molecule
-            product: Product molecule
-            
-        Raises:
-            MappingError: If any validation check fails
-        """
-        # Ensure dataframe exists and has required columns
-        if df is None or df.empty:
-            raise MappingError("Mapping validation failed: empty dataframe")
-
-        # Check for required columns
-        required_cols = {"reactant_idx", "product_idx"}
-        if not required_cols.issubset(df.columns):
-            raise MappingError(f"Mapping validation error: required columns {required_cols} not found in dataframe.")
-
-        # Extract indices and perform validation checks
-        r_idxs = df["reactant_idx"].dropna().tolist()
-        p_idxs = df["product_idx"].dropna().tolist()
-
-        # Atom counts must match
-        if len(r_idxs) != len(p_idxs):
-            raise MappingError(f"Mapping validation error: mismatch in atom counts between reactant and product.")
-
-        # No duplicate mappings (1-to-1 mapping required)
-        if len(set(r_idxs)) != len(r_idxs):
-            raise MappingError(f"Mapping validation error: duplicate indices found in reactant mapping.")
-        if len(set(p_idxs)) != len(p_idxs):
-            raise MappingError(f"Mapping validation error: duplicate indices found in product mapping.")
-
-        # Indices must be within molecule bounds
-        if any(idx >= reactant.GetNumAtoms() for idx in r_idxs):
-            raise MappingError(f"Mapping validation error: reactant index out of bounds.")
-        if any(idx >= product.GetNumAtoms() for idx in p_idxs):
-            raise MappingError(f"Mapping validation error: product index out of bounds.")
-
-        # All atoms must be mapped (complete mapping)
-        if len(r_idxs) != reactant.GetNumAtoms():
-            raise MappingError(f"Mapping validation error: incomplete mapping for reactant.")
-        if len(p_idxs) != product.GetNumAtoms():
-            raise MappingError(f"Mapping validation error: incomplete mapping for product.")
-
-    # --- ATOM MAPPING ---
-    
-    def _assign_atom_map_numbers_and_set_isotopes(self, r1: Chem.Mol, r2: Chem.Mol) -> None:
-        """
-        Assigns unique map numbers and isotopes to reactant atoms for tracking through reaction.
-        Isotopes survive RDKit's reaction engine, allowing atom identity recovery post-reaction.
-        
-        Args:
-            r1: First reactant molecule
-            r2: Second reactant molecule
-        """
-        # Assign map numbers 1001+ to first reactant atoms
-        for atom in r1.GetAtoms():
-            idx = 1001 + atom.GetIdx()
-            atom.SetAtomMapNum(idx)
-            atom.SetIsotope(idx)  # Isotope survives the reaction
-
-        # Assign map numbers 2001+ to second reactant atoms
-        for atom in r2.GetAtoms():
-            idx = 2001 + atom.GetIdx()
-            atom.SetAtomMapNum(idx)
-            atom.SetIsotope(idx) # Isotope survives the reaction
-			
-    def _reassign_atom_map_numbers_by_isotope(self, mol: Chem.Mol) -> None:
-        """
-        Restores atom map numbers from isotope values after reaction.
-        RDKit's reaction engine preserves isotopes, allowing recovery of original atom identities.
-        
-        Args:
-            mol: Product molecule with isotope information
-        """
-        for atom in mol.GetAtoms():
-            surviving_idx = atom.GetIsotope()
-            if surviving_idx != 0:
-                atom.SetAtomMapNum(surviving_idx)  # Restore original map number
-                atom.SetIsotope(0)                 # Clear isotope to restore normal chemistry
-
-    def _build_atom_index_mapping(self, 
-                                  reactant_combined: Chem.Mol, 
-                                  product_combined: Chem.Mol) -> tuple[dict[int, int], pd.DataFrame]:
-        """
-        Builds bidirectional atom index mapping between reactants and products using map numbers.
-        
-        Args:
-            reactant_combined: Combined reactant molecule
-            product_combined: Combined product molecule
-            
-        Returns:
-            Tuple of (mapping dict: reactant_idx -> product_idx, dataframe with mapping)
-        """
-        mapping_dict = {}
-        
-        # Pre-index product atoms by map number for O(1) lookup
-        product_map = {
-            atom.GetAtomMapNum(): atom.GetIdx()
-            for atom in product_combined.GetAtoms()
-            if atom.GetAtomMapNum() != 0
-        }
-        
-        rows = []
-        for r_atom in reactant_combined.GetAtoms():
-            r_map_num = r_atom.GetAtomMapNum()
-
-            # Match reactant atom to product atom via map number
-            if r_map_num != 0 and r_map_num in product_map:
-                r_idx = r_atom.GetIdx()
-                p_idx = product_map[r_map_num]
-
-                mapping_dict[r_idx] = p_idx
-                rows.append({
-                    "reactant_idx": r_idx,
-                    "product_idx": p_idx
-                })
-
-        df = pd.DataFrame(rows)
-        return mapping_dict, df
-
-    def _reveal_template_map_numbers(self, mol: Chem.Mol) -> None:
-        """
-        Restores map numbers from RDKit's internal 'old_mapno' property for visualization.
-        RDKit stores original map numbers in this property after reaction execution.
-        
-        Args:
-            mol: Product molecule
-        """
-        for atom in mol.GetAtoms():
-            if atom.HasProp('old_mapno'):
-                map_num = atom.GetIntProp('old_mapno')
-                atom.SetAtomMapNum(map_num)
-
-    def _clear_isotopes(self, mol_1: Chem.Mol, mol_2: Chem.Mol) -> None:
-        """
-        Clears isotope values from molecules to restore normal chemistry after using isotopes for atom tracking.
-        
-        Args:
-            mol_1: First molecule to clear
-            mol_2: Second molecule to clear
-        """
-        for atom in mol_1.GetAtoms():
-            atom.SetIsotope(0)
-        for atom in mol_2.GetAtoms():
-            atom.SetIsotope(0)
-
-    # --- BUILDERS ---
-    
-    def _build_reaction(self, rxn_smarts: str) -> Chem.rdChemReactions.ChemicalReaction:
-        """Builds RDKit ChemicalReaction object from SMARTS string."""
-        return AllChem.ReactionFromSmarts(rxn_smarts)
-    
-    def _build_reactants(self, reactant_smiles_1: str, reactant_smiles_2: str) -> tuple[Chem.Mol, Chem.Mol]:
-        """
-        Builds reactant molecules from SMILES strings with explicit hydrogens added.
-        
-        Args:
-            reactant_smiles_1: SMILES string for first reactant
-            reactant_smiles_2: SMILES string for second reactant
-            
-        Returns:
-            Tuple of (reactant1 molecule, reactant2 molecule) with explicit hydrogens
-        """
-        mol_reactant_1 = Chem.MolFromSmiles(reactant_smiles_1)
-        if mol_reactant_1 is None:
-            raise SMARTSParsingError(f"Failed to parse first reactant SMILES: {reactant_smiles_1!r}")
-        mol_reactant_1 = Chem.AddHs(mol_reactant_1)
-        
-        mol_reactant_2 = Chem.MolFromSmiles(reactant_smiles_2)
-        if mol_reactant_2 is None:
-            raise SMARTSParsingError(f"Failed to parse second reactant SMILES: {reactant_smiles_2!r}")
-        mol_reactant_2 = Chem.AddHs(mol_reactant_2)
-        
-        return mol_reactant_1, mol_reactant_2
-    
-    def _build_reaction_tuple(self, same_reactants: bool, mol_reactant_1: Chem.Mol, mol_reactant_2: Chem.Mol) -> list:
-        """
-        Builds list of reactant pairs to process. If reactants are identical, returns single pair.
-        Otherwise returns both orderings to account for reaction directionality.
-        
-        Args:
-            same_reactants: Whether both reactants are identical
-            mol_reactant_1: First reactant molecule
-            mol_reactant_2: Second reactant molecule
-            
-        Returns:
-            List of reactant pairs [[r1, r2], ...] to process
-        """
-        if same_reactants:
-            return [[mol_reactant_1, mol_reactant_1]]
-
-        return [[mol_reactant_1, mol_reactant_2], [mol_reactant_2, mol_reactant_1]]
-    
-    # --- HELPERS ---
-    
-    def _is_consecutive(self, num_list: list[int]) -> bool:
-        """
-        Checks if list contains consecutive integers with no duplicates.
-        
-        Args:
-            num_list: List of integers to check
-            
-        Returns:
-            True if list is consecutive and has no duplicates, False otherwise
-        """
-        if not num_list:
-            return False
-
-        return (
-            len(set(num_list)) == len(num_list)
-            and max(num_list) - min(num_list) + 1 == len(num_list)
-        )
-
     # --- VISUALIZATION ---
     
     def reaction_templates_highlighted_image_grid(

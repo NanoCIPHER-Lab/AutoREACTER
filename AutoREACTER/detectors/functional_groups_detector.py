@@ -157,12 +157,7 @@ class MonomerRole:
     indexes: Tuple[int, ...]
     functionalities: Tuple[FunctionalGroupInfo, ...]  # Tuple of detected functionalities for the monomer
 
-class ReactantPool:
-    """
-    A pool of reactants for possible reactions for multiple reaction loops.
-    """
-    loop_no : int
-    pool : List[MonomerRole] 
+
 
 @dataclass(slots=True)
 class FunctionalGroupVisualization:
