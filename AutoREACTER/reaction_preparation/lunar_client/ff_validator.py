@@ -159,7 +159,7 @@ class FFValidator:
             # 2. Dynamic Count Logic
             if expected_count is None:
                 expected_count = len(current_coeffs)
-                print(f"Section '{section_name}' dynamic count set to: {expected_count}")
+                # print(f"Section '{section_name}' dynamic count set to: {expected_count}")
             
             # 3. Validation against the dynamic count
             if len(current_coeffs) != expected_count:
