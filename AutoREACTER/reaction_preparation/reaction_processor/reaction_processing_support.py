@@ -321,22 +321,3 @@ def build_reaction_tuple(same_reactants: bool, mol_reactant_1: Chem.Mol, mol_rea
 
     return [[mol_reactant_1, mol_reactant_2], [mol_reactant_2, mol_reactant_1]]
 
-# --- HELPERS ---
-
-def is_consecutive(num_list: list[int]) -> bool:
-    """
-    Checks if list contains consecutive integers with no duplicates.
-    
-    Args:
-        num_list: List of integers to check
-        
-    Returns:
-        True if list is consecutive and has no duplicates, False otherwise
-    """
-    if not num_list:
-        return False
-
-    return (
-        len(set(num_list)) == len(num_list)
-        and max(num_list) - min(num_list) + 1 == len(num_list)
-    )
