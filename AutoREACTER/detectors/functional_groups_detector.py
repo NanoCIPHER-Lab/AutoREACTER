@@ -109,6 +109,9 @@ import pathlib, os
 from PIL.Image import Image
 from AutoREACTER.input_parser import MonomerEntry
 from AutoREACTER.detectors.functional_groups_library import FunctionalGroupsLibrary
+from typing import TYPECHECKING
+if TYPECHECKING:
+    from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import TemplateIndexedMolecule
 
 logger = logging.getLogger(__name__)  # Module-level logger for future diagnostics.
 
@@ -459,7 +462,7 @@ class FunctionalGroupsDetector:
     
     def index_based_functional_groups_detector(
         self,
-        dimers: list[TemplateIndexedMolecule],
+        dimers: list["TemplateIndexedMolecule"],
     ) -> list[MonomerRole]:
         """
         Detect functional groups in post-reaction templates by restricting the search to specific atom indices.
