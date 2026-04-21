@@ -47,7 +47,8 @@ class ReactionDef:
     references: Dict[str, List[str]] = field(default_factory=dict)
     comments: Optional[str] = None
 which can be used to create instances for each reaction, 
-ensuring consistency and making it easier to manage the reaction library rather than having a flat dictionary structure.
+ensuring consistency and making it easier to manage the reaction 
+library rather than having a flat dictionary structure.
 """
 
 """
