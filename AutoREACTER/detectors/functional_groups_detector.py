@@ -109,7 +109,6 @@ import pathlib, os
 from PIL.Image import Image
 from AutoREACTER.input_parser import MonomerEntry
 from AutoREACTER.detectors.functional_groups_library import FunctionalGroupsLibrary
-from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import TemplateIndexedMolecule
 
 logger = logging.getLogger(__name__)  # Module-level logger for future diagnostics.
 
