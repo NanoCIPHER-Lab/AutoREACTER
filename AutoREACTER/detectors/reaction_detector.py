@@ -115,6 +115,19 @@ class ReactionDetector:
         monomer_role_2: Optional[MonomerRole] = None,
         fg_2: Optional[FunctionalGroupInfo] = None,
     ) -> Tuple:
+        
+        """
+        Creates a unique key for a given reaction instance to track seen pairs and avoid duplicates.
+        For co-polymerization, the order of monomers does not matter (A + B is the same as B + A).
+        Args:
+            reaction_name: Name of the reaction type.
+            monomer_role_1: The first monomer role.
+            fg_1: The functional group on the first monomer.
+            monomer_role_2: The second monomer role (optional).
+            fg_2: The functional group on the second monomer (optional).
+        Returns:
+            A tuple representing the unique key for the reaction instance.
+    """
 
         if monomer_role_2 is None or fg_2 is None:
             return (
