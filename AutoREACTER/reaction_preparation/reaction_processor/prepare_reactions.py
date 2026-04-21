@@ -42,7 +42,10 @@ from AutoREACTER.reaction_preparation.reaction_processor.reaction_processing_sup
 )
 
 from AutoREACTER.reaction_preparation.reaction_processor.reaction_propagation import ReactionPropagation
+from typing import TYPE_CHECKING, Dict, List, Optional
 
+if TYPE_CHECKING:
+    from AutoREACTER.detectors.functional_groups_detector import MonomerRole
 
 @dataclass(slots=True)
 class ReactionMetadata:
@@ -91,7 +94,6 @@ class ReactionMetadata:
     product_combined_3Dmol_path: Optional[Path] = None
     activity_stats: bool = True
 
-
 class PrepareReactions:
     """Processes chemical reactions: builds atom mappings, identifies reaction centers, and detects byproducts."""
 
@@ -103,7 +105,11 @@ class PrepareReactions:
 
     # --- PUBLIC ---
 
-    def prepare_reactions(self, reaction_instances: list[ReactionInstance]) -> list[ReactionMetadata]:
+    def prepare_reactions(
+        self, 
+        reaction_instances: list[ReactionInstance], 
+        monomer_roles: list['MonomerRole'] = None
+    ) -> list[ReactionMetadata]:
         """
         Main pipeline: processes reaction instances, detects duplicates, and enriches metadata with template mappings.
         
@@ -159,9 +165,14 @@ class PrepareReactions:
             # Store the template mapping in the metadata for later use
             reaction.template_reactant_to_product_mapping = template_mapped_dict
         
-        # reaction_metadata = self.reaction_propagation.propagate_reactions(reaction_metadata, )  # Propagate reactions to generate new metadata
-
+        if monomer_roles is not None:
+            reaction_metadata = self.reaction_propagation.run_propagation_loop(
+                reaction_metadata, 
+                monomer_roles
+            )
+            
         return reaction_metadata
+
 
     # --- PRIVATE ---
 
