@@ -84,6 +84,8 @@ class ReactionInstance:
     functional_group_2: Optional[FunctionalGroupInfo] = None
     monomer_2_indexes: Tuple[int, ...] = ()
 
+    # for propagation loops 
+    monomer_role : MonomerRole
 
 class ReactionDetector:
     """
