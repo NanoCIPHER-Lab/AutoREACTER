@@ -144,7 +144,7 @@ class FunctionalGroupInfo:
     matched_indexes: Tuple[Tuple[int, ...], ...] = () 
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True)
 class MonomerRole:
     """
     Immutable dataclass representing a monomer with its detected functional groups.
@@ -155,13 +155,11 @@ class MonomerRole:
         functionalities (Tuple[FunctionalGroupInfo, ...]): Tuple of all detected functional groups.
     """
     smiles: str
-    molecule_object: Chem.Mol = None 
     name: str
     indexes: Tuple[int, ...]
-    functionalities: Tuple[FunctionalGroupInfo, ...]  # Tuple of detected functionalities for the monomer
-    is_original_monomer: bool = True  # Flag to indicate if this role is from the original monomer or a product (for propagation loops)
-
-
+    functionalities: Tuple[FunctionalGroupInfo, ...]
+    molecule_object: Optional[Chem.Mol] = None 
+    is_original_monomer: bool = True
 
 @dataclass(slots=True)
 class FunctionalGroupVisualization:
@@ -466,6 +464,7 @@ class FunctionalGroupsDetector:
     def index_based_functional_groups_detector(
         self,
         dimers: list["TemplateIndexedMolecule"],
+        original_monomer_roles: list[MonomerRole]
     ) -> list[MonomerRole]:
         """
         Detect functional groups in post-reaction templates by restricting the search to specific atom indices.
@@ -504,32 +503,60 @@ class FunctionalGroupsDetector:
                 )
 
                 if functionality_count > 0:
-                    detected_functionalities.append(
-                        FunctionalGroupInfo(
-                            functionality_type=ftype,
-                            fg_name=functional_group["group_name"],
-                            fg_smarts_1=smarts_1,
-                            fg_count_1=count_1,
-                            fg_smarts_2=smarts_2,
-                            fg_count_2=count_2,
-                            matched_indexes=functional_matches if functional_matches else (),
-                        )
+                    functional_group_info = FunctionalGroupInfo(
+                        functionality_type=ftype,
+                        fg_name=functional_group['group_name'],
+                        fg_smarts_1=smarts_1,
+                        fg_count_1=count_1,
+                        fg_smarts_2=smarts_2,
+                        fg_count_2=count_2,
+                        matched_indexes=functional_matches
                     )
+                    if self._is_functional_in_system(functional_group_info, original_monomer_roles):
+                        detected_functionalities.append(
+                            functional_group_info
+                        )
 
             if detected_functionalities:
-                detected_roles.append(
-                    MonomerRole(
-                        smiles="",
-                        name=monomer.name,
-                        molecule_object=mol,
-                        indexes=tuple(indexes),
-                        functionalities=tuple(detected_functionalities),
-                        is_original_monomer=False  # This a product from a reaction template, so it's not from the original monomer.
-                    )
-                )
-
+                monomer_role = MonomerRole(
+                            smiles="",
+                            name=monomer.name,
+                            molecule_object=mol,
+                            indexes=tuple(indexes),
+                            functionalities=tuple(detected_functionalities),
+                            is_original_monomer=False  # This a product from a reaction template, so it's not from the original monomer.
+                        )
+                detected_roles.append(monomer_role)
         return detected_roles
-    
+    def _functionality_key(self, fg: FunctionalGroupInfo) -> tuple:
+        """
+        Identity of a functionality in the chemical system.
+        Excludes matched_indexes because those are site/context-specific.
+        """
+        return (
+            fg.functionality_type,
+            fg.fg_name,
+            fg.fg_smarts_1,
+            fg.fg_smarts_2,
+        )
+    def _is_functional_in_system(
+        self,
+        functionality: FunctionalGroupInfo,
+        original_monomer_roles: list[MonomerRole],
+    ) -> bool:
+        """
+        Return True if the detected functionality exists anywhere in the original system.
+        """
+        target_key = self._functionality_key(functionality)
+
+        original_keys = {
+            self._functionality_key(func)
+            for monomer_role in original_monomer_roles
+            for func in monomer_role.functionalities
+        }
+
+        return target_key in original_keys
+
     def _find_matching_tuple(self, indexes, tuple_list):
         """
         Find the first tuple in tuple_list that contains at least one index from indexes.

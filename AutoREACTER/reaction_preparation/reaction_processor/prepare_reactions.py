@@ -175,6 +175,7 @@ class PrepareReactions:
 
     # --- PRIVATE ---
 
+
     def _process_reaction_instances(self, detected_reactions: list[ReactionInstance]) -> list[ReactionMetadata]:
         """
         Converts ReactionInstance objects into ReactionMetadata by building molecules and running reactions.

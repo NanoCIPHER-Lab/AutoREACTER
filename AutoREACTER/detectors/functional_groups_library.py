@@ -73,7 +73,7 @@ class FunctionalGroupsLibrary:
                 "functionality_type": "di_identical",
                 "smarts_1": "[C:1]1[O:2][C:3]1",
                 "group_name": "di_epoxide"
-            }
+            },
 
             # COMMENTED OUT FUNCTIONAL GROUPS FOR FUTURE ADDITION (NEED TO VALIDATE SMARTS FIRST)
             

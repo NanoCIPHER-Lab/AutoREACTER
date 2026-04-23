@@ -75,17 +75,15 @@ class ReactionInstance:
     delete_atom: bool
     references: dict
     same_reactants: bool
-
     monomer_1: MonomerRole
     functional_group_1: FunctionalGroupInfo
     monomer_1_indexes: Tuple[int, ...] = ()
-
+    
     monomer_2: Optional[MonomerRole] = None
     functional_group_2: Optional[FunctionalGroupInfo] = None
     monomer_2_indexes: Tuple[int, ...] = ()
 
     # for propagation loops 
-    monomer_role : MonomerRole
 
 class ReactionDetector:
     """
