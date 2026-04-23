@@ -109,8 +109,8 @@ import pathlib, os
 from PIL.Image import Image
 from AutoREACTER.input_parser import MonomerEntry
 from AutoREACTER.detectors.functional_groups_library import FunctionalGroupsLibrary
-from typing import TYPECHECKING
-if TYPECHECKING:
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
     from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import TemplateIndexedMolecule
 
 logger = logging.getLogger(__name__)  # Module-level logger for future diagnostics.
@@ -155,9 +155,11 @@ class MonomerRole:
         functionalities (Tuple[FunctionalGroupInfo, ...]): Tuple of all detected functional groups.
     """
     smiles: str
+    molecule_object: Chem.Mol = None 
     name: str
     indexes: Tuple[int, ...]
     functionalities: Tuple[FunctionalGroupInfo, ...]  # Tuple of detected functionalities for the monomer
+    is_original_monomer: bool = True  # Flag to indicate if this role is from the original monomer or a product (for propagation loops)
 
 
 
@@ -433,7 +435,7 @@ class FunctionalGroupsDetector:
                             fg_smarts_1=smarts_1,
                             fg_count_1=count_1,
                             fg_smarts_2=smarts_2,
-                            fg_count_2=count_2
+                            fg_count_2=count_2,
                         )
                     )
                     # Debug print for match details.
@@ -449,7 +451,8 @@ class FunctionalGroupsDetector:
                         smiles=smiles,
                         name=monomer.name,
                         indexes=(),  # Placeholder: no index-based detection in the first loop. 
-                        functionalities=tuple(detected_functionalities)
+                        functionalities=tuple(detected_functionalities),
+                        is_original_monomer=True  # This is the initial detection, so it's from the original monomer.
                     )
                 )
                 monomer_roles_visualization.append(
@@ -518,8 +521,10 @@ class FunctionalGroupsDetector:
                     MonomerRole(
                         smiles="",
                         name=monomer.name,
+                        molecule_object=mol,
                         indexes=tuple(indexes),
                         functionalities=tuple(detected_functionalities),
+                        is_original_monomer=False  # This a product from a reaction template, so it's not from the original monomer.
                     )
                 )
 
