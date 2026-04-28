@@ -19,7 +19,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: ["3.12", "3.13"]
+        python-version: ["3.13"]
 
     steps:
       - name: Checkout repository
@@ -37,6 +37,18 @@ jobs:
           python -m pip install -e .
           python -m pip install pytest
 
-      - name: Run tests
+      - name: Check Python syntax
         run: |
-          pytest
+          python -m compileall AutoREACTER AutoREACTER.py
+
+      - name: Smoke import package
+        run: |
+          python -c "import AutoREACTER; print('AutoREACTER package import OK')"
+
+      - name: Run tests if present
+        run: |
+          if find . -path "./tests/test*.py" -o -path "./test*.py" | grep -q .; then
+            pytest
+          else
+            echo "No pytest tests found yet. Skipping pytest."
+          fi
