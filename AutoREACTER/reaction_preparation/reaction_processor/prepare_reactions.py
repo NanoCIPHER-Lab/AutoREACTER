@@ -454,8 +454,8 @@ class PrepareReactions:
 
                 total_products = len(reaction_metadata) + 1
 
-                # Clear isotopes before saving to restore normal chemistry
-                clear_isotopes(reactant_combined, product_combined)
+                # Clear isotopes and atom maps before saving to restore normal chemistry
+                clear_isotopes_and_map_numbers(reactant_combined, product_combined)
 
                 # Save mapping dataframe to CSV
                 df_combined.to_csv(csv_cache / f"reaction_{total_products}.csv", index=False)
