@@ -33,7 +33,7 @@ from AutoREACTER.reaction_preparation.reaction_processor.reaction_processing_sup
     build_reaction,
     build_reactants,
     build_reaction_tuple,
-    clear_isotopes,
+    clear_isotopes_and_map_numbers,
     detect_byproducts,
     detect_duplicates,
     reassign_atom_map_numbers_by_isotope,
@@ -303,7 +303,7 @@ class PrepareReactions:
                 total_products = len(reaction_metadata) + 1
 
                 # Clear isotopes before saving to restore normal chemistry
-                clear_isotopes(reactant_combined, product_combined)
+                clear_isotopes_and_map_numbers(reactant_combined, product_combined)
 
                 # Save mapping dataframe to CSV
                 df_combined.to_csv(csv_cache / f"reaction_{total_products}.csv", index=False)

@@ -209,6 +209,8 @@ def reassign_atom_map_numbers_by_isotope(mol: Chem.Mol) -> None:
             atom.SetAtomMapNum(surviving_idx)  # Restore original map number
             atom.SetIsotope(0)                 # Clear isotope to restore normal chemistry
 
+
+
 def build_atom_index_mapping(   reactant_combined: Chem.Mol, 
                                 product_combined: Chem.Mol) -> tuple[dict[int, int], pd.DataFrame]:
     """
@@ -261,9 +263,9 @@ def reveal_template_map_numbers(mol: Chem.Mol) -> None:
             map_num = atom.GetIntProp('old_mapno')
             atom.SetAtomMapNum(map_num)
 
-def clear_isotopes(mol_1: Chem.Mol, mol_2: Chem.Mol) -> None:
+def clear_isotopes_and_map_numbers(mol_1: Chem.Mol, mol_2: Chem.Mol) -> None:
     """
-    Clears isotope values from molecules to restore normal chemistry after using isotopes for atom tracking.
+    Clears isotope and map number values from molecules to restore normal chemistry after using them for atom tracking.
     
     Args:
         mol_1: First molecule to clear
@@ -271,14 +273,16 @@ def clear_isotopes(mol_1: Chem.Mol, mol_2: Chem.Mol) -> None:
     """
     for atom in mol_1.GetAtoms():
         atom.SetIsotope(0)
+        atom.SetAtomMapNum(0)
     for atom in mol_2.GetAtoms():
         atom.SetIsotope(0)
+        atom.SetAtomMapNum(0)
 
 # --- BUILDERS ---
 
 def build_reaction(rxn_smarts: str) -> ChemicalReaction:
     """Builds RDKit ChemicalReaction object from SMARTS string."""
-    return AllChem.ReactionFromSmarts(rxn_smarts)
+    return AllChem.ReactionFromSmarts(rxn_smarts)                           
 
 def build_reactants(reactant_smiles_1: str, reactant_smiles_2: str) -> tuple[Chem.Mol, Chem.Mol]:
     """

@@ -79,8 +79,7 @@ class ReactionPropagation:
         self.rxn_detector = ReactionDetector()
 
 
-    #  PUBLIC                                                              
-
+    #  PUBLIC
     def run_propagation_loop(
         self,
         reactions_metadata: list[ReactionMetadata],
@@ -113,6 +112,7 @@ class ReactionPropagation:
             raise ValueError(
                 "Monomer roles must be provided for the propagation loop."
             )
+
         # seen_instance_keys prevents re-running identical (mol-pair, rxn-name) combos
         seen_instance_keys: Set[Tuple] = self._build_seen_instance_keys(reactions_metadata)
 
