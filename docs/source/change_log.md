@@ -24,7 +24,7 @@ This serves two purposes:
  -->
 ---
 
-## [0.2.0] - 2026-04-17
+## [0.2.0] - 2026-05-01
 
 ### Breaking
 - Migrated to a class-based architecture (not backward compatible).
