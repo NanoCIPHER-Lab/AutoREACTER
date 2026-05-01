@@ -1,18 +1,4 @@
-"""
-Input parsing layer for AutoREACTER.
-
-TODO
-- [ ] Parse user inputs (CLI / JSON / GUI later) and validate required keys.
-- [ ] Enforce: either "monomer_counts" OR "monomer_ratios" must be provided.
-- [ ] If "monomer_ratios" is given, compute "monomer_counts" based on:
-      - "total_atoms" target(s), and
-      - monomer atom counts / molar masses from RDKit.
-- [ ] Derive box size / initial density estimates from monomer counts + density.
-- [ ] Output a clean, consistently formatted object for the AutoREACTER workflow.
-"""
-
 from __future__ import annotations
-
 import logging
 from dataclasses import dataclass
 from pathlib import Path
