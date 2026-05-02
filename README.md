@@ -8,7 +8,7 @@
 
 Full documentation is available at:
 
-**[https://nanocipher-lab.github.io/AutoREACTER/](https://nanocipher-lab.github.io/AutoREACTER/)**
+**[autoreacter.org](https://autoreacter.org/)**
 
 The documentation includes installation instructions, input configuration, supported reactions, supported force fields, cleanup utilities, and developer API references.
 
@@ -29,7 +29,7 @@ AutoREACTER currently supports beta-stage step-growth **polycondensation** workf
 - Diamine + di-carboxylic acid polycondensation
 - Diamine + di-carboxylic acid halide polycondensation
 
-For the detailed functional-group mapping and reaction rules, see the [supported reactions documentation](https://nanocipher-lab.github.io/AutoREACTER/supported-reactions.html).
+For the detailed functional-group mapping and reaction rules, see the [supported reactions documentation](https://autoreacter.org/supported-reactions.html).
 
 ## Installation
 
@@ -38,7 +38,7 @@ Clone the repository:
 ```bash
 git clone https://github.com/NanoCIPHER-Lab/AutoREACTER.git
 cd AutoREACTER
-```
+````
 
 Create and activate the recommended Conda environment:
 
@@ -54,7 +54,7 @@ python -m pip install -U pip
 python -m pip install -e .
 ```
 
-AutoREACTER also requires **LUNAR** for atom typing. See the [getting started documentation](https://nanocipher-lab.github.io/AutoREACTER/getting-started.html) for setup details.
+AutoREACTER also requires **LUNAR** for atom typing. See the [getting started documentation](https://autoreacter.org/getting-started.html) for setup details.
 
 ## Quick start
 
