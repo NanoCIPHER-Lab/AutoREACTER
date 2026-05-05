@@ -23,8 +23,14 @@ This serves two purposes:
     At release time, you can move the Unreleased section changes into a new release version section.
  -->
 ---
+## [0.2.1] - 2026-05-04
 
-## [0.2.0] - 2026-04-17
+### Fixed
+- Fixed issue where `cache/00_cache` was not cleared when initiating a new AutoREACTER run.
+- Improved cache handling to prevent bugs caused by deleting cache files in the middle of a run.
+- Added a warning message when the `--cleanup` command is used to delete all cached runs, to prevent accidental data loss.
+
+## [0.2.0] - 2026-05-01
 
 ### Breaking
 - Migrated to a class-based architecture (not backward compatible).

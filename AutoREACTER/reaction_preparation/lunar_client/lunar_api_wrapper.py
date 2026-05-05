@@ -27,7 +27,11 @@ from AutoREACTER.input_parser import SimulationSetup
 from AutoREACTER.reaction_preparation.lunar_client.locate_lunar import get_LUNAR_loc
 from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import ReactionMetadata
 from AutoREACTER.reaction_preparation.lunar_client.ff_validator import FFValidator
+parent_dir = os.path.dirname(os.path.abspath(__file__))
 
+auto_reacter_dir = os.path.abspath(
+    os.path.join(parent_dir, "..", "..", "..")
+)
 
 # =============================================================================
 # Data Structures for LUNAR Processing Results
@@ -128,7 +132,6 @@ class LunarAPIWrapper:
                       Will create subdirectories for each processing stage.
         """
         self.cache_dir = Path(cache_dir / "lunar")
-
         # Locate LUNAR installation and key script paths
         self.LUNAR_LOCATION = get_LUNAR_loc(use_gui=False)
         self.atom_typing_py = os.path.join(self.LUNAR_LOCATION, "atom_typing.py")
@@ -136,7 +139,6 @@ class LunarAPIWrapper:
         self.bond_react_merge_py = os.path.join(self.LUNAR_LOCATION, "bond_react_merge.py")
 
         self._loading_screen("LUNAR API Wrapper Initialization")
-
         # Create cache structure for different processing stages
         os.makedirs(self.cache_dir, exist_ok=True)
 
@@ -377,10 +379,12 @@ class LunarAPIWrapper:
             ValueError: If the force field file is not found or unsupported
         """
         base = Path(self.LUNAR_LOCATION) / "frc_files"
+        auto_reacter_frc_dir = Path(auto_reacter_dir) / "frc_files"
+        print(f"Resolving .frc file for force field '{force_field}'...")  # Debug statement
 
         paths = {
-            "PCFF-IFF": base / "pcff_interface_v1_6mBN.frc",
-            "PCFF": base / "pcff.frc",
+            "PCFF-IFF": auto_reacter_frc_dir / "pcff.frc",
+            "PCFF": auto_reacter_frc_dir / "pcff.frc",
             "Compass": base / "compass_published.frc",
             "CVFF-IFF": base / "cvff_aug.frc",
             "CVFF": base / "cvff.frc",
@@ -427,6 +431,7 @@ class LunarAPIWrapper:
                 '-topo', str(data_file),
                 '-nta', str(nta_file),
                 '-frc', frc_file,
+                '-asm', 'T',  # This flag helps automatically assign very general and assumed parameters if the force field read in by the frc_file does not currently support parameters for certain systems being defined by the topofile and nta_file. 
                 '-dir', self.cache_all2lmp
             ])
             

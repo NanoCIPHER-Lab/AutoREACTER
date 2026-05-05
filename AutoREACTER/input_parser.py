@@ -1,24 +1,12 @@
 from __future__ import annotations
-"""
-TODO (Input Parsing Layer)
-- [ ] Parse user inputs (CLI / JSON / GUI later) and validate required keys.
-- [ ] Enforce: either "monomer_counts" OR "monomer_ratios" must be provided (not both unless you define a rule).
-- [ ] If "monomer_ratios" is given, compute "monomer_counts" based on:
-      - "total_atoms" target(s) (likely multiple) and
-      - monomer atom counts / molar masses from RDKit
-- [ ] Derive box size / initial density estimates from monomer counts + density.
-- [ ] Output a clean, consistently-formatted dictionary to feed into main.py.
-"""
-
-from dataclasses import dataclass
-from typing import Any
-from rdkit import Chem
-from rdkit.Chem import Draw
 import logging
-from typing import Literal
-from PIL.Image import Image
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Any, Literal, Optional
+
+from PIL.Image import Image
+from rdkit import Chem
+from rdkit.Chem import Descriptors, Draw
 
 # Module-level logger for future diagnostics.
 logger = logging.getLogger(__name__)
@@ -26,75 +14,75 @@ logger = logging.getLogger(__name__)
 
 class InputError(Exception):
     """Base class for all input-related errors in the parsing pipeline."""
-    pass
 
 
 class InputSchemaError(InputError):
     """Raised when there are missing keys or wrong top-level structure in the input."""
-    pass
 
 
 class InputConflictError(InputError):
     """Raised when there are mutually exclusive or invalid combinations of input fields."""
-    pass
 
 
 class NumericFieldError(InputError):
-    """Raised when numeric values (density, temperature, counts) are invalid."""
-    pass
+    """Raised when numeric values such as density, temperature, or counts are invalid."""
 
 
 class SmilesValidationError(InputError):
     """Raised when an invalid SMILES string is provided or RDKit parsing fails."""
-    pass
 
 
 class DuplicateMonomerError(InputError):
     """Raised when duplicate monomer definitions are detected."""
-    pass
 
 
-# Type aliases for clarity and validation
-
+# Type aliases for clarity and validation.
 CompositionMethodType = Literal["counts", "ratio"]
 ForceFieldType = Literal[
-    "PCFF-IFF", "PCFF", "Compass",
-    "CVFF-IFF", "CVFF", "DRIEDING", 
+    "PCFF-IFF",
+    "PCFF",
+    "Compass",
+    "CVFF-IFF",
+    "CVFF",
+    "Clay-FF",
+    "DRIEDING",
+    "OPLS-AA",
 ]
-# Note: Since Clay-FF and OPLS-AA are not fully supported within LUNAR, they are consequently unsupported in AutoREACTER.
+
 
 @dataclass(slots=True)
 class MonomerEntry:
     """
     Canonical internal representation of a monomer.
-    
-    This dataclass stores validated and processed information about a single monomer
-    species, including its chemical identity (SMILES), physical properties derived 
-    from RDKit, and its quantity in the simulation.
-    
+
+    This dataclass stores validated and processed information about a single
+    monomer species, including chemical identity, RDKit-derived properties,
+    and its quantity in each simulation replica.
+
     Attributes:
-        id: Unique integer identifier for the monomer (e.g., 1, 2, 3).
-        data_id: Original identifier string from input (e.g., "data_1").
-        name: Optional human-readable name for LAMMPS labeling (defaults to "data_{id}" if not provided).
+        id: Unique integer identifier for the monomer, e.g., 1, 2, 3.
+        data_id: Original internal identifier string, e.g., "data_1".
+        name: Human-readable name used for LAMMPS labeling.
         smiles: RDKit-canonical SMILES string representing the molecular structure.
-        count: Dictionary mapping replica tags to integer counts (used in 'counts' mode).
-        ratio: Float representing the molar ratio of the monomer (used in 'ratio' mode).
-        rdkit_mol: The RDKit Mol object corresponding to the monomer's SMILES string.
-        molecule_3Dmol_path: Optional file path to the 3Dmol.mol representation of the monomer.
-        num_atoms: The number of atoms in the monomer, derived from the RDKit Mol object.
-        molecular_weight: The molecular weight of the monomer, derived from the RDKit Mol object.
-        status: Boolean indicating whether the monomer should be included in the simulation.
+        count: Dictionary mapping replica tags to integer counts in counts mode.
+        ratio: Molar ratio of the monomer in ratio mode.
+        rdkit_mol: RDKit Mol object corresponding to the monomer SMILES.
+        molecule_3Dmol_path: Optional file path to the 3D .mol representation.
+        num_atoms: Number of atoms in the monomer with hydrogens included.
+        molecular_weight: Molecular weight of the monomer from RDKit.
+        status: Boolean indicating whether the monomer should be included.
     """
+
     id: int
-    data_id: str 
-    name: str | None 
-    smiles: str  
-    count: dict | None  # None only if ratio mode 
-    ratio: float | None  # None only if counts mode 
-    rdkit_mol: Chem.Mol | None = None # Store the RDKit Mol object
+    data_id: str
+    name: str | None
+    smiles: str
+    count: dict | None  # None only if ratio mode.
+    ratio: float | None  # None only if counts mode.
+    rdkit_mol: Chem.Mol | None = None
     molecule_3Dmol_path: Optional[Path] = None
-    num_atoms: int | None = None          # Will be derived from rdkit_mol
-    molecular_weight: float | None = None # Will be derived from rdkit_mol
+    num_atoms: int | None = None
+    molecular_weight: float | None = None
     status: bool = True
 
 
@@ -102,51 +90,52 @@ class MonomerEntry:
 class Replica:
     """
     Container for individual simulation replica/system definitions.
-    This dataclass encapsulates all relevant information for a single simulation target,
-    including its unique tag, temperature, density, and composition details.
-     Attributes:
-        tag: A unique identifier for the replica.
-        temperature: The temperature of the replica (Kelvin).
-        density: The density of the replica (g/cm^3).
-        monomer_counts: A dictionary mapping monomer names to their counts.
-        monomer_ratios: A dictionary mapping monomer names to their molar ratios.
-        total_atoms: The total number of atoms in the system (required for ratio mode).
-        initial_box_volume: The estimated initial box volume based on density and monomer counts (cubic Angstroms).
-        initial_box_length: The estimated initial box length assuming a cubic box (Angstroms).
+
+    Attributes:
+        tag: Unique identifier for the replica.
+        temperature: Replica temperature in Kelvin.
+        density: Replica density in g/cm^3.
+        monomer_counts: Mapping of monomer names to counts in counts mode.
+        monomer_ratios: Mapping of monomer names to ratios in ratio mode.
+        total_atoms: Total target atom count, required for ratio mode.
+        initial_box_volume: Estimated initial box volume in cubic Angstroms.
+        initial_box_length: Estimated cubic box length in Angstroms.
     """
+
     tag: str
     temperature: float
     density: float
     monomer_counts: dict | None = None
     monomer_ratios: dict | None = None
     total_atoms: int | None = None
-    initial_box_volume: float | None = None    # In cubic Angstroms
-    initial_box_length: float | None = None    # Assuming a cubic box
+    initial_box_volume: float | None = None
+    initial_box_length: float | None = None
 
 
 @dataclass(slots=True)
 class SimulationSetup:
     """
     Container that stores normalized and validated simulation inputs.
-    
-    This class acts as the primary data transfer object (DTO) passed to the 
-    simulation engine after input parsing is complete.
-    Most of these data will consumed in the LAMMPS input generation step, but having them structured here allows for
-    easier data management and potential future extensions.
-    monomers section will be used heavyly at first stages.
-    
+
+    This class acts as the primary data transfer object passed into later
+    AutoREACTER workflow stages. Most of these data are consumed during LAMMPS
+    input generation, but keeping them structured here makes downstream stages
+    cleaner and easier to extend.
+
     Attributes:
-        simulation_name: A simple name for the simulation, used for output organization.
-        temperature: List of temperature values (Kelvin). Normalized to list internally.
+        simulation_name: Name of the simulation, used for output organization.
+        temperature: List of temperature values in Kelvin.
         density: List of density values in g/cm^3.
-        force_field: Optional string specifying the force field to use (e.g., "PCFF", "OPLS-AA"). Default is "PCFF".
+        force_field: Force field name. Defaults to "PCFF" if not provided.
         monomers: List of MonomerEntry objects representing the system composition.
-        composition_method: The method used to define composition ("counts" or "ratio").
-        composition: Raw composition dictionary from inputs for flexible downstream use.
-        ratio: Mapping of monomer names to their molar ratios (used in 'ratio' mode).
-        number_of_total_atoms: List of total atom counts per target (place holder to be calculated).
-        box_estimates: Estimated box size based on density (placeholder).
+        replicas: List of validated Replica objects.
+        composition_method: Composition method, either "counts" or "ratio".
+        composition: Normalized composition dictionary from the input replicas.
+        ratio: Optional mapping of monomer IDs to ratios.
+        number_of_total_atoms: Optional list of total atom targets.
+        box_estimates: Optional estimated box size placeholder.
     """
+
     simulation_name: str
     temperature: list[float]
     density: list[float]
@@ -162,42 +151,40 @@ class SimulationSetup:
 
 class InputParser:
     """
-    Validates, normalizes, and prepares raw user inputs for the main simulation pipeline.
-    
-    This class is responsible for enforcing required keys, checking value contracts, 
-    and performing canonicalization steps (e.g., SMILES normalization via RDKit).
-    It transforms a raw dictionary input into a structured SimulationSetup object.
+    Validates, normalizes, and prepares raw user inputs for AutoREACTER.
+
+    This class enforces required keys, checks value contracts, canonicalizes
+    SMILES strings through RDKit, and transforms a raw dictionary into a
+    structured SimulationSetup object.
     """
 
     def validate_inputs(self, inputs: dict) -> SimulationSetup:
         """
         Main entry point for input validation.
-        
-        Orchestrates the validation of all input fields and constructs the final
-        SimulationSetup object.
 
         Args:
             inputs: Raw dictionary input containing simulation parameters.
 
         Returns:
-            A validated SimulationSetup object ready for the simulation engine.
+            A validated SimulationSetup object ready for downstream workflow steps.
         """
-        # Check top-level structure and determine composition method.
         self.validate_basic_format(inputs)
 
         simulation_name = inputs["simulation_name"]
-
         replicas_list = inputs["replicas"]
         composition_method = self._get_inputs_mode(replicas_list)
 
         validated_replicas = self._validate_replicas(
-            replicas_list, composition_method
+            replicas_list,
+            composition_method,
         )
+
         self._validate_system_monomer_keys(
-            inputs, 
-            validated_replicas["systems"], 
-            composition_method
+            inputs,
+            validated_replicas["systems"],
+            composition_method,
         )
+
         monomers = self._validate_monomer_entry(
             inputs,
             composition_method,
@@ -216,114 +203,148 @@ class InputParser:
             replicas=validated_replicas["replicas"],
             composition_method=composition_method,
             composition=validated_replicas,
-            force_field=force_field
+            force_field=force_field,
         )
-            
 
-    def molecule_representation_of_initial_molecules(self, simulation_setup: SimulationSetup) -> list[Chem.Mol]:
+    def molecule_representation_of_initial_molecules(
+        self,
+        simulation_setup: SimulationSetup,
+    ) -> tuple[list[Chem.Mol], list[str]]:
         """
-        Extracts RDKit Mol objects for all monomers in the simulation setup.
-        
-        This method can be used for downstream processing that requires direct access
-        to the molecular structures, such as reaction definition or advanced analysis.
+        Extracts RDKit Mol objects and names for all monomers.
 
         Args:
-            simulation_setup: The validated SimulationSetup object.
+            simulation_setup: Validated SimulationSetup object.
 
         Returns:
-            A list of RDKit Mol objects corresponding to each monomer entry.
+            A tuple containing RDKit Mol objects and molecule legends.
         """
-        initial_molecules = [monomer.rdkit_mol for monomer in simulation_setup.monomers if monomer.rdkit_mol is not None]
-        initial_molecules_legends = [monomer.name for monomer in simulation_setup.monomers]
+        initial_molecules = [
+            monomer.rdkit_mol
+            for monomer in simulation_setup.monomers
+            if monomer.rdkit_mol is not None
+        ]
+        initial_molecules_legends = [
+            monomer.name or monomer.data_id
+            for monomer in simulation_setup.monomers
+        ]
         return initial_molecules, initial_molecules_legends
-    
+
     def initial_molecules_image_grid(self, simulation_setup: SimulationSetup) -> Image:
         """
-        Creates a grid image of the initial molecules for visualization purposes.
+        Creates a grid image of the initial molecules for visualization.
+
         Args:
-            simulation_setup: The validated SimulationSetup object.
+            simulation_setup: Validated SimulationSetup object.
 
         Returns:
-            A Image object containing the grid of molecule images.
+            PIL Image object containing the molecule grid.
         """
-        initial_molecules = [monomer.rdkit_mol for monomer in simulation_setup.monomers if monomer.rdkit_mol is not None]
-        initial_molecules_legends = [monomer.name for monomer in simulation_setup.monomers]
-        return Draw.MolsToGridImage(initial_molecules, molsPerRow=3, subImgSize=(400, 400), legends=initial_molecules_legends)
+        initial_molecules, initial_molecules_legends = (
+            self.molecule_representation_of_initial_molecules(simulation_setup)
+        )
+
+        return Draw.MolsToGridImage(
+            initial_molecules,
+            molsPerRow=3,
+            subImgSize=(400, 400),
+            legends=initial_molecules_legends,
+        )
 
     def validate_basic_format(self, inputs: dict) -> None:
         """
         Validates the top-level structure of the input dictionary.
-        
-        Ensures the input is a dictionary and contains all required keys.
 
         Args:
-            inputs: The raw input dictionary.
+            inputs: Raw input dictionary.
 
         Raises:
-            InputSchemaError: If the input is not a dict or is missing required keys.
+            InputSchemaError: If input is not a dict or is missing required keys.
         """
         if not isinstance(inputs, dict):
             raise InputSchemaError(
-            f"Expected input to be a dictionary. Got {type(inputs).__name__} instead."
+                f"Expected input to be a dictionary. Got {type(inputs).__name__} instead."
             )
-        
+
         required_keys = ["simulation_name", "replicas", "monomers"]
         for key in required_keys:
             if key not in inputs:
                 raise InputSchemaError(
                     f"Missing required key: {key!r} in inputs dictionary."
                 )
-        
-        return None
 
     def _get_inputs_mode(self, replicas_list: list) -> CompositionMethodType:
         """
-        Determines the composition method based on the contents of the replicas list.
-        
+        Determines the composition method from the replicas list.
+
         Args:
-            replicas_list: The 'replicas' list from the inputs.
+            replicas_list: The 'replicas' list from the input dictionary.
 
         Returns:
-            The composition method string ("counts" or "ratio").
+            Composition method, either "counts" or "ratio".
 
         Raises:
             InputSchemaError: If the list is invalid or mode cannot be inferred.
+            InputConflictError: If a replica contains both counts and ratios.
         """
         if not isinstance(replicas_list, list) or len(replicas_list) == 0:
             raise InputSchemaError(
                 f"'replicas' must be a non-empty list. Got {type(replicas_list).__name__} instead."
             )
 
-        first_replica = replicas_list[0]
-        if "monomer_counts" in first_replica:
-            return "counts"
-        elif "monomer_ratios" in first_replica:
-            return "ratio"
-        else:
-            raise InputSchemaError(
-                "Could not infer composition method. Replicas must contain either 'monomer_counts' or 'monomer_ratios'."
+        detected_modes: set[CompositionMethodType] = set()
+
+        for replica in replicas_list:
+            if not isinstance(replica, dict):
+                raise InputSchemaError(
+                    f"Each replica must be a dictionary. Got {type(replica).__name__} instead."
+                )
+
+            has_counts = "monomer_counts" in replica
+            has_ratios = "monomer_ratios" in replica
+
+            if has_counts and has_ratios:
+                raise InputConflictError(
+                    "Each replica must contain either 'monomer_counts' or 'monomer_ratios', not both."
+                )
+
+            if has_counts:
+                detected_modes.add("counts")
+            elif has_ratios:
+                detected_modes.add("ratio")
+            else:
+                raise InputSchemaError(
+                    "Could not infer composition method. Replicas must contain either "
+                    "'monomer_counts' or 'monomer_ratios'."
+                )
+
+        if len(detected_modes) != 1:
+            raise InputConflictError(
+                "All replicas must use the same composition method. Do not mix counts and ratio modes."
             )
-        
-    def _validate_temperature(self, temp: Any) -> list[float]:
+
+        return detected_modes.pop()
+
+    def _validate_temperature(self, temp: Any) -> float:
         """
         Validates and normalizes temperature input.
-        
-        Accepts a single number or a list of numbers. Ensures all values are positive.
 
         Args:
-            temp: Temperature input (int or float).
-            
+            temp: Temperature input.
+
         Returns:
-            A float temperature value.
+            Validated float temperature value.
 
         Raises:
-            NumericFieldError: If the format is invalid or values are non-positive.
+            NumericFieldError: If the value is not a positive number.
         """
-        if not isinstance(temp, (int, float)):
+        if isinstance(temp, bool) or not isinstance(temp, (int, float)):
             raise NumericFieldError(f"'temperature' must be a number. Got: {temp!r}")
 
         if temp <= 0:
-            raise NumericFieldError(f"Temperature values must be positive. Got: {temp!r}")
+            raise NumericFieldError(
+                f"Temperature values must be positive. Got: {temp!r}"
+            )
 
         return float(temp)
 
@@ -332,7 +353,7 @@ class InputParser:
         Validates the density input.
 
         Args:
-            density: Density value (g/cm^3).
+            density: Density value in g/cm^3.
 
         Returns:
             Validated float density value.
@@ -340,7 +361,7 @@ class InputParser:
         Raises:
             NumericFieldError: If density is not a positive number.
         """
-        if not isinstance(density, (int, float)):
+        if isinstance(density, bool) or not isinstance(density, (int, float)):
             raise NumericFieldError(
                 f"'density' must be a number. Got: {density!r}"
             )
@@ -353,7 +374,7 @@ class InputParser:
             )
 
         return density_value
-    
+
     def _validate_force_field(self, force_field: Any) -> str:
         """
         Validates the force field input.
@@ -365,40 +386,50 @@ class InputParser:
             Validated force field name.
 
         Raises:
-            InputSchemaError: If force field is not a string or is empty.
+            InputSchemaError: If force field is unsupported.
         """
         allowed: set[ForceFieldType] = {
-            "PCFF-IFF", "PCFF", "Compass", "CVFF-IFF", "CVFF", "Clay-FF", "DRIEDING", "OPLS-AA"
+            "PCFF-IFF",
+            "PCFF",
+            "Compass",
+            "CVFF-IFF",
+            "CVFF",
+            "Clay-FF",
+            "DRIEDING",
+            "OPLS-AA",
         }
-        
+
         if force_field is None:
-            return "PCFF"  # Default value
+            return "PCFF"
+
+        if not isinstance(force_field, str) or not force_field.strip():
+            raise InputSchemaError(
+                f"'force_field' must be a non-empty string. Got: {force_field!r}"
+            )
 
         if force_field not in allowed:
             raise InputSchemaError(f"Unsupported force field: {force_field!r}")
+
         return force_field
-    
+
     def _validate_composition(
         self,
         composition_dict: dict,
-        method: CompositionMethodType
+        method: CompositionMethodType,
     ) -> dict:
         """
-        Validates the composition dictionary structure and targets.
-        
-        Checks that targets exist, have valid tags, and conform to the requirements
-        of the specific composition method (e.g., presence of 'total_atoms').
+        Validates a legacy composition dictionary structure.
+
+        Note:
+            This method is kept for compatibility with older input schemas. The
+            current parser path validates composition through the 'replicas' section.
 
         Args:
-            composition_dict: The composition dictionary to validate.
-            method: The composition method being used.
+            composition_dict: Composition dictionary to validate.
+            method: Composition method, either "counts" or "ratio".
 
         Returns:
             The validated composition dictionary.
-
-        Raises:
-            InputSchemaError: If structure is invalid or tags are missing/duplicated.
-            NumericFieldError: If numeric fields like 'total_atoms' are invalid.
         """
         targets = composition_dict.get("targets")
 
@@ -428,53 +459,53 @@ class InputParser:
 
             seen_tags.add(tag)
 
-            # Ratio mode requires total_atoms
             if method == "ratio":
                 total_atoms = target.get("total_atoms")
-                if not isinstance(total_atoms, int) or total_atoms <= 0:
+                if isinstance(total_atoms, bool) or not isinstance(total_atoms, int) or total_atoms <= 0:
                     raise NumericFieldError(
                         f"'total_atoms' must be a positive integer for ratio mode. Got: {total_atoms!r}"
                     )
 
-            # Counts mode must NOT include total_atoms (optional strictness)
-            if method == "counts":
-                if "total_atoms" in target:
-                    raise InputSchemaError(
-                        "'total_atoms' should not be provided in 'counts' mode."
-                    )
+            if method == "counts" and "total_atoms" in target:
+                raise InputSchemaError(
+                    "'total_atoms' should not be provided in 'counts' mode."
+                )
 
         return composition_dict
-    
-    def _validate_system_monomer_keys(self, inputs: dict, systems: list[dict], method: str) -> None:
-        """Ensures that monomer keys in each system match the defined monomers in the inputs.
-            This method checks that the monomer names used in the 'monomer_counts' or 'monomer_ratios' fields of each system
-            correspond to the monomer names defined in the top-level 'monomers' list. It raises errors if there are
-            missing or extra monomer keys in any system compared to the defined monomers.
-        Args:
-            inputs: The raw input dictionary containing the 'monomers' list.
-            systems: List of system dictionaries from the replicas section.
-            method: The composition method ("counts" or "ratio").
-        Raises:
-            InputSchemaError: If there are missing or extra monomer keys in any system compared to the defined monomers.
-        """
-        
-        monomers = inputs.get("monomers", [])
-        allowed_names = set()
 
-        for monomer in monomers:
+    def _validate_system_monomer_keys(
+        self,
+        inputs: dict,
+        systems: list[dict],
+        method: CompositionMethodType,
+    ) -> None:
+        """
+        Ensures that monomer keys in each system match the defined monomers.
+
+        Args:
+            inputs: Raw input dictionary containing the top-level 'monomers' list.
+            systems: List of system dictionaries from the replicas section.
+            method: Composition method, either "counts" or "ratio".
+
+        Raises:
+            InputSchemaError: If systems contain missing or unknown monomer keys.
+        """
+        monomers = inputs.get("monomers", [])
+        allowed_names: set[str] = set()
+
+        for monomer_id, monomer in enumerate(monomers, start=1):
             name = monomer.get("name")
+
             if not isinstance(name, str) or not name.strip():
-                raise InputSchemaError("Each monomer must include a non-empty 'name'.")
+                name = f"data_{monomer_id}"
+                monomer["name"] = name
+
             allowed_names.add(name)
+
+        field_name = "monomer_counts" if method == "counts" else "monomer_ratios"
 
         for system in systems:
             tag = system["tag"]
-
-            if method == "counts":
-                field_name = "monomer_counts"
-            else:
-                field_name = "monomer_ratios"
-
             provided_names = set(system.get(field_name, {}).keys())
 
             extra = provided_names - allowed_names
@@ -489,34 +520,23 @@ class InputParser:
                 raise InputSchemaError(
                     f"System '{tag}' is missing monomer(s) in '{field_name}': {sorted(missing)}"
                 )
-        
-    
-    def _validate_monomer_entry(self, 
-                                inputs: dict, 
-                                method: CompositionMethodType,
-                                systems: list[dict]
-                            ) -> list[MonomerEntry]:
+
+    def _validate_monomer_entry(
+        self,
+        inputs: dict,
+        method: CompositionMethodType,
+        systems: list[dict],
+    ) -> list[MonomerEntry]:
         """
         Validates monomer entries and constructs MonomerEntry objects.
-        
-        Iterates through the monomers list, validates SMILES strings, checks for 
-        duplicates, validates counts/ratios based on the composition method, and 
-        calculates physical properties using RDKit.
 
         Args:
-            inputs: The raw input dictionary.
-            method: The composition method ("counts" or "ratio").
-            systems: List of system dictionaries from the replicas section, used to validate counts/ratios.
+            inputs: Raw input dictionary.
+            method: Composition method, either "counts" or "ratio".
+            systems: Validated system dictionaries from the replicas section.
 
         Returns:
             A list of validated MonomerEntry objects.
-
-        Raises:
-            ValueError: If monomers field is not a list or dict.
-            SmilesValidationError: If SMILES are invalid.
-            DuplicateMonomerError: If duplicate SMILES are found.
-            InputSchemaError: If count/ratio structure is invalid.
-            NumericFieldError: If count/ratio values are invalid.
         """
         validated_monomers: list[MonomerEntry] = []
         seen_smiles: list[str] = []
@@ -525,26 +545,24 @@ class InputParser:
         if not isinstance(monomers, list):
             raise InputSchemaError("'monomers' must be a list.")
 
-        # Collect all tags
-        system_tags = [system["tag"] for system in systems]
-
         for monomer_id, monomer_dict in enumerate(monomers, start=1):
+            if not isinstance(monomer_dict, dict):
+                raise InputSchemaError(
+                    f"Each monomer entry must be a dictionary. Got: {monomer_dict!r}"
+                )
 
             name = monomer_dict.get("name")
-
             if not isinstance(name, str) or not name.strip():
-                name = f"data_{monomer_id}" # Default name if not provided or invalid
-                
-            smiles_raw = monomer_dict.get("smiles")
+                name = f"data_{monomer_id}"
 
+            smiles_raw = monomer_dict.get("smiles")
             smiles, mol = self._validate_smiles(smiles_raw)
-            seen_smiles = self.validate_no_duplicate_smiles(
-                smiles, seen_smiles
-            )
+            seen_smiles = self.validate_no_duplicate_smiles(smiles, seen_smiles)
+
+            num_atoms, molecular_weight = self._derive_molecule_properties(mol)
 
             if method == "counts":
-
-                count_map = {}
+                count_map: dict[str, int] = {}
 
                 for system in systems:
                     tag = system["tag"]
@@ -556,7 +574,7 @@ class InputParser:
                         )
 
                     value = monomer_counts[name]
-                    if not isinstance(value, int) or value < 0:
+                    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
                         raise NumericFieldError(
                             f"Invalid count for monomer {name!r} in system '{tag}'."
                         )
@@ -567,7 +585,6 @@ class InputParser:
                 ratio = None
 
             else:
-                # ratio defined per system (must be consistent)
                 first_system = systems[0]
                 ratios = first_system["monomer_ratios"]
 
@@ -578,7 +595,7 @@ class InputParser:
 
                 ratio_value = ratios[name]
 
-                if not isinstance(ratio_value, (int, float)) or ratio_value < 0:
+                if isinstance(ratio_value, bool) or not isinstance(ratio_value, (int, float)) or ratio_value < 0:
                     raise NumericFieldError(
                         f"Invalid ratio for monomer {name!r}."
                     )
@@ -595,121 +612,149 @@ class InputParser:
                     count=count,
                     ratio=ratio,
                     rdkit_mol=mol,
+                    num_atoms=num_atoms,
+                    molecular_weight=molecular_weight,
                 )
             )
 
         return validated_monomers
-    
-    def _int_to_dict(self, integer: int) -> dict:
+
+    def _derive_molecule_properties(self, mol: Chem.Mol) -> tuple[int, float]:
         """
-        Convert an integer to a dictionary format for counts mode.
-        
-        Note: This is a placeholder for future support of ratio mode 
-        where counts may be derived from ratios and total atom targets.
+        Derives simple molecule properties from an RDKit Mol object.
 
         Args:
-            integer: The integer value.
+            mol: RDKit molecule.
 
         Returns:
-            A dictionary with a placeholder key "_".
+            Tuple of number of atoms with hydrogens included and molecular weight.
+        """
+        mol_with_h = Chem.AddHs(mol)
+        num_atoms = int(mol_with_h.GetNumAtoms())
+        molecular_weight = float(Descriptors.MolWt(mol))
+        return num_atoms, molecular_weight
+
+    def _int_to_dict(self, integer: int) -> dict:
+        """
+        Converts an integer to a dictionary format for counts mode.
+
+        Note:
+            This is kept as a compatibility placeholder for future ratio-mode
+            conversion where counts may be derived from ratios and total atoms.
         """
         return {"_": integer}
 
-    def _validate_smiles(self, smiles: str) -> tuple[str, Chem.Mol]:
+    def _validate_smiles(self, smiles: Any) -> tuple[str, Chem.Mol]:
         """
-        Validates a SMILES string via RDKit and returns the canonicalized representation.
+        Validates a SMILES string through RDKit and canonicalizes it.
 
         Args:
             smiles: Raw SMILES string input.
 
         Returns:
-            A tuple containing:
-                - Canonical SMILES string.
-                - RDKit Mol object.
-        
+            Canonical SMILES string and RDKit Mol object.
+
         Raises:
             SmilesValidationError: If RDKit cannot parse the string.
         """
-        s = (smiles or "").strip()
-        mol = Chem.MolFromSmiles(s)
+        if not isinstance(smiles, str) or not smiles.strip():
+            raise SmilesValidationError(
+                f"SMILES must be a non-empty string. Got: {smiles!r}"
+            )
+
+        smiles_clean = smiles.strip()
+        mol = Chem.MolFromSmiles(smiles_clean)
+
         if mol is None:
-            raise SmilesValidationError(f"Invalid SMILES string: {smiles!r}. RDKit failed to parse it.")
-        
-        # Canonicalize to remove whitespace/ordering differences for downstream comparison.
-        smiles = Chem.MolToSmiles(mol, canonical=True)
-        return smiles, mol
+            raise SmilesValidationError(
+                f"Invalid SMILES string: {smiles!r}. RDKit failed to parse it."
+            )
+
+        canonical_smiles = Chem.MolToSmiles(mol, canonical=True)
+        return canonical_smiles, mol
 
     def _validate_numeric_fields(self, inputs: dict) -> None:
         """
-        Ensures density, temperature, and monomer counts meet expected numeric requirements.
-        
-        Note: This method appears to be a legacy or alternative validation routine 
-        not currently hooked into the main `validate_inputs` flow.
+        Legacy numeric validation helper.
 
-        Args:
-            inputs: Input dictionary.
-
-        Raises:
-            NumericFieldError: If any numeric constraints are violated.
+        Note:
+            This method is kept for compatibility with older input schemas and is
+            not currently used in the main validate_inputs flow.
         """
         density = inputs.get("density", None)
-        if not isinstance(density, (int, float)) or density <= 0:
-            raise NumericFieldError(f"'density' must be a positive number. Got: {density!r}")
+        if isinstance(density, bool) or not isinstance(density, (int, float)) or density <= 0:
+            raise NumericFieldError(
+                f"'density' must be a positive number. Got: {density!r}"
+            )
 
         temps = inputs.get("temperature", None)
         if temps is None:
-            raise NumericFieldError("'temperature' is required (number or list of numbers).")
+            raise NumericFieldError(
+                "'temperature' is required as a number or list of numbers."
+            )
 
         temps_list = temps if isinstance(temps, list) else [temps]
-        for t in temps_list:
-            if not isinstance(t, (int, float)) or t <= 0:
-                raise NumericFieldError(f"Temperature values must be positive numbers. Got: {t!r}")
+        for temp in temps_list:
+            if isinstance(temp, bool) or not isinstance(temp, (int, float)) or temp <= 0:
+                raise NumericFieldError(
+                    f"Temperature values must be positive numbers. Got: {temp!r}"
+                )
 
         num_monomers = inputs.get("number_of_monomers", None)
         if not isinstance(num_monomers, dict) or not num_monomers:
-            raise NumericFieldError("'number_of_monomers' must be a non-empty dict of monomer_id -> positive int.")
-        
+            raise NumericFieldError(
+                "'number_of_monomers' must be a non-empty dict of monomer_id -> positive int."
+            )
+
         for monomer_id, count in num_monomers.items():
-            # Guard against bool values because bool is a subclass of int.
             if isinstance(count, bool) or not isinstance(count, int) or count <= 0:
                 raise NumericFieldError(
                     f"Monomer count for {monomer_id!r} must be a positive integer. Got: {count!r}"
                 )
 
-    def validate_no_duplicate_smiles(self, current_monomer: str, seen_monomer_list: list) -> list:
+    def validate_no_duplicate_smiles(
+        self,
+        current_monomer: str,
+        seen_monomer_list: list[str],
+    ) -> list[str]:
         """
-        Confirms that there are no duplicate SMILES strings between different monomer entries.
+        Confirms that there are no duplicate canonical SMILES strings.
 
         Args:
-            current_monomer: The SMILES string of the current monomer being validated.
-            seen_monomer_list: List of previously seen SMILES strings.
+            current_monomer: Canonical SMILES string for the current monomer.
+            seen_monomer_list: List of previously seen canonical SMILES strings.
 
         Returns:
-            The updated list of seen SMILES strings.
-        
-        Raises:
-            DuplicateMonomerError: If the current SMILES is already in the seen list.
+            Updated list of seen SMILES strings.
         """
-        for monomer in seen_monomer_list:
-            if current_monomer == monomer:
-                raise DuplicateMonomerError(
-                    f"Duplicate monomer detected with SMILES: {current_monomer!r}. Each monomer must have a unique SMILES string."
-                )
+        if current_monomer in seen_monomer_list:
+            raise DuplicateMonomerError(
+                f"Duplicate monomer detected with SMILES: {current_monomer!r}. "
+                "Each monomer must have a unique SMILES string."
+            )
+
         seen_monomer_list.append(current_monomer)
         return seen_monomer_list
-    
-    def _validate_single_replica(self, replica: Replica, method: CompositionMethodType) -> None:
+
+    def _validate_single_replica(
+        self,
+        replica: Replica,
+        method: CompositionMethodType,
+    ) -> None:
+        """
+        Validates one Replica object after initial construction.
+        """
         if not isinstance(replica.tag, str) or not replica.tag.strip():
             raise InputSchemaError(
                 "Each system must include a non-empty 'tag'."
             )
 
-        if not isinstance(replica.temperature, (int, float)) or replica.temperature <= 0:
+        if isinstance(replica.temperature, bool) or not isinstance(replica.temperature, (int, float)) or replica.temperature <= 0:
             raise NumericFieldError(
                 f"Replica '{replica.tag}' has invalid temperature."
             )
 
-        if not isinstance(replica.density, (int, float)) or replica.density <= 0:
+        if isinstance(replica.density, bool) or not isinstance(replica.density, (int, float)) or replica.density <= 0:
             raise NumericFieldError(
                 f"Replica '{replica.tag}' has invalid density."
             )
@@ -726,8 +771,8 @@ class InputParser:
                         f"Invalid count for monomer {monomer!r}: {value!r}"
                     )
 
-        if method == "ratio":
-            if not isinstance(replica.total_atoms, int) or replica.total_atoms <= 0:
+        elif method == "ratio":
+            if isinstance(replica.total_atoms, bool) or not isinstance(replica.total_atoms, int) or replica.total_atoms <= 0:
                 raise NumericFieldError(
                     "'total_atoms' must be a positive integer in ratio mode."
                 )
@@ -738,26 +783,26 @@ class InputParser:
                 )
 
             for monomer, value in replica.monomer_ratios.items():
-                if not isinstance(value, (int, float)) or value < 0:
+                if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
                     raise NumericFieldError(
                         f"Invalid ratio value for monomer {monomer!r}: {value!r}"
                     )
 
-    def _validate_replicas(self, systems: list[dict], method: CompositionMethodType) -> dict:
+    def _validate_replicas(
+        self,
+        systems: list[dict],
+        method: CompositionMethodType,
+    ) -> dict:
         """
         Validates the 'replicas' section of the input.
 
-        Ensures structure, numeric fields, and system-level composition fields
-        are correct based on the selected composition method.
-
         Args:
-            systems: The list of replica dictionaries.
-            method: Composition method ("counts" or "ratio").
+            systems: List of replica dictionaries.
+            method: Composition method, either "counts" or "ratio".
 
         Returns:
             Normalized replicas dictionary.
         """
-
         if not isinstance(systems, list) or not systems:
             raise InputSchemaError(
                 "'replicas' must be a non-empty list."
@@ -767,12 +812,9 @@ class InputParser:
         temperatures: list[float] = []
         density: list[float] = []
         replicas: list[Replica] = []
-
-        # used for ratio consistency check
         reference_ratios: dict | None = None
 
         for system in systems:
-
             if not isinstance(system, dict):
                 raise InputSchemaError(
                     "Each system must be a dictionary."
@@ -802,12 +844,10 @@ class InputParser:
             temperatures.append(system["temperature"])
             density.append(system["density"])
 
-            # -------- ratio mode --------
             if method == "ratio":
-
                 total_atoms = system.get("total_atoms")
 
-                if not isinstance(total_atoms, int) or total_atoms <= 0:
+                if isinstance(total_atoms, bool) or not isinstance(total_atoms, int) or total_atoms <= 0:
                     raise NumericFieldError(
                         "'total_atoms' must be a positive integer in ratio mode."
                     )
@@ -819,21 +859,18 @@ class InputParser:
                         "'monomer_ratios' must be provided in ratio mode."
                     )
 
-                # validate ratio values
                 for monomer, value in ratios.items():
-                    if not isinstance(value, (int, float)) or value < 0:
+                    if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
                         raise NumericFieldError(
                             f"Invalid ratio value for monomer {monomer!r}: {value!r}"
                         )
 
-                # enforce ratio consistency across systems
                 if reference_ratios is None:
                     reference_ratios = ratios
-                else:
-                    if ratios != reference_ratios:
-                        raise InputSchemaError(
-                            "All systems must use identical 'monomer_ratios'."
-                        )
+                elif ratios != reference_ratios:
+                    raise InputSchemaError(
+                        "All systems must use identical 'monomer_ratios'."
+                    )
 
                 replica = Replica(
                     tag=system["tag"],
@@ -847,9 +884,7 @@ class InputParser:
                 self._validate_single_replica(replica, method)
                 replicas.append(replica)
 
-            # -------- counts mode --------
-            if method == "counts":
-
+            elif method == "counts":
                 counts = system.get("monomer_counts")
 
                 if not isinstance(counts, dict) or not counts:
@@ -858,7 +893,6 @@ class InputParser:
                     )
 
                 for monomer, value in counts.items():
-
                     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
                         raise NumericFieldError(
                             f"Invalid count for monomer {monomer!r}: {value!r}"
@@ -886,12 +920,13 @@ class InputParser:
             "temperatures": temperatures,
             "density": density,
             "systems": systems,
-            "replicas": replicas
+            "replicas": replicas,
         }
+
 
 if __name__ == "__main__":
     # Sample input data for quick manual verification of the parser.
-        
+
     # Example 1: Counts Mode
     inputs = {
         "simulation_name": "Example_Count_Mode",
@@ -903,8 +938,8 @@ if __name__ == "__main__":
                 "monomer_counts": {
                     "tmc": 220,
                     "mpd": 220,
-                    "ethanol": 110
-                }
+                    "ethanol": 110,
+                },
             },
             {
                 "tag": "100k",
@@ -913,27 +948,27 @@ if __name__ == "__main__":
                 "monomer_counts": {
                     "tmc": 2200,
                     "mpd": 2200,
-                    "ethanol": 1100
-                }
-            }
+                    "ethanol": 1100,
+                },
+            },
         ],
         "monomers": [
             {
                 "name": "tmc",
-                "smiles": "ClC(=O)c1cc(cc(c1)C(Cl)=O)C(Cl)=O"
+                "smiles": "ClC(=O)c1cc(cc(c1)C(Cl)=O)C(Cl)=O",
             },
             {
                 "name": "mpd",
-                "smiles": "C1=CC(=CC(=C1)N)N"
+                "smiles": "C1=CC(=CC(=C1)N)N",
             },
             {
                 "name": "ethanol",
-                "smiles": "CCO"
-            }
-        ]
+                "smiles": "CCO",
+            },
+        ],
     }
-        
-    # Example 2: Ratio  Mode
+
+    # Example 2: Ratio Mode
     inputs_ratio = {
         "simulation_name": "Example_Ratio_Mode",
         "replicas": [
@@ -945,8 +980,8 @@ if __name__ == "__main__":
                 "monomer_ratios": {
                     "tmc": 1.0,
                     "mpd": 1.0,
-                    "ethanol": 0.5
-                }
+                    "ethanol": 0.5,
+                },
             },
             {
                 "tag": "100k_base",
@@ -956,24 +991,24 @@ if __name__ == "__main__":
                 "monomer_ratios": {
                     "tmc": 1.0,
                     "mpd": 1.0,
-                    "ethanol": 0.5
-                }
-            }
+                    "ethanol": 0.5,
+                },
+            },
         ],
         "monomers": [
             {
                 "name": "tmc",
-                "smiles": "ClC(=O)c1cc(cc(c1)C(Cl)=O)C(Cl)=O"
+                "smiles": "ClC(=O)c1cc(cc(c1)C(Cl)=O)C(Cl)=O",
             },
             {
                 "name": "mpd",
-                "smiles": "C1=CC(=CC(=C1)N)N"
+                "smiles": "C1=CC(=CC(=C1)N)N",
             },
             {
                 "name": "ethanol",
-                "smiles": "CCO"
-            }
-        ]
+                "smiles": "CCO",
+            },
+        ],
     }
 
     input_ff = {
@@ -987,8 +1022,8 @@ if __name__ == "__main__":
                 "monomer_counts": {
                     "tmc": 220,
                     "mpd": 220,
-                    "ethanol": 110
-                }
+                    "ethanol": 110,
+                },
             },
             {
                 "tag": "100k",
@@ -997,30 +1032,31 @@ if __name__ == "__main__":
                 "monomer_counts": {
                     "tmc": 2200,
                     "mpd": 2200,
-                    "ethanol": 1100
-                }
-            }
+                    "ethanol": 1100,
+                },
+            },
         ],
         "monomers": [
             {
                 "name": "tmc",
-                "smiles": "ClC(=O)c1cc(cc(c1)C(Cl)=O)C(Cl)=O"
+                "smiles": "ClC(=O)c1cc(cc(c1)C(Cl)=O)C(Cl)=O",
             },
             {
                 "name": "mpd",
-                "smiles": "C1=CC(=CC(=C1)N)N"
+                "smiles": "C1=CC(=CC(=C1)N)N",
             },
             {
                 "name": "ethanol",
-                "smiles": "CCO"
-            }
-        ]
+                "smiles": "CCO",
+            },
+        ],
     }
 
     parser = InputParser()
+
     print("Validating Counts Mode Input:")
     print(parser.validate_inputs(inputs))
-    
+
     print("\nValidating Ratio Mode Input:")
     print(parser.validate_inputs(inputs_ratio))
 

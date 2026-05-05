@@ -15,25 +15,57 @@ class GetCacheDir:
     structure with a staging area.
     """
 
-    def __init__(self):
-        """Initialize cache directory structure."""
+    def __init__(self, clear_staging: bool = False):
+        """
+        Initialize cache directory structure.
+
+        Args:
+            clear_staging:
+                If True, clear all contents inside cache/00_cache.
+                The 00_cache directory itself is preserved.
+        """
         self.git_root = self.get_git_root()
         self.cache_base_dir = self.git_root / "cache"
         self.cache_base_dir.mkdir(parents=True, exist_ok=True)
 
         # Staging directory for temporary files before moving to dated run folders
         self.staging_dir = self.cache_base_dir / "00_cache"
-        os.makedirs(self.staging_dir, exist_ok=True)
+        self.staging_dir.mkdir(parents=True, exist_ok=True)
+
+        if clear_staging:
+            self.clear_staging_dir()
+
+    def clear_staging_dir(self) -> None:
+        """
+        Clear all files and folders inside the staging cache directory.
+
+        This only clears cache/00_cache contents.
+        It does not delete dated run folders.
+        """
+        self.staging_dir.mkdir(parents=True, exist_ok=True)
+
+        failed = []
+        for item in self.staging_dir.iterdir():
+            try:
+                if item.is_symlink() or item.is_file():
+                    item.unlink()
+                elif item.is_dir():
+                    shutil.rmtree(item)
+            except Exception as e:
+                print(f"[WARN] Failed to remove staging cache item {item}: {e}")
+                failed.append(item)
+
+        if failed:
+            print(f"[WARN] Staging cache partially cleared ({len(failed)} item(s) could not be removed): {self.staging_dir}")
+        else:
+            print(f"[OK] Cleared staging cache: {self.staging_dir}")
 
     def get_git_root(self) -> Path:
         """
         Return the root directory of the current git repository.
         
         Falls back to a path derived from this script's location if git
-        command fails (e.g., when running outside a git repository).
-        
-        Returns:
-            Path: Root directory path
+        command fails.
         """
         try:
             out = subprocess.check_output(
@@ -243,6 +275,8 @@ class RetentionCleanup:
                     and pattern.match(folder.name)
                 ):
                     shutil.rmtree(folder)
+                    print(f"[OK] Deleted: {folder}")
+            return
 
         try:
             days = int(mode)

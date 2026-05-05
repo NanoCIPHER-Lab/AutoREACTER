@@ -36,6 +36,11 @@ source_suffix = {
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-out
 # ut
 
-html_theme = 'furo'
+# html_theme = 'furo'
+# html_static_path = ['_static']
+# html_logo = "_static/logo.png"make html
+
+
+html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
 html_logo = "_static/logo.png"
