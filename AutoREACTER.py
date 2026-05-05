@@ -141,8 +141,9 @@ def AutoREACTER(input_file: str) -> None:
 
     # Parse and validate user-provided input
     input_parser = InputParser()
-    cache_manager = GetCacheDir()
+    cache_manager = GetCacheDir(clear_staging=True)
     cache_dir = cache_manager.staging_dir
+
 
     # Create a dated directory for this specific run
     run_manager = RunDirectoryManager(cache_manager.cache_base_dir)
