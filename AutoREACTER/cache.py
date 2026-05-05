@@ -44,6 +44,7 @@ class GetCacheDir:
         """
         self.staging_dir.mkdir(parents=True, exist_ok=True)
 
+        failed = []
         for item in self.staging_dir.iterdir():
             try:
                 if item.is_symlink() or item.is_file():
@@ -52,8 +53,12 @@ class GetCacheDir:
                     shutil.rmtree(item)
             except Exception as e:
                 print(f"[WARN] Failed to remove staging cache item {item}: {e}")
+                failed.append(item)
 
-        print(f"[OK] Cleared staging cache: {self.staging_dir}")
+        if failed:
+            print(f"[WARN] Staging cache partially cleared ({len(failed)} item(s) could not be removed): {self.staging_dir}")
+        else:
+            print(f"[OK] Cleared staging cache: {self.staging_dir}")
 
     def get_git_root(self) -> Path:
         """
