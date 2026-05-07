@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/autoreacter_logo.png" width="650">
+  <img src="docs/source/_static/logo.png" width="650">
 </p>
 
 <h1 align="center">AutoREACTER</h1>
@@ -7,6 +7,7 @@
 <p align="center">
 Automated generation of LAMMPS/REACTER-ready reaction-template workflows.
 </p>
+
 # AutoREACTER
 
 **AutoREACTER** is a Python-based toolkit for automating reaction-based molecular system generation for LAMMPS workflows. It is developed as part of the **Multiscale Polymer Toolkit (MuPT)**.
