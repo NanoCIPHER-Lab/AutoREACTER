@@ -118,7 +118,6 @@ logger = logging.getLogger(__name__)  # Module-level logger for future diagnosti
 # Dictionary defining various types of monomers would typically be loaded here, but is accessed via FunctionalGroupsLibrary.
 # Includes functionality types (e.g., 'vinyl', 'mono', 'di_different', 'di_identical'), SMARTS patterns,
 # and group names. Expandable based on literature (e.g., "J. Chem. Inf. Model. 2023, 63, 5539−5548").
-# TODO: Address monomers with mixed groups like COCl and COOH.
 # TODO: Add more functional groups as needed from literature/user requirements.
 
 
