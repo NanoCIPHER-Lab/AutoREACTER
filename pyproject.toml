@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "AutoREACTER"
-version = "0.2-beta.0"
+version = "0.2-beta.1"
 description = "A toolkit for LAMMPS reaction modeling within MuPT"
 authors = [
     {name = "Janitha Mahanthe", email = "jmahanth@stevens.edu"},
@@ -12,11 +12,14 @@ authors = [
     ]
 license = "MIT"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "numpy",
     "pandas",
     "lammps",
-    "networkx"
+    "networkx",
+    "rdkit",
+    "pillow"
 ]
+
 [tool.setuptools.packages.find]
