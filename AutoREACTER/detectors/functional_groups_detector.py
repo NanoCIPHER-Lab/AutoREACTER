@@ -225,7 +225,7 @@ class FunctionalGroupsDetector:
         # Convert SMILES to RDKit molecule object for substructure matching.
         
         if mol is None:
-            logger.warning(f"Invalid SMILES: {smiles}")
+            logger.warning("Invalid molecule object passed to functional group detector.")
             return 0, None, None, None
 
         # Create pattern from primary SMARTS and validate.
@@ -329,7 +329,7 @@ class FunctionalGroupsDetector:
             SMARTS complexity or optimize performance for large molecules.
         """
         if mol is None:
-            logger.warning(f"Invalid SMILES: {smiles}")
+            logger.warning("Invalid molecule object passed to index-based functional group detector.")
             return 0, None, None, None
 
         # Create pattern from primary SMARTS and validate.
@@ -650,8 +650,8 @@ if __name__ == "__main__":
                 smiles=smiles,
                 count=None,
                 ratio=1.0,
-                atom_count=mol.GetNumAtoms() if mol else 0,
-                molar_mass=Descriptors.MolWt(mol) if mol else 0.0,
+                num_atoms=Chem.AddHs(mol).GetNumAtoms() if mol else 0,
+                molecular_weight=Descriptors.MolWt(mol) if mol else 0.0,
                 rdkit_mol=mol
             )
         )
