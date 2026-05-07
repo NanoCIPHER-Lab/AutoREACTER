@@ -17,7 +17,9 @@ dependencies = [
     "numpy",
     "pandas",
     "lammps",
-    "networkx"
+    "networkx",
+    "rdkit",
+    "pillow"
 ]
 
 [tool.setuptools.packages.find]
