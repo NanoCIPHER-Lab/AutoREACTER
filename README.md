@@ -8,10 +8,6 @@
 Automated generation of LAMMPS/REACTER-ready reaction-template workflows.
 </p>
 
-# AutoREACTER
-
-**AutoREACTER** is a Python-based toolkit for automating reaction-based molecular system generation for LAMMPS workflows. It is developed as part of the **Multiscale Polymer Toolkit (MuPT)**.
-
 > **Status:** AutoREACTER is currently in **v0.2-beta** and under active development. APIs, configuration schemas, reaction libraries, and core functionality may change without notice.
 
 ## Documentation
