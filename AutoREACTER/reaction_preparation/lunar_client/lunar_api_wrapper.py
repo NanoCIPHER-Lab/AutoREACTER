@@ -379,7 +379,8 @@ class LunarAPIWrapper:
             ValueError: If the force field file is not found or unsupported
         """
         base = Path(self.LUNAR_LOCATION) / "frc_files"
-        auto_reacter_frc_dir = Path(auto_reacter_dir) / "frc_files"
+        auto_reacter_frc_dir = files("AutoREACTER").joinpath("frc_files")
+
         print(f"Resolving .frc file for force field '{force_field}'...")  # Debug statement
 
         paths = {
@@ -391,13 +392,18 @@ class LunarAPIWrapper:
             "DRIEDING": base / "all2lmp_dreiding.frc",
         }
 
-        if paths[force_field].is_file():
-            return str(paths[force_field])
-        else:
-            raise ValueError(
-                f"Force field file not found for {force_field}. "
-                f"Please redownload LUNAR from https://github.com/CMMRLab/LUNAR"
-            )
+        if force_field not in paths:
+            raise ValueError(f"Unsupported force field: {force_field}")
+
+        frc_path = paths[force_field]
+
+        if frc_path.is_file():
+            return str(frc_path)
+
+        raise ValueError(
+            f"Force field file not found for {force_field}: {frc_path}. "
+            f"Please redownload LUNAR from https://github.com/CMMRLab/LUNAR"
+        )
 
     def _run_LUNAR_all2lmp(self, atom_typing_result: list[AtomTypingResult], force_field: str) -> list[All2LMPResult]:
         """
@@ -629,7 +635,8 @@ class LunarAPIWrapper:
                 print(f"[LUNAR bond_react_merge] Generated template files for reaction {t.reaction_id}")
             else:
                 raise FileNotFoundError(
-                    Path(t.pre_reaction_file.data_file) or Path(t.post_reaction_file.data_file) / f"Missing template files for reaction {t.reaction_id}"
+                    f"Missing template files for reaction {t.reaction_id}: "
+                    f"{t.pre_reaction_file.data_file}, {t.post_reaction_file.data_file}"
                 )
         
         # Collect all final file paths
