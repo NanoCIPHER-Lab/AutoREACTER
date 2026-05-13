@@ -379,7 +379,14 @@ class LunarAPIWrapper:
             ValueError: If the force field file is not found or unsupported
         """
         base = Path(self.LUNAR_LOCATION) / "frc_files"
-        auto_reacter_frc_dir = Path(__file__).resolve().parents[3] / "frc_files"
+        auto_reacter_frc_dir = next(
+            (
+                parent / "frc_files"
+                for parent in Path(__file__).resolve().parents
+                if (parent / "frc_files" / "pcff.frc").is_file()
+            ),
+            base,
+        )
 
         print(f"Resolving .frc file for force field '{force_field}'...")  # Debug statement
 
