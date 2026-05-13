@@ -75,13 +75,14 @@ class GetCacheDir:
         """
         Return the root directory of the current git repository.
         
-        Falls back to a path derived from the execution location if git
-        command fails.
+        If base_dir is provided, it is treated as an explicit root override.
+        Otherwise, this falls back to a path derived from the execution
+        location if git command fails.
         """
         if base_dir is not None:
-            start_dir = Path(base_dir).expanduser().resolve()
-        else:
-            start_dir = self.get_execution_dir()
+            return Path(base_dir).expanduser().resolve()
+
+        start_dir = self.get_execution_dir()
 
         try:
             out = subprocess.check_output(
