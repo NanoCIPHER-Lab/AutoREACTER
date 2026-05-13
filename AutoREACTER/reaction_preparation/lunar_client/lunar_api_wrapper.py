@@ -379,9 +379,9 @@ class LunarAPIWrapper:
             ValueError: If the force field file is not found or unsupported
         """
         base = Path(self.LUNAR_LOCATION) / "frc_files"
-        cls = type(self)
-        if not hasattr(cls, "_repo_frc_dir"):
-            cls._repo_frc_dir = next(
+        instance_class = type(self)
+        if not hasattr(instance_class, "_repo_frc_dir"):
+            repo_frc_dir = next(
                 (
                     parent / "frc_files"
                     for parent in Path(__file__).resolve().parents
@@ -389,7 +389,10 @@ class LunarAPIWrapper:
                 ),
                 base,
             )
-        pcff_frc_dir = cls._repo_frc_dir
+            if repo_frc_dir == base:
+                print("[LUNAR all2lmp] Repository frc_files not found; using LUNAR frc_files fallback.")
+            instance_class._repo_frc_dir = repo_frc_dir
+        pcff_frc_dir = instance_class._repo_frc_dir
 
         print(f"Resolving .frc file for force field '{force_field}'...")  # Debug statement
 
