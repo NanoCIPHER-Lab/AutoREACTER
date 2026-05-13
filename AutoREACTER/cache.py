@@ -1,21 +1,27 @@
 from pathlib import Path
-import os
+import sys
 import re
 import shutil
 import subprocess
 import datetime as dt
+from typing import Optional, Union
 from AutoREACTER.reaction_preparation.lunar_client.REACTER_files_builder import REACTERFiles
+
 
 class GetCacheDir:
     """
     Manages the base cache directory for the AutoREACTER workflow.
     
     This class determines the root of the git repository (or falls back to a
-    path relative to the script) and creates a standardized cache directory
-    structure with a staging area.
+    path relative to the execution location) and creates a standardized cache
+    directory structure with a staging area.
     """
 
-    def __init__(self, clear_staging: bool = False):
+    def __init__(
+        self,
+        clear_staging: bool = False,
+        base_dir: Optional[Union[Path, str]] = None,
+    ):
         """
         Initialize cache directory structure.
 
@@ -23,8 +29,10 @@ class GetCacheDir:
             clear_staging:
                 If True, clear all contents inside cache/00_cache.
                 The 00_cache directory itself is preserved.
+            base_dir:
+                Optional base directory to use instead of auto-detecting.
         """
-        self.git_root = self.get_git_root()
+        self.git_root = self.get_git_root(base_dir=base_dir)
         self.cache_base_dir = self.git_root / "cache"
         self.cache_base_dir.mkdir(parents=True, exist_ok=True)
 
@@ -60,27 +68,49 @@ class GetCacheDir:
         else:
             print(f"[OK] Cleared staging cache: {self.staging_dir}")
 
-    def get_git_root(self) -> Path:
+    def get_git_root(
+        self,
+        base_dir: Optional[Union[Path, str]] = None,
+    ) -> Path:
         """
         Return the root directory of the current git repository.
         
-        Falls back to a path derived from this script's location if git
+        Falls back to a path derived from the execution location if git
         command fails.
         """
+        if base_dir is not None:
+            start_dir = Path(base_dir).expanduser().resolve()
+        else:
+            start_dir = self.get_execution_dir()
+
         try:
             out = subprocess.check_output(
                 ["git", "rev-parse", "--show-toplevel"],
-                text=True
+                cwd=start_dir,
+                text=True,
+                stderr=subprocess.DEVNULL,
             ).strip()
-            return Path(out)
+            return Path(out).resolve()
         except Exception:
-            script_dir = Path(__file__).resolve().parent
-        
-            for parent in [script_dir] + list(script_dir.parents):
+            for parent in [start_dir] + list(start_dir.parents):
                 if (parent / ".git").exists() or (parent / "pyproject.toml").exists():
                     return parent
-        
-            return script_dir.parent
+
+            return start_dir
+
+    def get_execution_dir(self) -> Path:
+        """
+        Return the directory where the workflow is being executed.
+        """
+        if "ipykernel" in sys.modules:
+            return Path.cwd().resolve()
+
+        argv0 = Path(sys.argv[0]).expanduser()
+
+        if argv0.suffix == ".py" and argv0.exists():
+            return argv0.resolve().parent
+
+        return Path.cwd().resolve()
 
 
 class RunDirectoryManager:
