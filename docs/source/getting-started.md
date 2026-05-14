@@ -1,4 +1,3 @@
-![AutoREACTER Logo](_static/logo.png)
 # Getting Started 
 
 This guide will guide you through setting up your environment, installing the required dependencies, and running reaction modeling setup for REACTER. 

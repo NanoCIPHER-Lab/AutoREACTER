@@ -1,4 +1,3 @@
-![AutoREACTER Logo](_static/logo.png)
 # Welcome to AutoREACTER
 
 **AutoREACTER v0.2-beta.0**

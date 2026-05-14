@@ -1,4 +1,3 @@
-![AutoREACTER Logo](_static/logo.png)
 ## Supported Reactions
 
 AutoREACTER is currently in **v0.2-beta**. At this stage of development, the reaction library is limited, specifically step-growth **polycondensation** reactions. 

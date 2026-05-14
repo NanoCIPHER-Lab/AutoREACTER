@@ -1,5 +1,3 @@
-![AutoREACTER Logo](_static/logo.png)
-
 ## Supported Force Fields
 
 All classical force fields integrated into **AutoREACTER** are processed via the [LUNAR][LUNAR_GITHUB] package.
