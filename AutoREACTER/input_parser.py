@@ -272,6 +272,11 @@ class InputParser:
                 f"Expected input to be a dictionary. Got {type(inputs).__name__} instead."
             )
 
+        if "simulations" not in inputs and "replicas" in inputs:
+            raise InputSchemaError(
+                "Input key 'replicas' has been renamed to 'simulations'. Please update your input schema."
+            )
+
         required_keys = ["simulation_name", "simulations", "monomers"]
         for key in required_keys:
             if key not in inputs:
@@ -803,11 +808,11 @@ class InputParser:
         Validates the 'simulations' section of the input.
 
         Args:
-            systems: List of replica dictionaries.
+            systems: List of simulation dictionaries.
             method: Composition method, either "counts" or "ratio".
 
         Returns:
-            Normalized replicas dictionary.
+            Normalized simulations dictionary.
         """
         if not isinstance(systems, list) or not systems:
             raise InputSchemaError(
