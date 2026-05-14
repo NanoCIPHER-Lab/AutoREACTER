@@ -1,4 +1,3 @@
-![AutoREACTER Logo](_static/logo.png)
 ## Input Configuration.
 
 The `input.json` file is the one and only input for your AutoREACTER workflow.  
