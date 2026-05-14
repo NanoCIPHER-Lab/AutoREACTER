@@ -24,7 +24,7 @@ Regardless of which mode you use, every `input.json` needs global settings and a
 
 ---
 
-### 2. Defining Replicas: Ratio Mode vs. Count Mode
+### 2. Defining Simulations: Ratio Mode vs. Count Mode
 
 When defining the `simulations` array, you have to decide how you want to calculate the number of molecules in the simulation box. 
 
