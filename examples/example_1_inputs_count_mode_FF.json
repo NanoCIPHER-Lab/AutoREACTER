@@ -1,7 +1,7 @@
 {
     "simulation_name": "Example_Count_Mode",
     "force_field": "PCFF",
-    "replicas": [
+    "simulations": [
         {
             "tag": "10k",
             "temperature": 300,
