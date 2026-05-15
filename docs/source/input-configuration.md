@@ -9,7 +9,7 @@ It tells the system:
 4. Density of the simulation  
 5. Temperature of the simulation
 
-AutoREACTER v0.2 introduces a highly flexible replica system. You can define multiple distinct simulation setups  within a single run. You must explicitly define parameters like `temperature` and `density` for **each replica**. This method ensures AutoREACTER generates only the exact LAMMPS files you need.
+AutoREACTER v0.2 introduces a highly flexible simulation system. You can define multiple distinct simulation setups  within a single run. You must explicitly define parameters like `temperature` and `density` for **each simulation**. This method ensures AutoREACTER generates only the exact LAMMPS files you need.
 
 There are two primary ways to define your system composition: **Ratio Mode** and **Count Mode**.
 
@@ -125,11 +125,11 @@ Use Count Mode when you know number of molecules instead of number of atoms. Ins
 ```
 ---
 
-### 3. Replica Parameters Breakdown
+### 3. Simulation Parameters Breakdown
 
 For each object inside the `simulations` list, you must define:
 
-* **`tag`**: A unique label for the replica (e.g., `"10k_base"`). This will be used to name the output subdirectories.
+* **`tag`**: A unique label for the simulation (e.g., `"10k_base"`). This will be used to name the output subdirectories.
 * **`temperature`**: The system temperature in Kelvin. AutoREACTER uses this to configure the LAMMPS input scripts.
 * **`density`**: The initial target density of the simulation box (in g/cm³).
 * **Composition Setup:** Either provide `total_atoms` alongside `monomer_ratios` (Ratio Mode) **OR** provide `monomer_counts` (Count Mode). **Do not mix them in the same simulation**.
