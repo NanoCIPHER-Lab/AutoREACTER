@@ -3,21 +3,30 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-
 AutoREACTER documentation
 =========================
 
-Welcome to the AutoREACTER documentation.
+Welcome to AutoREACTER.
 
-AutoREACTER is an open-source Python toolkit for automating the setup of input files for reactive molecular dynamics (MD) in LAMMPS. AutoREACTER fully automates the creation of all input files necessary to run REACTER, requiring as user input only the SMILES strings of the reacting molecules. Reactions are suggested from a customizable database currently populated with polymerization reactions.
+AutoREACTER is an open-source Python toolkit for preparing REACTER-ready
+LAMMPS input files from molecular structures. It automates the generation of
+reaction templates, atom mappings, molecular systems, and LAMMPS input scripts
+for classical reactive molecular dynamics workflows.
+
+.. image:: _static/autoreacter_overview.png
+   :alt: Simplified AutoREACTER workflow
+   :align: center
+   :width: 85%
+
+AutoREACTER is developed as part of the Multiscale Polymer Toolkit (MuPT).
+It bridges the gap between raw chemical structures and REACTER-ready LAMMPS
+input files for atomistic simulations.
+
+**Note:** AutoREACTER is currently in v0.2-beta.0 and under active development.
+APIs, configuration schemas, and core functionality may change as we continue
+to expand the reaction library and force field support.
 
 GitHub repository: https://github.com/NanoCIPHER-Lab/AutoREACTER
-
-**Note: AutoREACTER is currently in v0.2-beta and under active development. APIs, configuration schemas, and core functionality may change or break without notice as we expand reaction library and force field support**
-
-REACTER is a method for modeling chemical reactions using classical fixed-bond force fields. The required inputs files are pre- and post-reaction templates and a map file providing the atom-to-atom mapping for the reaction.
-
-AutoREACTER bridges the gap between raw chemical structures and REACTER-ready LAMMPS input files for atomistic simulations. AutoREACTER automatically generates atom-typed reaction templates, map files, and the initial monomer melt using simplified input files as described in Input Configuration Documentation.
 
 .. toctree::
    :maxdepth: 1
