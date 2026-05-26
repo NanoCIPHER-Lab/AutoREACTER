@@ -32,7 +32,7 @@ class SimulationSetupManager:
         Execute the complete simulation setup pipeline and write all LAMMPS files.
         
         This is the main entry point called by the top-level AutoREACTER workflow.
-        It performs system property calculations on all simulations and then delegates
+        It performs system property calculations on all replicas and then delegates
         file generation to generate_input_files().
         
         Args:
@@ -54,11 +54,11 @@ class SimulationSetupManager:
         updated_setup = calculator.process_all()
 
         # Optional debugging block (uncomment during development to inspect calculations)
-        # for simulation in updated_setup.simulations:
-        #     print(f"\n[INFO] Simulation: {simulation.tag}")
-        #     print(f"  - Calculated Monomer Counts: {simulation.monomer_counts}")
-        #     print(f"  - Initial Box Length: {simulation.initial_box_length:.2f} Å")
-        #     print(f"  - Target Density: {simulation.density} g/cm³")
+        # for replica in updated_setup.replicas:
+        #     print(f"\n[INFO] Replica: {replica.tag}")
+        #     print(f"  - Calculated Monomer Counts: {replica.monomer_counts}")
+        #     print(f"  - Initial Box Length: {replica.initial_box_length:.2f} Å")
+        #     print(f"  - Target Density: {replica.density} g/cm³")
 
         # Generate all LAMMPS input files for the five simulation stages
         self.generate_input_files(

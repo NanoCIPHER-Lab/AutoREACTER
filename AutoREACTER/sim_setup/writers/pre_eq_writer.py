@@ -1,7 +1,7 @@
 from pathlib import Path
 from datetime import datetime
 from AutoREACTER.sim_setup.writers.lammps_settings import LammpsSettings
-from AutoREACTER.input_parser import Simulation
+from AutoREACTER.input_parser import Replica
 
 
 class PreEqWriter:
@@ -21,7 +21,7 @@ class PreEqWriter:
         self,
         out_dir: Path,
         settings: LammpsSettings,
-        simulation: Simulation,
+        replica: Replica,
         sim_name: str,
     ):
         """
@@ -30,15 +30,15 @@ class PreEqWriter:
         Args:
             out_dir: Base output directory for simulation files
             settings: LAMMPS settings configuration (units, styles, pair potentials, etc.)
-            simulation: Contains simulation-specific parameters such as target temperature and tag
+            replica: Contains replica-specific parameters such as target temperature and tag
             sim_name: Name prefix used for all output files and the input script
         """
         self.settings = settings
         self.out_dir = out_dir
         self.sim_name = sim_name
-        self.in_pre_eq_file_name = self.write_pre_eq_file(simulation=simulation)
+        self.in_pre_eq_file_name = self.write_pre_eq_file(replica=replica)
 
-    def write_pre_eq_file(self, simulation: Simulation) -> str:
+    def write_pre_eq_file(self, replica: Replica) -> str:
         """
         Creates the complete LAMMPS input script for pre-equilibration and writes
         it to the '2_pre_equilibration' subdirectory.
@@ -50,12 +50,12 @@ class PreEqWriter:
         - Extended NVT equilibration at the final temperature
 
         Args:
-            simulation: Simulation object containing temperature and simulation tag
+            replica: Replica object containing temperature and simulation tag
 
         Returns:
             str: The filename of the generated LAMMPS input script
         """
-        tag = f"{self.sim_name}_{simulation.tag}"
+        tag = f"{self.sim_name}_{replica.tag}"
         pre_eq_dir = self.out_dir / "2_pre_equilibration"
         pre_eq_dir.mkdir(parents=True, exist_ok=True)
 
@@ -125,7 +125,7 @@ class PreEqWriter:
             "",
             "#------------Stage 1: NVT Temperature Ramp------------",
             "# (25,000 steps × 1 fs timestep)",
-            f"{'fix':<16} nvt_1 all nvt temp 298.15 {simulation.temperature} 100.0",
+            f"{'fix':<16} nvt_1 all nvt temp 298.15 {replica.temperature} 100.0",
             f"{'run':<16} 25000",
             f"{'unfix':<16} nvt_1",
             "",
@@ -133,14 +133,14 @@ class PreEqWriter:
             "# Isotropic pressure control at 0 atm while maintaining target temperature.",
             "# This allows the box volume to adjust to the correct density at the",
             "# desired temperature and pressure.",
-            f"{'fix':<16} npt_2 all npt temp {simulation.temperature} {simulation.temperature} 100.0 iso 0.0 0.0 1000.0",
+            f"{'fix':<16} npt_2 all npt temp {replica.temperature} {replica.temperature} 100.0 iso 0.0 0.0 1000.0",
             f"{'run':<16} 25000",
             f"{'unfix':<16} npt_2",
             "",
             "#------------Stage 3: Final NVT Equilibration------------",
             "# Extended constant-volume equilibration at the final temperature.",
             "# This stabilizes the system after the density adjustment in the NPT stage.",
-            f"{'fix':<16} nvt_3 all nvt temp {simulation.temperature} {simulation.temperature} 100.0",
+            f"{'fix':<16} nvt_3 all nvt temp {replica.temperature} {replica.temperature} 100.0",
             f"{'run':<16} 50000",
             f"{'unfix':<16} nvt_3",
             "",
