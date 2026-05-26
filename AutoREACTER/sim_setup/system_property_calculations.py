@@ -15,15 +15,15 @@ class NoneMonomerError(Exception):
 
 class SystemPropertyCalculations:
     """
-    Computes essential physical and stoichiometric properties for each simulation replica.
+    Computes essential physical and stoichiometric properties for each simulation simulation.
     
     This class is responsible for two main tasks:
       1. Populating monomer-level properties (atom count, molecular weight) from RDKit objects.
-      2. Calculating replica-level properties including monomer counts (when using ratio mode),
+      2. Calculating simulation-level properties including monomer counts (when using ratio mode),
          total system mass, target volume, and initial (low-density) box dimensions.
     
     All calculations are performed in-place on the provided SimulationSetup object.
-    The class follows a clear separation between monomer-level and replica-level logic.
+    The class follows a clear separation between monomer-level and simulation-level logic.
     """
 
     def __init__(self, simulation_setup: SimulationSetup) -> None:
@@ -32,7 +32,7 @@ class SystemPropertyCalculations:
         
         Args:
             simulation_setup: Fully parsed SimulationSetup containing monomers,
-                              replicas, composition method, and target densities.
+                              simulations, composition method, and target densities.
         """
         self.simulation_setup = simulation_setup
 
@@ -41,7 +41,7 @@ class SystemPropertyCalculations:
         Run the complete property calculation pipeline.
         
         This is the main public method called by SimulationSetupManager.
-        It populates monomer properties first, then calculates all replica-specific
+        It populates monomer properties first, then calculates all simulation-specific
         values (counts, box dimensions, etc.).
         
         Returns:
@@ -79,10 +79,10 @@ class SystemPropertyCalculations:
 
     def _calculate_replica_properties(self) -> None:
         """
-        Compute all properties required for each replica (monomer counts and box dimensions).
+        Compute all properties required for each simulation (monomer counts and box dimensions).
         
         This method first builds a lookup dictionary of active monomers (keyed by name
-        to match ratio definitions), then iterates over every replica and calls the
+        to match ratio definitions), then iterates over every simulation and calls the
         appropriate calculation helpers based on the composition_method.
         """
         # Build lookup of only active monomers for fast access during ratio calculations
@@ -92,59 +92,59 @@ class SystemPropertyCalculations:
             if monomer.status
         }
 
-        for replica in self.simulation_setup.replicas:
+        for simulation in self.simulation_setup.simulations:
             # 1. Determine integer monomer counts when user supplied stoichiometric ratios
             if self.simulation_setup.composition_method == "ratio":
-                self._get_monomer_counts(replica, active_monomers)
+                self._get_monomer_counts(simulation, active_monomers)
 
             # 2. Calculate initial (sparse) and target box dimensions from mass and density
-            self._calculate_box_dimensions(replica, active_monomers)
+            self._calculate_box_dimensions(simulation, active_monomers)
 
-    def _get_monomer_counts(self, replica, active_monomers: dict) -> None:
+    def _get_monomer_counts(self, simulation, active_monomers: dict) -> None:
         """
         Convert monomer ratios into integer counts that sum close to the requested total_atoms.
         
         The algorithm calculates a multiplier so the weighted atom count matches the
         target total_atoms, then ceilings each contribution (minimum of 1 monomer).
-        The resulting counts are stored both on the replica and back on the monomer
+        The resulting counts are stored both on the simulation and back on the monomer
         objects for later use in file writing.
         
         Args:
-            replica: The Replica object being processed.
+            simulation: The Simulation object being processed.
             active_monomers: Dictionary mapping monomer names to Monomer objects.
         
         Raises:
             ValueError: If total_atoms is not set or if no valid monomers are present.
         """
-        if replica.total_atoms is None:
-            raise ValueError(f"Replica '{replica.tag}' is missing 'total_atoms'.")
+        if simulation.total_atoms is None:
+            raise ValueError(f"Simulation '{simulation.tag}' is missing 'total_atoms'.")
 
         # Calculate total atoms per "unit" of the stoichiometric ratio
         atoms_per_unit = sum(
             ratio * active_monomers[m_name].num_atoms
-            for m_name, ratio in replica.monomer_ratios.items()
+            for m_name, ratio in simulation.monomer_ratios.items()
             if m_name in active_monomers
         )
 
         if atoms_per_unit == 0:
-            raise ValueError(f"Replica '{replica.tag}' has no active monomers to calculate ratios.")
+            raise ValueError(f"Simulation '{simulation.tag}' has no active monomers to calculate ratios.")
 
-        multiplier = replica.total_atoms / atoms_per_unit
+        multiplier = simulation.total_atoms / atoms_per_unit
 
-        if replica.monomer_counts is None:
-            replica.monomer_counts = {}
+        if simulation.monomer_counts is None:
+            simulation.monomer_counts = {}
 
-        for m_name, ratio in replica.monomer_ratios.items():
+        for m_name, ratio in simulation.monomer_ratios.items():
             if m_name in active_monomers:
                 calculated_count = max(1, math.ceil(ratio * multiplier))
-                replica.monomer_counts[m_name] = calculated_count
+                simulation.monomer_counts[m_name] = calculated_count
 
                 # Also record this count on the monomer for easier lookup later
                 if active_monomers[m_name].count is None:
                     active_monomers[m_name].count = {}
-                active_monomers[m_name].count[replica.tag] = calculated_count
+                active_monomers[m_name].count[simulation.tag] = calculated_count
 
-    def _calculate_box_dimensions(self, replica, active_monomers: dict) -> None:
+    def _calculate_box_dimensions(self, simulation, active_monomers: dict) -> None:
         """
         Compute the initial (low-density) simulation box size based on total mass and target density.
         
@@ -154,35 +154,35 @@ class SystemPropertyCalculations:
           - An initial sparse box at 25% of the target density (to avoid atomic overlaps
             during the early minimization/equilibration stages).
         
-        All results are stored directly on the replica object.
+        All results are stored directly on the simulation object.
         
         Args:
-            replica: The Replica object being processed.
+            simulation: The Simulation object being processed.
             active_monomers: Dictionary of active monomers for quick property lookup.
         
         Raises:
             ValueError: If monomer_counts have not been calculated yet.
         """
-        if replica.monomer_counts is None:
-            raise ValueError(f"Replica '{replica.tag}' lacks monomer counts.")
+        if simulation.monomer_counts is None:
+            raise ValueError(f"Simulation '{simulation.tag}' lacks monomer counts.")
 
         # Calculate total system mass in grams
         total_mass_g = 0.0
-        for m_name, count in replica.monomer_counts.items():
+        for m_name, count in simulation.monomer_counts.items():
             if m_name in active_monomers:
                 mass_g = (count * active_monomers[m_name].molecular_weight) / N_A
                 total_mass_g += mass_g
 
         # Target volume at user-defined density
-        target_volume_cm3 = total_mass_g / replica.density
+        target_volume_cm3 = total_mass_g / simulation.density
         target_volume_A3 = target_volume_cm3 * CM_2_A3
 
         # Initial sparse box (25% of target density) to reduce starting overlaps
-        initial_density = replica.density / 4.0
+        initial_density = simulation.density / 4.0
         initial_volume_cm3 = total_mass_g / initial_density
         initial_volume_A3 = initial_volume_cm3 * CM_2_A3
 
         initial_box_length = round(math.pow(initial_volume_A3, 1.0 / 3.0), 2)
 
-        replica.initial_box_volume = initial_volume_A3
-        replica.initial_box_length = initial_box_length
+        simulation.initial_box_volume = initial_volume_A3
+        simulation.initial_box_length = initial_box_length
