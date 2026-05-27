@@ -1,4 +1,3 @@
-![AutoREACTER Logo](_static/logo.png)
 # Welcome to AutoREACTER
 
 **AutoREACTER v0.2-beta.0**
@@ -28,7 +27,7 @@ AutoREACTER removes this manual process of defining reaction templates, preparin
 AutoREACTER is built on a clean, modular, class-based architecture. When you submit your simulation setup, the toolkit processes it through five core stages:
 
 1. **Input Processing:**  
-   Reads your `input.json` file and validates system replicas, temperatures, densities, monomer SMILES strings, stoichiometric ratios, and force field selections.
+   Reads your `input.json` file and validates system simulations, temperatures, densities, monomer SMILES strings, stoichiometric ratios, and force field selections.
 
 2. **Functional Group & Reaction Detection:**  
    Analyzes monomers to identify available functional groups. These are cross-referenced with the internal reaction library to determine all possible reactive pathways. Non-reactive molecules are identified separately.

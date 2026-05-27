@@ -1,5 +1,3 @@
-![AutoREACTER Logo](_static/logo.png)
-
 ## Cleanup Mode
 
 This feature allows you to clean up cached data based on retention time or remove all cached runs.  

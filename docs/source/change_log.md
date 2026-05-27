@@ -1,4 +1,3 @@
-![AutoREACTER Logo](_static/logo.png)
 # Change Log
 All notable changes to this project will be documented in this file.
 
@@ -34,7 +33,7 @@ This serves two purposes:
 
 ### Breaking
 - Migrated to a class-based architecture (not backward compatible).
-- Updated input schema: explicit density and temperature per replica required.
+- Updated input schema: explicit density and temperature per simulation required.
 - Replaced RDKit atom map numbers with isotope-based tracking.
 - Changed output structure to dated run directories.
 - Introduced library-driven workflow for reactions and functional groups.

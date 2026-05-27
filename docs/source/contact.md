@@ -1,5 +1,3 @@
-![AutoREACTER Logo](_static/logo.png)
-
 ## Contact us
 
 For questions, suggestions, or bug reports:
