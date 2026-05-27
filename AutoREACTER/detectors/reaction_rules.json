@@ -1,0 +1,7 @@
+[
+    {
+        "description": "EPOXY CURING",
+        "if": "Di-Epoxide and Primary Amine Polyamination",
+        "then": "Di-Epoxide and Secondary Amine Polyamination"
+    }
+]
