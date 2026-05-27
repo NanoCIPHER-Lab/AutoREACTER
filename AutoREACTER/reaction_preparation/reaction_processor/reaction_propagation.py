@@ -1,3 +1,9 @@
+"""
+This module implements the reaction propagation loop for AutoREACTER, which iteratively discovers new reactions from the products of previous reactions.
+The main class, ReactionPropagation, contains the logic for running the propagation loop, preparing reactions, and processing reaction instances. 
+The loop continues until no new reactions are found or a maximum number of iterations is reached to prevent infinite loops. The module also includes 
+helper methods for building deduplication keys, filtering seen instances, and handling SMILES canonicalization.
+"""
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Optional, Iterable, Set, Tuple, TYPE_CHECKING
@@ -136,8 +142,9 @@ class ReactionPropagation:
             
             # --- Step 2: index-restricted functional-group detection ---
             detected_roles = self.fg_detector.index_based_functional_groups_detector(
-                template_indexed_molecules
+                template_indexed_molecules, monomer_roles
             )
+            print(detected_roles)
 
             if not detected_roles:
                 # No reactive sites remaining — propagation converged
@@ -147,11 +154,11 @@ class ReactionPropagation:
             
             monomer_roles.extend(detected_roles)  # Add original monomer roles back in for reaction detection
             
-            roles_dict_list = [asdict(role) for role in monomer_roles]
-            json_data = json.dumps(roles_dict_list, indent=4)
+            roles_dict_list = [asdict(role) for role in monomer_roles] # Convert dataclass instances to dictionaries for JSON serialization for development purposes
+        
             
             print(f"Iteration {iteration}: Detected {len(monomer_roles)} functional group roles for reaction detection.")
-            print(json_data)  # Print the JSON data for debugging purposes
+            # print(roles_dict_list)  # Print the JSON data for debugging purposes
             # --- Step 3: detect candidate reactions from the new roles ---
             candidate_instances = self.rxn_detector.reaction_detector(
                 monomer_roles
@@ -170,11 +177,11 @@ class ReactionPropagation:
             # we need reaction_detector.index_based_reaction_detector to return the reaction with indexes weather monomer
             # or a product to begin with also we can not reconstruct the molecules which may lead to errors reconstructing 
             # the same molecule multiple times 
-            raise NotImplementedError("Reaction detection from detected roles is not yet implemented. "
-                "This is a critical next step to enable the propagation loop. "
-                "Please implement the logic to convert detected functional group roles "
-                "into ReactionInstance objects that can be processed in the next steps."
-            )
+            # raise NotImplementedError("Reaction detection from detected roles is not yet implemented. "
+            #     "This is a critical next step to enable the propagation loop. "
+            #     "Please implement the logic to convert detected functional group roles "
+            #     "into ReactionInstance objects that can be processed in the next steps."
+            # )
             # --- Step 4: filter out already-seen (mol-pair, reaction-name) combos ---
             new_instances = self._filter_seen_instances(
                 candidate_instances, seen_instance_keys
@@ -192,8 +199,9 @@ class ReactionPropagation:
             for instance in new_instances:
                 key = self._build_instance_key(instance)
                 seen_instance_keys.add(key)
+            print(f"Iteration {iteration}: Detected {len(new_instances)} new reaction instances, resulting in {len(new_metadata)} new metadata entries.")
 
-        # Unreachable — loop exits via return or raises above
+        # Unreachable — loop exits via return or raises abov e
         return reactions_metadata
 
     def prepare_reactions(

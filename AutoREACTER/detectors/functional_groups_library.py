@@ -65,6 +65,19 @@ class FunctionalGroupsLibrary:
                 "group_name": "amino_acid",
                 "comments": None,
             },
+            "primary_amine_monomer": {
+                "functionality_type": "mono",
+                "smarts_1": "[N;H2,H1:1]",
+                "group_name": "primary_amine",
+                "comments": None,
+            },
+            "secondary_amine_monomer": {
+                "functionality_type": "mono",
+                "smarts_1": "[N;H1:1]",
+                "group_name": "secondary_amine",
+                "comments": None,
+            },      
+
 
             # ==========================================
             # EPOXIDES

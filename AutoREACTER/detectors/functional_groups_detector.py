@@ -482,6 +482,8 @@ class FunctionalGroupsDetector:
 
         for monomer in dimers:
             mol = monomer.mol
+            mol.UpdatePropertyCache(strict=False)
+            Chem.SanitizeMol(mol)
             indexes = monomer.indexes
 
             detected_functionalities = []
