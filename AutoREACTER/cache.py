@@ -4,6 +4,7 @@ import re
 import shutil
 import subprocess
 import datetime as dt
+import tempfile
 from typing import Optional, Union
 from AutoREACTER.reaction_preparation.lunar_client.REACTER_files_builder import REACTERFiles
 
@@ -32,9 +33,17 @@ class GetCacheDir:
             base_dir:
                 Optional base directory to use instead of auto-detecting.
         """
-        self.git_root = self.get_git_root(base_dir=base_dir)
-        self.cache_base_dir = self.git_root / "cache"
+        # 1. Determine the root directory safely
+        if base_dir is not None:
+            self.root_dir = Path(base_dir).expanduser().resolve()
+        else:
+            # Use the Current Working Directory where the user ran the command
+            self.root_dir = Path.cwd().resolve() 
+
+        # 2. Create the cache base directory
+        self.cache_base_dir = self.root_dir / "cache"
         self.cache_base_dir.mkdir(parents=True, exist_ok=True)
+        # --- THE FIX ENDS HERE ---
 
         # Staging directory for temporary files before moving to dated run folders
         self.staging_dir = self.cache_base_dir / "00_cache"
@@ -47,7 +56,7 @@ class GetCacheDir:
         """
         Clear all files and folders inside the staging cache directory.
 
-        This only clears cache/00_cache contents.
+        This only clears the temporary staging directory contents.
         It does not delete dated run folders.
         """
         self.staging_dir.mkdir(parents=True, exist_ok=True)
@@ -67,51 +76,6 @@ class GetCacheDir:
             print(f"[WARN] Staging cache partially cleared ({len(failed)} item(s) could not be removed): {self.staging_dir}")
         else:
             print(f"[OK] Cleared staging cache: {self.staging_dir}")
-
-    def get_git_root(
-        self,
-        base_dir: Optional[Union[Path, str]] = None,
-    ) -> Path:
-        """
-        Return the root directory of the current git repository.
-        
-        If base_dir is provided, it is treated as an explicit root override.
-        Otherwise, this falls back to a path derived from the execution
-        location if git command fails.
-        """
-        if base_dir is not None:
-            return Path(base_dir).expanduser().resolve()
-
-        start_dir = self.get_execution_dir()
-
-        try:
-            out = subprocess.check_output(
-                ["git", "rev-parse", "--show-toplevel"],
-                cwd=start_dir,
-                text=True,
-                stderr=subprocess.DEVNULL,
-            ).strip()
-            return Path(out).resolve()
-        except Exception:
-            for parent in [start_dir] + list(start_dir.parents):
-                if (parent / ".git").exists() or (parent / "pyproject.toml").exists():
-                    return parent
-
-            return start_dir
-
-    def get_execution_dir(self) -> Path:
-        """
-        Return the directory where the workflow is being executed.
-        """
-        if "ipykernel" in sys.modules:
-            return Path.cwd().resolve()
-
-        argv0 = Path(sys.argv[0]).expanduser()
-
-        if argv0.suffix == ".py" and argv0.exists():
-            return argv0.resolve().parent
-
-        return Path.cwd().resolve()
 
 
 class RunDirectoryManager:
