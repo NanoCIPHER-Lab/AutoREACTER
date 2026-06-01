@@ -1,38 +1,25 @@
 from pathlib import Path
 import shutil
 import tempfile
+import uuid
 from AutoREACTER.reaction_preparation.lunar_client.REACTER_files_builder import REACTERFiles
 
 
 class GetCacheDir:
-    """
-    Manages the base cache directory for the AutoREACTER workflow.
-    
-    This class determines the root of the git repository (or falls back to a
-    path relative to the execution location) and creates a standardized cache
-    directory structure with a staging area.
-    """
-
-    def __init__(
-        self,
-        clear_staging: bool = False,
-    ):
+    def __init__(self, clear_staging: bool = True):
         """
-        Initialize cache directory structure.
-
+        Initializes the cache manager.
+        
         Args:
-            clear_staging:
+            clear_staging: 
                 If True, clear all contents inside the staging directory.
                 The staging directory itself is preserved.
-            base_dir:
-                Optional base directory to use instead of auto-detecting.
         """
-        # Staging directory for temporary files before moving to dated run folders
-        self.staging_dir = Path(tempfile.gettempdir()) / "AutoREACTER_staging"
+        # Generate a unique staging directory for this run to prevent concurrent conflicts
+        run_id = uuid.uuid4().hex[:8]
+        self.staging_dir = Path(tempfile.gettempdir()) / f"AutoREACTER_staging_{run_id}"
         self.staging_dir.mkdir(parents=True, exist_ok=True)
-
-        if clear_staging:
-            self.clear_staging_dir()
+        self.clear_staging_dir()
 
     def clear_staging_dir(self) -> None:
         """

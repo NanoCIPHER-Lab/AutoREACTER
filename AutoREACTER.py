@@ -36,68 +36,6 @@ def loading_message(message: str, duration: float = 3.0, interval: float = 0.5) 
     print()  # newline
 
 
-def save_image(img: Image.Image, path: str, label: str = "Image") -> None:
-    """
-    Save a PIL Image to disk with robust error handling and user feedback.
-    
-    Args:
-        img: PIL Image object to save
-        path: Full path where the image should be saved
-        label: Human-readable label used in log messages
-    """
-    if img is None:
-        print(f"[WARN] {label}: Image is None, skipping save.")
-        return
-
-    try:
-        if hasattr(img, "save"):
-            img.save(path)
-            print(f"\n[OK] {label} saved → {path}")
-        else:
-            print(f"[ERROR] {label}: Object has no .save() method")
-    except Exception as e:
-        print(f"[ERROR] Failed to save {label} to {path}: {e}")
-
-
-def run_cleanup(mode: str = "skip") -> None:
-    """Run cache cleanup with the specified retention mode.
-    
-    Args:
-        mode: Cleanup mode - number of days (as string), 'all', or 'skip'
-    """
-    cache_manager = GetCacheDir()
-    cleanup = RetentionCleanup(cache_manager.cache_base_dir)
-    cleanup.run(mode=mode)
-
-
-def help_message() -> None:
-    """Display usage instructions and available command-line options."""
-    print("Usage:")
-    print("  python AutoREACTER.py -i <input.json>")
-    print("  python AutoREACTER.py -c <days|all|skip>")
-    print()
-    print("Options:")
-    print("  -i, --input        Path to input JSON file")
-    print("  -c, --cleanup      Run cache cleanup")
-    print()
-    print("Cleanup modes:")
-    print("  <days>   → delete runs older than N days (e.g., 7, 30)")
-    print("  all      → delete all cached runs")
-    print("  skip     → no cleanup (default)")
-
-
-
-
-def loading_message(message: str, duration: float = 3.0, interval: float = 0.5) -> None:
-    """
-    Print a loading message with animated dots to indicate progress.
-    """
-    print(f"[INFO] {message}", end="", flush=True)
-    steps = int(duration / interval)
-    for _ in range(steps):
-        print(".", end="", flush=True)
-        time.sleep(interval)
-    print()  
 
 def save_image(img: Image.Image, path: str, label: str = "Image") -> None:
     """
@@ -121,12 +59,33 @@ def save_image(img: Image.Image, path: str, label: str = "Image") -> None:
         print(f"[ERROR] Failed to save {label} to {path}: {e}")
 
 def help_message() -> None:
+    """
+    Print usage instructions for the AutoREACTER script.
+    This function is called when the user runs the script without arguments or with incorrect options.
+    """
     print("Usage:")
     print("  python AutoREACTER.py -i <input.json>")
     print("\nOptions:")
     print("  -i, --input        Path to input JSON file")
 
 def AutoREACTER(input_file: str) -> None:
+    """
+    Main function to run the AutoREACTER workflow.
+    This function orchestrates the entire process from reading inputs, detecting reactions, preparing files, and setting up the simulation.
+     Args:
+        input_file: Path to the input JSON file containing simulation parameters and monomer information.
+    
+    Workflow Steps:
+    1. Initialize Session: Read and validate inputs, set up staging and output directories.
+    2. Functional Group Detection: Identify functional groups in the monomers and generate visualizations
+    3. Reaction Discovery and Selection: Detect possible reactions based on functional groups and allow user selection.
+    4. Non-monomer (Additive) Detection: Identify any non-reactant additives and allow user selection.
+    5. Reaction Template Preparation: Prepare reaction templates and generate visualizations for review.
+    6. 3D Geometry Preparation: Generate 3D geometries for molecules and reactions.
+    7. Lunar API Processing: Send data to the Lunar API and retrieve results.
+    8. Build REACTER Input Files: Create the necessary input files for REACTER based on the processed data.
+    9. Final Simulation Setup and Output: Organize all outputs into the final directory structure and provide user feedback.
+    """
     # === 1. Initialize Session ===
     session = read_input(input_file)
 
