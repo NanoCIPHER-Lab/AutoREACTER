@@ -13,6 +13,7 @@ The workflow consists of four main stages:
 4. Bond Reaction Merge: Combines molecules and reaction templates
 """
 
+from ast import Raise
 import subprocess
 import os
 import sys
@@ -21,17 +22,15 @@ import re
 import time
 import platform
 import shutil
-from dataclasses import dataclass
+import importlib.resources as pkg_resources
 from typing import Optional
+from dataclasses import dataclass
 from AutoREACTER.input_parser import SimulationSetup
 from AutoREACTER.reaction_preparation.lunar_client.locate_lunar import get_LUNAR_loc
 from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import ReactionMetadata
 from AutoREACTER.reaction_preparation.lunar_client.ff_validator import FFValidator
-parent_dir = os.path.dirname(os.path.abspath(__file__))
+from AutoREACTER.session import ARXSession
 
-auto_reacter_dir = os.path.abspath(
-    os.path.join(parent_dir, "..", "..", "..")
-)
 
 # =============================================================================
 # Data Structures for LUNAR Processing Results
@@ -123,22 +122,25 @@ class LunarAPIWrapper:
         LUNAR_LOCATION: Path to the LUNAR installation directory
     """
 
-    def __init__(self, cache_dir: Path):
+    def __init__(self, ARX: ARXSession):
         """
         Initialize the LUNAR wrapper and set up cache directories.
         
         Args:
-            cache_dir: Base directory for storing intermediate files.
-                      Will create subdirectories for each processing stage.
+            ARX: The AutoREACTER session object.
         """
-        self.cache_dir = Path(cache_dir / "lunar")
+        self._loading_screen("LUNAR API Wrapper Initialization")
+        """
+         Create cache structure for different processing stages.""
+        Will create subdirectories for each processing stage.
+        """
+        self.cache_dir = Path(ARX.cache_dir / "lunar")
         # Locate LUNAR installation and key script paths
         self.LUNAR_LOCATION = get_LUNAR_loc(use_gui=False)
         self.atom_typing_py = os.path.join(self.LUNAR_LOCATION, "atom_typing.py")
         self.all2lmp_py = os.path.join(self.LUNAR_LOCATION, "all2lmp.py")
         self.bond_react_merge_py = os.path.join(self.LUNAR_LOCATION, "bond_react_merge.py")
 
-        self._loading_screen("LUNAR API Wrapper Initialization")
         # Create cache structure for different processing stages
         os.makedirs(self.cache_dir, exist_ok=True)
 
@@ -379,22 +381,12 @@ class LunarAPIWrapper:
             ValueError: If the force field file is not found or unsupported
         """
         base = Path(self.LUNAR_LOCATION) / "frc_files"
-        instance_class = type(self)
-        if not hasattr(instance_class, "_repo_frc_dir"):
-            repo_frc_dir = next(
-                (
-                    parent / "frc_files"
-                    for parent in Path(__file__).resolve().parents
-                    if (parent / "frc_files" / "pcff.frc").is_file()
-                ),
-                base,
-            )
-            if repo_frc_dir == base:
-                print("[LUNAR all2lmp] Repository frc_files not found; using LUNAR frc_files fallback.")
-            instance_class._repo_frc_dir = repo_frc_dir
-        pcff_frc_dir = instance_class._repo_frc_dir
 
-        print(f"Resolving .frc file for force field '{force_field}'...")  # Debug statement
+        try:
+            # Attempt to use pkg_resources to locate .frc files within the package
+            pcff_frc_dir = Path(pkg_resources.files("AutoREACTER").joinpath("frc_files", "pcff.frc"))
+        except Exception as e:
+            raise RuntimeError(f"Error locating .frc files using pkg_resources: {e}")
 
         paths = {
             "PCFF-IFF": pcff_frc_dir / "pcff.frc",
