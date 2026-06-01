@@ -1,11 +1,6 @@
 from pathlib import Path
-import sys
-import re
 import shutil
-import subprocess
-import datetime as dt
 import tempfile
-from typing import Optional, Union
 from AutoREACTER.reaction_preparation.lunar_client.REACTER_files_builder import REACTERFiles
 
 
@@ -82,50 +77,10 @@ class RunDirectoryManager:
         """
         self.base_dir = Path(base_dir)
         self.base_dir.mkdir(parents=True, exist_ok=True)
-
-    def _is_empty(self, path: Path) -> bool:
-        """Check if a directory contains no files or subdirectories."""
-        return not any(path.iterdir())
-
-    def make_dated_run_dir(self) -> Path:
-        """
-        Create and return a dated run directory following the pattern: {base}/{today}/{run_number}.
-        
-        Reuses the latest run directory if it is empty. Otherwise, increments the run number.
-        
-        Returns:
-            Path: Path to the final run directory
-        """
-        today = dt.date.today().isoformat()
-        date_dir = self.base_dir / today
-        date_dir.mkdir(parents=True, exist_ok=True)
-
-        # Find existing run numbers (directories named with integers)
-        existing_runs = [
-            int(p.name) for p in date_dir.iterdir()
-            if p.is_dir() and p.name.isdigit()
-        ]
-
-        if existing_runs:
-            latest_run = date_dir / str(max(existing_runs))
-            if self._is_empty(latest_run):
-                print(f"[INFO] Final directory: {latest_run}")
-                return latest_run
-
-        # Create new run directory with incremented number
-        run_number = max(existing_runs, default=0) + 1
-        run_dir = date_dir / str(run_number)
-        run_dir.mkdir()
-
-        print(f"[INFO] Final directory: {run_dir}")
-        return run_dir
-
+    
     def remove_path(self, path: Path) -> None:
         """
         Remove a file, symlink, or directory recursively.
-        
-        Args:
-            path: Path to remove
         """
         if path.is_symlink() or path.is_file():
             path.unlink()
