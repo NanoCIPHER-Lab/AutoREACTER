@@ -21,32 +21,19 @@ class GetCacheDir:
     def __init__(
         self,
         clear_staging: bool = False,
-        base_dir: Optional[Union[Path, str]] = None,
     ):
         """
         Initialize cache directory structure.
 
         Args:
             clear_staging:
-                If True, clear all contents inside cache/00_cache.
-                The 00_cache directory itself is preserved.
+                If True, clear all contents inside the staging directory.
+                The staging directory itself is preserved.
             base_dir:
                 Optional base directory to use instead of auto-detecting.
         """
-        # 1. Determine the root directory safely
-        if base_dir is not None:
-            self.root_dir = Path(base_dir).expanduser().resolve()
-        else:
-            # Use the Current Working Directory where the user ran the command
-            self.root_dir = Path.cwd().resolve() 
-
-        # 2. Create the cache base directory
-        self.cache_base_dir = self.root_dir / "cache"
-        self.cache_base_dir.mkdir(parents=True, exist_ok=True)
-        # --- THE FIX ENDS HERE ---
-
         # Staging directory for temporary files before moving to dated run folders
-        self.staging_dir = self.cache_base_dir / "00_cache"
+        self.staging_dir = Path(tempfile.gettempdir()) / "AutoREACTER_staging"
         self.staging_dir.mkdir(parents=True, exist_ok=True)
 
         if clear_staging:
@@ -223,73 +210,3 @@ class RunDirectoryManager:
         print(f"[OK] REACTER files moved → {new_base}")
         return reacter_files
 
-
-class RetentionCleanup:
-    """
-    Provides interactive cleanup functionality for old cache directories.
-    
-    Allows users to delete simulation run folders older than a chosen retention
-    period (1 week, 1 month, 3 months) or delete everything.
-    """
-
-    def __init__(self, base_dir: Path):
-        """
-        Initialize cleanup manager with target base directory.
-        
-        Args:
-            base_dir: Cache base directory to clean up
-        """
-        self.base_dir = Path(base_dir)
-
-    def run(self, mode="skip"):
-        """
-        Run the cleanup process based on the specified mode.
-        Modes are:
-            - "skip": Do not perform any cleanup
-            - "all": Delete all dated run directories
-            - int (number of days): Delete directories older than this many days
-        Args:
-            mode: Cleanup mode - "skip", int(number of days), or "all"
-        Returns:
-            None
-        """
-        print(f"\n[INFO] Cache directory: {self.base_dir}")
-
-        if mode == "skip":
-            print("[INFO] Cache cleanup skipped.")
-            return
-
-        pattern = re.compile(r"\d{4}-\d{2}-\d{2}")
-        protected = {"00_cache"}
-        
-        if mode == "all":
-            for folder in self.base_dir.iterdir():
-                if (
-                    folder.is_dir()
-                    and folder.name not in protected
-                    and pattern.match(folder.name)
-                ):
-                    shutil.rmtree(folder)
-                    print(f"[OK] Deleted: {folder}")
-            return
-
-        try:
-            days = int(mode)
-        except Exception:
-            print(f"[WARN] Invalid cleanup mode: {mode}")
-            return
-
-        cutoff = dt.date.today() - dt.timedelta(days=days)
-
-        for folder in self.base_dir.iterdir():
-            if not folder.is_dir() or folder.name == "00_cache":
-                continue
-
-            try:
-                folder_date = dt.datetime.strptime(folder.name, "%Y-%m-%d").date()
-            except ValueError:
-                continue
-
-            if folder_date < cutoff:
-                shutil.rmtree(folder)
-                print(f"[OK] Deleted: {folder}")
