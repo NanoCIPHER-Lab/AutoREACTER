@@ -76,11 +76,14 @@ def read_input(input_file_path: str, clear_staging: bool = True) -> ARXSession:
     base_output_dir = input_path.parent / "AutoREACTER_outputs"
     base_output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Create the specific folder for THIS simulation
-    output_dir = base_output_dir / validated_inputs.simulation_name
-    
+    # Create the specific folder for THIS simulation (sanitize to avoid path traversal)
+    sim_name = str(validated_inputs.simulation_name)
+    if Path(sim_name).name != sim_name or sim_name in {".", ".."}:
+        raise ValueError(f"Invalid simulation_name for output directory: {sim_name!r}")
+    output_dir = base_output_dir / sim_name
+
     if output_dir.exists():
-        _clear_directory(output_dir) # Only clear this specific run's old files
+        _clear_directory(output_dir)  # Only clear this specific run's old files
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Now create the images folder safely inside the simulation folder
