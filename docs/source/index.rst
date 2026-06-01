@@ -26,7 +26,6 @@ This guide covers setup, input configuration, and supported reactions.
    input-configuration.md
    supported-reactions.md
    supported-force-fields.md
-   clean_up.md
    change_log.md  
    contact.md
 
