@@ -171,7 +171,7 @@ def AutoREACTER(input_file: str) -> None:
     )
 
     # === 7. Lunar API Processing ===
-    lunar_api = LunarAPIWrapper(session.staging_dir)
+    lunar_api = LunarAPIWrapper(session)
     lunar_results = lunar_api.lunar_workflow(
         updated_inputs_3d, prepared_reactions_3d
     )
