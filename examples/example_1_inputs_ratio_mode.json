@@ -1,6 +1,6 @@
 {
     "simulation_name": "Example_Ratio_Mode",
-    "simulations": [
+    "replicas": [
         {
             "tag": "10k_base",
             "temperature": 300,
