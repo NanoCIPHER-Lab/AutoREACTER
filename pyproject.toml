@@ -23,3 +23,5 @@ dependencies = [
 ]
 
 [tool.setuptools.packages.find]
+[tool.setuptools.package-data]
+AutoREACTER = ["frc_files/*.frc"]
