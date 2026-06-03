@@ -26,7 +26,10 @@ from AutoREACTER.reaction_preparation.reaction_processor.utils import (
     add_dict_as_new_columns, add_column_safe, compare_set, prepare_paths
 )
 from AutoREACTER.reaction_preparation.reaction_processor.walker import reaction_atom_walker
-from AutoREACTER.session import ARXSession
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from AutoREACTER.session import ARXSession
 
 
 class MappingError(Exception):
@@ -88,7 +91,7 @@ class ReactionMetadata:
 class PrepareReactions:
     """Processes chemical reactions: builds atom mappings, identifies reaction centers, and detects byproducts."""
 
-    def __init__(self, session: ARXSession):
+    def __init__(self, session: "ARXSession"):
         """Initialize using the shared AutoREACTER session object."""
         self.session = session
         self.inputs = session.inputs

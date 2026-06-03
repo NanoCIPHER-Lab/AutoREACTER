@@ -29,7 +29,10 @@ from AutoREACTER.input_parser import SimulationSetup
 from AutoREACTER.reaction_preparation.lunar_client.locate_lunar import get_LUNAR_loc
 from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import ReactionMetadata
 from AutoREACTER.reaction_preparation.lunar_client.ff_validator import FFValidator
-from AutoREACTER.session import ARXSession
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from AutoREACTER.session import ARXSession
 
 
 # =============================================================================
@@ -122,7 +125,7 @@ class LunarAPIWrapper:
         LUNAR_LOCATION: Path to the LUNAR installation directory
     """
 
-    def __init__(self, ARX: ARXSession):
+    def __init__(self, ARX: "ARXSession"):
         """
         Initialize the LUNAR wrapper and set up cache directories.
 
@@ -386,14 +389,16 @@ class LunarAPIWrapper:
         base = Path(self.LUNAR_LOCATION) / "frc_files"
 
         try:
-            # Attempt to use pkg_resources to locate .frc files within the package
-            pcff_frc_dir = Path(pkg_resources.files("AutoREACTER").joinpath("frc_files", "pcff.frc"))
+            pcff_frc = Path(
+                pkg_resources.files("AutoREACTER").joinpath("frc_files", "pcff.frc")
+            )
+        
         except Exception as e:
             raise RuntimeError(f"Error locating .frc files using pkg_resources: {e}")
 
         paths = {
-            "PCFF-IFF": pcff_frc_dir / "pcff.frc",
-            "PCFF": pcff_frc_dir / "pcff.frc",
+            "PCFF-IFF": pcff_frc,
+            "PCFF": pcff_frc,  # PCFF and PCFF-IFF use the same .frc file in LUNAR
             "Compass": base / "compass_published.frc",
             "CVFF-IFF": base / "cvff_aug.frc",
             "CVFF": base / "cvff.frc",

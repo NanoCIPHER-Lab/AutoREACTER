@@ -26,6 +26,7 @@ from dataclasses import dataclass
 from typing import Optional
 import datetime
 import re
+from AutoREACTER import session
 from AutoREACTER.input_parser import SimulationSetup
 from AutoREACTER.reaction_preparation.lunar_client.lunar_api_wrapper import LunarFiles
 from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import ReactionMetadata 
@@ -34,7 +35,10 @@ from AutoREACTER.reaction_preparation.lunar_client.modifiers_molecule_files impo
     modify_types, modify_charges, modify_coords,
     modify_bonds, modify_angles, modify_dihedrals, modify_impropers,
 )
-from AutoREACTER.session import ARXSession
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from AutoREACTER.session import ARXSession
 
 now = datetime.datetime.now() 
 import logging
@@ -74,7 +78,7 @@ class REACTERFiles:
 class REACTERFilesBuilder:
     def __init__(
         self,
-        session: ARXSession,
+        session: "ARXSession",
         updated_inputs_with_3d_mols: SimulationSetup | None = None,
     ):
         self.session = session

@@ -25,7 +25,10 @@ from rdkit.Chem import Descriptors
 # Local imports from the AutoREACTER package
 from AutoREACTER.input_parser import SimulationSetup
 from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import ReactionMetadata
-from AutoREACTER.session import ARXSession
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from AutoREACTER.session import ARXSession
 
 
 class Molecule3DPreparationError(Exception):
@@ -53,7 +56,7 @@ class Molecule3DPreparation:
         full_templates_path: Directory for combined reactant/product complexes.
     """
 
-    def __init__(self, session: ARXSession):
+    def __init__(self, session: "ARXSession"):
         """Initialize the 3D preparation utility using the shared AutoREACTER session.
 
         In AutoREACTER, session.staging_dir is the working/cache directory.
