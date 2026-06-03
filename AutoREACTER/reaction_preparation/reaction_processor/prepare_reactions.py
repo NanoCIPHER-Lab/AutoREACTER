@@ -26,26 +26,19 @@ from AutoREACTER.reaction_preparation.reaction_processor.utils import (
     add_dict_as_new_columns, add_column_safe, prepare_paths
 )
 from AutoREACTER.reaction_preparation.reaction_processor.walker import reaction_atom_walker
-from AutoREACTER.reaction_preparation.reaction_processor.reaction_processing_support import (
-    assign_first_shell_and_initiators,
-    assign_atom_map_numbers_and_set_isotopes,
-    build_atom_index_mapping,
-    build_reaction,
-    build_reactants,
-    build_reaction_tuple,
-    clear_isotopes_and_map_numbers,
-    detect_byproducts,
-    detect_duplicates,
-    reassign_atom_map_numbers_by_isotope,
-    reveal_template_map_numbers,
-    validate_mapping,
-)
-
-from AutoREACTER.reaction_preparation.reaction_processor.reaction_propagation import ReactionPropagation
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from AutoREACTER.detectors.functional_groups_detector import MonomerRole
+    from AutoREACTER.session import ARXSession
+
+
+class MappingError(Exception):
+    """Custom exception raised when atom mapping between reactants and products fails or is inconsistent."""
+
+
+class SMARTSParsingError(Exception):
+    """Custom exception raised when parsing SMILES or reaction SMARTS fails."""
+
 
 @dataclass(slots=True)
 class ReactionMetadata:
@@ -97,9 +90,14 @@ class ReactionMetadata:
 class PrepareReactions:
     """Processes chemical reactions: builds atom mappings, identifies reaction centers, and detects byproducts."""
 
-    def __init__(self, cache: Path):
-        """Initialize with cache directory for storing reaction CSVs."""
-        self.cache = Path(cache)
+    def __init__(self, session: "ARXSession"):
+        """Initialize using the shared AutoREACTER session object."""
+        self.session = session
+        self.inputs = session.inputs
+
+        # In AutoREACTER, staging_dir is the working/cache directory.
+        self.staging_dir = Path(session.staging_dir)
+        self.cache = self.staging_dir
         self.csv_cache = prepare_paths(self.cache, "csv_cache")
         self.reaction_propagation = ReactionPropagation(self.csv_cache) 
 

@@ -1,6 +1,6 @@
 ## Supported Reactions
 
-AutoREACTER is currently in **v0.2-beta**. At this stage of development, the reaction library is limited, specifically step-growth **polycondensation** reactions. 
+AutoREACTER is currently in **v0.2.2-beta**. At this stage of development, the reaction library is limited, specifically step-growth **polycondensation** reactions. 
 
 The core `Detector` module automatically identifies the following functional groups and maps them to their respective reaction pathways. 
 

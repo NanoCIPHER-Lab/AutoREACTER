@@ -47,7 +47,7 @@ jobs:
 
       - name: Run tests if present
         run: |
-          if find . -path "./tests/test*.py" -o -path "./test*.py" | grep -q .; then
+          if find . \( -path "./tests/test*.py" -o -path "./test*.py" \) | grep -q .; then
             pytest
           else
             echo "No pytest tests found yet. Skipping pytest."

@@ -1,6 +1,6 @@
 {
     "simulation_name": "Example_Count_Mode",
-    "simulations": [
+    "replicas": [
         {
             "tag": "10k",
             "temperature": 300,

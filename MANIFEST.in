@@ -1,0 +1,13 @@
+include README.md
+include LICENSE.md
+include pyproject.toml
+
+recursive-include AutoREACTER/frc_files *.frc
+
+recursive-include examples *.json *.md *.ipynb
+recursive-include docs/source *.md *.rst *.py *.png
+
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
+recursive-exclude docs/build *
+recursive-exclude AutoREACTER.egg-info *
