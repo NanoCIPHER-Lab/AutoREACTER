@@ -47,3 +47,10 @@ AutoREACTER/examples/AutoREACTER_outputs/
 .idea/
 
 
+# Local config
+AutoREACTER/reaction_preparation/lunar_client/config.py
+
+# IDE and OS files
+.DS_Store
+.vscode/
+.idea/
