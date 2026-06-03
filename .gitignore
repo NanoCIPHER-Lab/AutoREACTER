@@ -33,10 +33,17 @@ docs/build/
 *.doctree
 *.pickle
 
-# Local config
+# Local LUNAR config
 AutoREACTER/reaction_preparation/lunar_client/config.py
+
+# Generated AutoREACTER example outputs
+examples/AutoREACTER_outputs/
+AutoREACTER/examples/AutoREACTER_outputs/
+
 
 # IDE and OS files
 .DS_Store
 .vscode/
 .idea/
+
+
