@@ -34,6 +34,7 @@ from AutoREACTER.reaction_preparation.lunar_client.modifiers_molecule_files impo
     modify_types, modify_charges, modify_coords,
     modify_bonds, modify_angles, modify_dihedrals, modify_impropers,
 )
+from AutoREACTER.session import ARXSession
 
 now = datetime.datetime.now() 
 import logging
@@ -71,11 +72,26 @@ class REACTERFiles:
     template_files: list[TemplateFile]
 
 class REACTERFilesBuilder:
-    def __init__(self, cache_dir: Path, updated_inputs_with_3d_mols: SimulationSetup):
-        self.cache_dir = Path(cache_dir) / "lunar" / "REACTER_files"
+    def __init__(
+        self,
+        session: ARXSession,
+        updated_inputs_with_3d_mols: SimulationSetup | None = None,
+    ):
+        self.session = session
+
+        # In AutoREACTER, session.staging_dir is the working/cache directory.
+        self.cache_dir = Path(session.staging_dir) / "lunar" / "REACTER_files"
         os.makedirs(self.cache_dir, exist_ok=True)
-        self.force_field = updated_inputs_with_3d_mols.force_field
-        self.updated_inputs_with_3d_mols = updated_inputs_with_3d_mols
+
+        # During the transition, allow the caller to pass the updated 3D inputs.
+        # Later, this can become only session.inputs once the pipeline updates session.inputs consistently.
+        self.updated_inputs_with_3d_mols = (
+            updated_inputs_with_3d_mols
+            if updated_inputs_with_3d_mols is not None
+            else session.inputs
+        )
+
+        self.force_field = self.updated_inputs_with_3d_mols.force_field
             
 
     def _get_ending_integer(self, s: str) -> int | None:
