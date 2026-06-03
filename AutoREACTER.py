@@ -135,7 +135,7 @@ def AutoREACTER(input_file: str) -> None:
     )
 
     # === 5. Reaction Template Preparation ===
-    prepare_reactions = PrepareReactions(session.staging_dir)
+    prepare_reactions = PrepareReactions(session)
     prepared_reactions = prepare_reactions.prepare_reactions(selected_reactions)
 
     try:
@@ -165,7 +165,7 @@ def AutoREACTER(input_file: str) -> None:
         sys.exit(0)
 
     # === 6. 3D Geometry Preparation ===
-    molecule_3d = Molecule3DPreparation(session.staging_dir)
+    molecule_3d = Molecule3DPreparation(session)
     updated_inputs_3d, prepared_reactions_3d = molecule_3d.prepare_molecule_3d_geometry(
         updated_inputs, prepared_reactions
     )
@@ -183,7 +183,7 @@ def AutoREACTER(input_file: str) -> None:
 
     # === 8. Build REACTER Input Files ===
     builder = REACTERFilesBuilder(
-        cache_dir=session.staging_dir,
+        session=session,
         updated_inputs_with_3d_mols=updated_inputs_3d
     )
 
