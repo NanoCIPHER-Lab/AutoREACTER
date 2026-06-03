@@ -125,39 +125,42 @@ class LunarAPIWrapper:
     def __init__(self, ARX: ARXSession):
         """
         Initialize the LUNAR wrapper and set up cache directories.
-        
+
         Args:
             ARX: The AutoREACTER session object.
         """
         self._loading_screen("LUNAR API Wrapper Initialization")
-        """
-         Create cache structure for different processing stages.""
-        Will create subdirectories for each processing stage.
-        """
-        self.cache_dir = Path(ARX.cache_dir / "lunar")
-        # Locate LUNAR installation and key script paths
+
+        self.session = ARX
+        self.inputs = ARX.inputs
+
+        # In AutoREACTER, staging_dir is the working/cache directory.
+        self.cache_dir = Path(ARX.staging_dir) / "lunar"
+
+        # Locate LUNAR installation and key script paths.
         self.LUNAR_LOCATION = get_LUNAR_loc(use_gui=False)
         self.atom_typing_py = os.path.join(self.LUNAR_LOCATION, "atom_typing.py")
         self.all2lmp_py = os.path.join(self.LUNAR_LOCATION, "all2lmp.py")
         self.bond_react_merge_py = os.path.join(self.LUNAR_LOCATION, "bond_react_merge.py")
 
-        # Create cache structure for different processing stages
+        # Create cache structure for different processing stages.
         os.makedirs(self.cache_dir, exist_ok=True)
 
-        # Allow override via environment variable
-        LUNAR_CACHE_DIR = os.environ.get("LUNAR_CACHE_DIR", self.cache_dir)
+        # Allow override via environment variable.
+        # Convert to Path so path joins stay consistent.
+        LUNAR_CACHE_DIR = Path(os.environ.get("LUNAR_CACHE_DIR", self.cache_dir))
 
-        self.cache_atom_typing = os.path.join(LUNAR_CACHE_DIR, "atom_typing")
-        self.cache_all2lmp = os.path.join(LUNAR_CACHE_DIR, "all2lmp")
-        self.cache_bond_react_merge = os.path.join(LUNAR_CACHE_DIR, "bond_react_merge")
+        self.cache_atom_typing = LUNAR_CACHE_DIR / "atom_typing"
+        self.cache_all2lmp = LUNAR_CACHE_DIR / "all2lmp"
+        self.cache_bond_react_merge = LUNAR_CACHE_DIR / "bond_react_merge"
 
-        # Prepare merge prep folder (clean slate)
-        self.cache_mergeprep = Path(self.cache_dir) / "all2lmp_2_bondreact_mergeprep"
+        # Prepare merge prep folder.
+        self.cache_mergeprep = self.cache_dir / "all2lmp_2_bondreact_mergeprep"
         if self.cache_mergeprep.exists():
             shutil.rmtree(self.cache_mergeprep)
         self.cache_mergeprep.mkdir(parents=True, exist_ok=True)
 
-        # Ensure all cache directories exist
+        # Ensure all cache directories exist.
         for p in (
             self.cache_dir,
             self.cache_atom_typing,
