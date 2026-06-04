@@ -70,6 +70,22 @@ class ReactionLibrary:
                             "reaction_and_mechanism": ["https://pubs.acs.org/doi/10.1021/ed073pA312"]},
                 "comments": "This is not a commonly documented reaction, but it is a possibke polyesterification between hydroxy acids and carboxylic acids. Since hydroxy acid halides are highly reactive,monomers are less known and not widely used in practice."
             },
+            "Diol and Di-Carboxylic Acid Polycondensation(Polyesterification)": {
+                "same_reactants": False,
+                "reactant_1": "diol",
+                "reactant_2": "di_carboxylic_acid",
+                "product": "polyester_chain",
+                "delete_atom": True,
+                "reaction": "[CX3:1](=[O:3])[OX2H1:4].[OX2H1;!$([O][C,S]=*):2]-[H:5]>>[CX3:1](=[O:3])-[OX2:2].[O:4]-[H:5]",
+                "reference": {
+                    "smarts": ["https://pubs.acs.org/doi/10.1021/acs.jcim.3c00329"],
+                    "reaction_and_mechanism": [
+                        "https://pubs.acs.org/doi/10.1021/ed048pA734.1",
+                        "https://pubs.acs.org/doi/10.1021/ed073pA312"
+                    ]
+                },
+                "comments": "Oxygen-only esterification. Reactant-side OH excludes already-acylated oxygen."
+            },
             "Diol and Di-Acid Halide Polycondensation(Polyesterification)": {
                 "same_reactants": False,
                 "reactant_1": "diol",
@@ -109,6 +125,19 @@ class ReactionLibrary:
                                 "reaction_and_mechanism": ["https://pubs.acs.org/doi/10.1021/ed048pA734.1", 
                                                             "https://pubs.acs.org/doi/10.1021/ed073pA312"]},
                     "comments": None
+            },
+            "Dithiol and Di-Carboxylic Acid Polycondensation(Polythioesterification)": {
+                "same_reactants": False,
+                "reactant_1": "dithiol",
+                "reactant_2": "di_carboxylic_acid",
+                "product": "polythioester_chain",
+                "delete_atom": True,
+                "reaction": "[CX3:1](=[O:3])[OX2H1:4].[SX2H1;!$([S][C,S]=*):2]-[H:5]>>[CX3:1](=[O:3])-[SX2:2].[O:4]-[H:5]",
+                "reference": {
+                    "smarts": None,
+                    "reaction_and_mechanism": None
+                },
+                "comments": "Possible thioesterification with water elimination, but generally less straightforward than acid-halide route."
             },
             "Amino Acid and Amino Acid Polycondensation (Polyamidation)": {
                 "same_reactants": False,

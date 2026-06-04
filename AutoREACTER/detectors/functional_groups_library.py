@@ -56,7 +56,6 @@ class FunctionalGroupsLibrary:
             "dithiol_monomer": {
                 "functionality_type": "di_identical",
                 "smarts_1": "[SX2H1;!$([S][C,S]=*):1]",
-                "smarts_2": "[SX2H1;!$([S][C,S]=*):2]",
                 "group_name": "dithiol",
                 "comments": "Sulfur-only dithiol. Does not match alcohols. Useful for polythioester, thiol-ene, thiourethane, and related sulfur polymer chemistry."
             },
