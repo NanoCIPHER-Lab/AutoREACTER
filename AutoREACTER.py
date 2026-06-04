@@ -193,7 +193,6 @@ def AutoREACTER(input_file: str) -> None:
     )
 
     # Move generated files to final output directory using RunDirectoryManager
-    # (Since we kept move_reacter_files in cache.py)
     run_manager = RunDirectoryManager(session.output_dir.parent)
     reacter_files = run_manager.move_reacter_files(
         reacter_files,
