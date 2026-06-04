@@ -31,7 +31,7 @@ class ReactionLibrary:
             "Hydroxy Carboxylic Acid Polycondensation(Polyesterification)": {
                 "same_reactants": True,
                 "reactant_1": "hydroxy_carboxylic_acid",
-                "product": "polyester_chain",
+                "product": "polyanhydride_chain",
                 "delete_atom": True,
                 "reaction": "[OX2H1;!$([O][C,S]=*):1]-[H:3].[CX3:2](=[O:5])[OX2H1:4]>>[OX2:1]-[CX3:2](=[O:5]).[O:4]-[H:3]",
                 "reference": {
@@ -47,7 +47,7 @@ class ReactionLibrary:
                 "same_reactants": False,
                 "reactant_1": "hydroxy_carboxylic_acid",
                 "reactant_2": "hydroxy_carboxylic_acid",
-                "product": "polyester_chain",
+                "product": "polyanhydride_chain",
                 "delete_atom": True,
                 "reaction": "[OX2H1;!$([O][C,S]=*):1]-[H:3].[CX3:2](=[O:5])[OX2H1:4]>>[OX2:1]-[CX3:2](=[O:5]).[O:4]-[H:3]",
                 "reference": {
@@ -215,14 +215,6 @@ class ReactionLibrary:
                 },
                 "comments": "Uses the thiol group of a hydroxy-thiol monomer to form a thioester linkage."
             },
-            # "Di-Amine and Di-Carboxylic Acid Polycondensation (Polyamidation)": {
-            #     "same_reactants": False,
-            #     "reactant_1": "di_amine_monomer",
-            #     "reactant_2": "di_carboxylic_acid_monomer",
-            #     "product": "polyamide_chain",
-            #     "delete_atom": True,
-            #     "reaction": "[CX3:2](=[O])[OX2H1,Cl,Br:1].[N&X3;H2,H1;!$(NC=*):3]>>[CX3:2](=[O])-[NX3;!$(NC=*):3].[OX2H1,Cl,Br:1]" # same product issue as above in polyesterification
-            # },
             # "Di-cyclic Anhydride and Di-Primery ammine Polycondensation (Polyimidation)": { # Do not have a clear idea about this reaction yet
             #     "same_reactants": False,
             #     "reactant_1": "di_cyclic_anhydride_monomer",
@@ -350,14 +342,6 @@ class ReactionLibrary:
             #     "reactant_1": "lactam_monomer",
             #     "product": "polyamide_chain",
             #     "delete_atom": False
-            # },
-            # "Di-Amine and Di-Carboxylic Acid Polycondensation (Polyamidation)": {
-            #     "same_reactants": False,
-            #     "reactant_1": "di_amine_monomer",
-            #     "reactant_2": "di_carboxylic_acid_monomer",
-            #     "product": "polyamide_chain",
-            #     "delete_atom": True,
-            #     "reaction": "[CX3:2](=[O])[OX2H1,Cl,Br:1].[N&X3;H2,H1;!$(NC=*):3]>>[CX3:2](=[O])-[NX3;!$(NC=*):3].[OX2H1,Cl,Br:1]" # same product issue as above in polyesterification
             # },
             # "Di-cyclic Anhydride and Di-Primery ammine Polycondensation (Polyimidation)": { # Do not have a clear idea about this reaction yet
             #     "same_reactants": False,
