@@ -33,10 +33,15 @@ class ReactionLibrary:
                 "reactant_1": "hydroxy_carboxylic_acid",
                 "product": "polyester_chain",
                 "delete_atom": True,
-                "reaction": "[O;!$(OC=*):1]-[H:3].[CX3:2](=[O:5])[OX2H1:4]>>[OX2:1]-[CX3:2](=[O:5]).[O:4]-[H:3]",
-                "reference": {"smarts": "https://pubs.acs.org/doi/10.1021/acs.jcim.3c00329",
-                            "reaction_and_mechanism": ["https://pubs.acs.org/doi/10.1021/ed048pA734.1", 
-                                                        "https://pubs.acs.org/doi/10.1021/ed073pA312"]}
+                "reaction": "[OX2H1;!$([O][C,S]=*):1]-[H:3].[CX3:2](=[O:5])[OX2H1:4]>>[OX2:1]-[CX3:2](=[O:5]).[O:4]-[H:3]",
+                "reference": {
+                    "smarts": "https://pubs.acs.org/doi/10.1021/acs.jcim.3c00329",
+                    "reaction_and_mechanism": [
+                        "https://pubs.acs.org/doi/10.1021/ed048pA734.1",
+                        "https://pubs.acs.org/doi/10.1021/ed073pA312"
+                    ]
+                },
+                "comments": None
             },
             "Hydroxy Carboxylic and Hydroxy Carboxylic Polycondensation(Polyesterification)": {
                 "same_reactants": False,
@@ -44,10 +49,15 @@ class ReactionLibrary:
                 "reactant_2": "hydroxy_carboxylic_acid",
                 "product": "polyester_chain",
                 "delete_atom": True,
-                "reaction": "[O;!$(OC=*):1]-[H:3].[CX3:2](=[O:5])[OX2H1:4]>>[OX2:1]-[CX3:2](=[O:5]).[O:4]-[H:3]",
-                "reference": {"smarts": "https://pubs.acs.org/doi/10.1021/acs.jcim.3c00329",
-                            "reaction_and_mechanism": ["https://pubs.acs.org/doi/10.1021/ed048pA734.1", 
-                                                        "https://pubs.acs.org/doi/10.1021/ed073pA312"]}
+                "reaction": "[OX2H1;!$([O][C,S]=*):1]-[H:3].[CX3:2](=[O:5])[OX2H1:4]>>[OX2:1]-[CX3:2](=[O:5]).[O:4]-[H:3]",
+                "reference": {
+                    "smarts": "https://pubs.acs.org/doi/10.1021/acs.jcim.3c00329",
+                    "reaction_and_mechanism": [
+                        "https://pubs.acs.org/doi/10.1021/ed048pA734.1",
+                        "https://pubs.acs.org/doi/10.1021/ed073pA312"
+                    ]
+                },
+                "comments": None
             },
             "Hydroxy Acid Halides Hydroxy Acid Halides Polycondensation(Polyesterification)": {
                 "same_reactants": False,
@@ -115,17 +125,6 @@ class ReactionLibrary:
                 },
                 "comments": "Dithiol reacts with acid halide to form thioester linkage and HX. This should not be classified as polyesterification."
             },
-                "Amino Acid Polycondensation (Polyamidation)": {
-                    "same_reactants": True,
-                    "reactant_1": "amino_acid",
-                    "product": "polyamide_chain",   
-                    "delete_atom": True,
-                    "reaction": "[NX3;H2,H1;!$(OC=*):1]-[H:3].[CX3:2](=[O:4])[OX2H1:5]>>[NX3:1]-[CX3:2](=[O:4]).[O:5]-[H:3]",
-                    "reference": {"smarts": ["https://pubs.acs.org/doi/10.1021/acs.jcim.3c00329"],
-                                "reaction_and_mechanism": ["https://pubs.acs.org/doi/10.1021/ed048pA734.1", 
-                                                            "https://pubs.acs.org/doi/10.1021/ed073pA312"]},
-                    "comments": None
-            },
             "Dithiol and Di-Carboxylic Acid Polycondensation(Polythioesterification)": {
                 "same_reactants": False,
                 "reactant_1": "dithiol",
@@ -139,17 +138,36 @@ class ReactionLibrary:
                 },
                 "comments": "Possible thioesterification with water elimination, but generally less straightforward than acid-halide route."
             },
+            "Amino Acid Polycondensation (Polyamidation)": {
+                "same_reactants": True,
+                "reactant_1": "amino_acid",
+                "product": "polyamide_chain",
+                "delete_atom": True,
+                "reaction": "[NX3;H2,H1;!$([N][C,S]=*):1]-[H:3].[CX3:2](=[O:4])[OX2H1:5]>>[NX3:1]-[CX3:2](=[O:4]).[O:5]-[H:3]",
+                "reference": {
+                    "smarts": ["https://pubs.acs.org/doi/10.1021/acs.jcim.3c00329"],
+                    "reaction_and_mechanism": [
+                        "https://pubs.acs.org/doi/10.1021/ed048pA734.1",
+                        "https://pubs.acs.org/doi/10.1021/ed073pA312"
+                    ]
+                },
+                "comments": None
+            },
             "Amino Acid and Amino Acid Polycondensation (Polyamidation)": {
                 "same_reactants": False,
                 "reactant_1": "amino_acid",
                 "reactant_2": "amino_acid",
-                "product": "polyamide_chain",   
+                "product": "polyamide_chain",
                 "delete_atom": True,
-                "reaction": "[NX3;H2,H1;!$(OC=*):1]-[H:3].[CX3:2](=[O:4])[OX2H1:5]>>[NX3:1]-[CX3:2](=[O:4]).[O:5]-[H:3]",
-                "reference": {"smarts": ["https://pubs.acs.org/doi/10.1021/acs.jcim.3c00329"],
-                            "reaction_and_mechanism": ["https://pubs.acs.org/doi/10.1021/ed048pA734.1", 
-                                                        "https://pubs.acs.org/doi/10.1021/ed073pA312"]},
-                "comments": None
+                "reaction": "[NX3;H2,H1;!$([N][C,S]=*):1]-[H:3].[CX3:2](=[O:4])[OX2H1:5]>>[NX3:1]-[CX3:2](=[O:4]).[O:5]-[H:3]",
+                "reference": {
+                    "smarts": ["https://pubs.acs.org/doi/10.1021/acs.jcim.3c00329"],
+                    "reaction_and_mechanism": [
+                        "https://pubs.acs.org/doi/10.1021/ed048pA734.1",
+                        "https://pubs.acs.org/doi/10.1021/ed073pA312"
+                    ]
+                },
+                "comments": "Copolyamidation between two amino acid monomers."
             },
             "Di-Amine and Di-Carboxylic Acid Polycondensation (Polyamidation)": {
                 "same_reactants": False,
@@ -170,7 +188,33 @@ class ReactionLibrary:
                 "reaction": "[CX3:1](=[O:3])[Cl,Br,I:4].[N;H2,H1;!$(NC=*):2][H:5]>>[CX3:1](=[O:3])[NX3;!$(NC=*):2].[Cl,Br,I:4]([H:5])",
                 "reference": {"smarts": ["https://pubs.acs.org/doi/10.1021/acs.jcim.3c00329"],
                             "reaction_and_mechanism": ["https://pubs.acs.org/doi/10.1021/ed048pA734"]},
-            }
+            },
+            "Hydroxy-Thiol and Di-Carboxylic Acid Halide Polycondensation through Hydroxy Group": {
+                "same_reactants": False,
+                "reactant_1": "hydroxy_thiol",
+                "reactant_2": "di_carboxylic_acid_halide",
+                "product": "mixed_polyester_polythioester_chain",
+                "delete_atom": True,
+                "reaction": "[CX3:1](=[O:3])[Cl,Br,I:4].[OX2H1;!$([O][C,S]=*):2]-[H:5]>>[CX3:1](=[O:3])-[OX2:2].[Cl,Br,I:4]-[H:5]",
+                "reference": {
+                    "smarts": None,
+                    "reaction_and_mechanism": None
+                },
+                "comments": "Uses the hydroxyl group of a hydroxy-thiol monomer to form an ester linkage."
+            },
+            "Hydroxy-Thiol and Di-Carboxylic Acid Halide Polycondensation through Thiol Group": {
+                "same_reactants": False,
+                "reactant_1": "hydroxy_thiol",
+                "reactant_2": "di_carboxylic_acid_halide",
+                "product": "mixed_polyester_polythioester_chain",
+                "delete_atom": True,
+                "reaction": "[CX3:1](=[O:3])[Cl,Br,I:4].[SX2H1;!$([S][C,S]=*):2]-[H:5]>>[CX3:1](=[O:3])-[SX2:2].[Cl,Br,I:4]-[H:5]",
+                "reference": {
+                    "smarts": None,
+                    "reaction_and_mechanism": None
+                },
+                "comments": "Uses the thiol group of a hydroxy-thiol monomer to form a thioester linkage."
+            },
             # "Di-Amine and Di-Carboxylic Acid Polycondensation (Polyamidation)": {
             #     "same_reactants": False,
             #     "reactant_1": "di_amine_monomer",
