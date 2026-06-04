@@ -18,11 +18,11 @@ class FunctionalGroupsLibrary:
             },
             "hydroxy_acid_halides_monomer": {
                 "functionality_type": "di_different",
-                "smarts_1": "[OX2H1;!$(OC=*):1]",
+                "smarts_1": "[OX2H1;!$([O][C,S]=*):1]",
                 "smarts_2": "[CX3:2](=[O])[Cl,Br,I]",
                 "group_name": "hydroxy_acid_halide",
                 "comments": "Hydroxy acid halides are highly reactive and less commonly used monomers for polyesterification compared to hydroxy carboxylic acids."
-            },  
+            },
             "diol_monomer": {
                 "functionality_type": "di_identical",
                 "smarts_1": "[OX2H1;!$([O][C,S]=*):1]",
@@ -38,7 +38,7 @@ class FunctionalGroupsLibrary:
             },
             "di_amine_monomer": { 
                 "functionality_type": "di_identical",
-                "smarts_1": "[N&X3;H2,H1;!$([N][C,S]=*):3]",
+                "smarts_1": "[NX3;H2,H1;!$([N][C,S]=*):1]",
                 "group_name": "di_amine",
                 "comments": None,
             },
@@ -54,6 +54,13 @@ class FunctionalGroupsLibrary:
                 "group_name": "di_carboxylic_acid_halide",
                 "comments": None,
             },
+            "carboxylic_acid_acid_halide_monomer": {
+                "functionality_type": "di_different",
+                "smarts_1": "[CX3:1](=[O])[OX2H1]",
+                "smarts_2": "[CX3:2](=[O])[Cl,Br,I]",
+                "group_name": "carboxylic_acid_acid_halide",
+                "comments": "Mixed COOH/acid-halide AB monomer. Edge case; forms polyanhydride-type linkage, not polyester.",
+            },
             "dithiol_monomer": {
                 "functionality_type": "di_identical",
                 "smarts_1": "[SX2H1;!$([S][C,S]=*):1]",
@@ -65,6 +72,18 @@ class FunctionalGroupsLibrary:
                 "smarts_1": "[OX2H1;!$([O][C,S]=*):1]",
                 "smarts_2": "[SX2H1;!$([S][C,S]=*):2]",
                 "group_name": "hydroxy_thiol",
+                "comments": None,
+            },
+            "di_carboxylic_ester_monomer": {
+                "functionality_type": "di_identical",
+                "smarts_1": "[CX3:1](=[O])[OX2H0][#6]",
+                "group_name": "di_carboxylic_ester",
+                "comments": None,
+            },
+            "di_isocyanate_monomer": {
+                "functionality_type": "di_identical",
+                "smarts_1": "[NX2]=[CX2:1]=[OX1]",
+                "group_name": "di_isocyanate",
                 "comments": None,
             },
             # "di_cyclic_anhydride_monomer": {
