@@ -24,21 +24,20 @@ class FunctionalGroupsLibrary:
             },  
             "diol_monomer": {
                 "functionality_type": "di_identical",
-                "smarts_1": "[O,S;X2;H1;!$([O,S]C=*):3]",
+                "smarts_1": "[OX2H1;!$([O][C,S]=*):1]",
                 "group_name": "diol",
-                "comments": None,
+                "comments": "Oxygen-only diol. Does not match thiols. Functional-group SMARTS uses H-count, not explicit H atoms."
             },
-
             "amino_acid_monomer": {
                 "functionality_type": "di_different",
-                "smarts_1": "[NX3;H2,H1;!$(OC=*):1]",
+                "smarts_1": "[NX3;H2,H1;!$([N][C,S]=*)]",
                 "smarts_2": "[CX3:2](=[O])[OX2H1]",
                 "group_name": "amino_acid",
                 "comments": None,
             },
             "di_amine_monomer": { 
                 "functionality_type": "di_identical",
-                "smarts_1": "[N&X3;H2,H1;!$(NC=*):3]",
+                "smarts_1": "[N&X3;H2,H1;!$([N][C,S]=*):3]",
                 "group_name": "di_amine",
                 "comments": None,
             },
@@ -53,6 +52,13 @@ class FunctionalGroupsLibrary:
                 "smarts_1": "[CX3:2](=[O])[Cl,Br,I:1]",
                 "group_name": "di_carboxylic_acid_halide",
                 "comments": None,
+            },
+            "dithiol_monomer": {
+                "functionality_type": "di_identical",
+                "smarts_1": "[SX2H1;!$([S][C,S]=*):1]",
+                "smarts_2": "[SX2H1;!$([S][C,S]=*):2]",
+                "group_name": "dithiol",
+                "comments": "Sulfur-only dithiol. Does not match alcohols. Useful for polythioester, thiol-ene, thiourethane, and related sulfur polymer chemistry."
             },
             # "di_cyclic_anhydride_monomer": {
             #     "functionality_type": "di_identical",
