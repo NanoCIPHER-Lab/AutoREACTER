@@ -34,6 +34,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from AutoREACTER.session import ARXSession
 
+from AutoREACTER.reaction_preparation.lunar_client.foyer_api_wrapper import FoyerAPIWrapper
 
 # =============================================================================
 # Data Structures for LUNAR Processing Results
@@ -686,6 +687,16 @@ class LunarAPIWrapper:
             LunarFiles containing all generated simulation files
         """
         force_field = updated_inputs_with_3d_mols.force_field
+        lower_force_field = force_field.lower() if force_field else "unknown"
+        if force_field in ["oplsaa", "opls", "opls-aa", "gaff"]:
+            if force_field == "gaff":
+                ff_name = "GAFF"
+            else:
+                ff_name = "OPLS"
+            print(f"Force field '{force_field}' detected. Using '{ff_name}' parameters in foyer.")
+            foyer_wrapper = FoyerAPIWrapper(ARX=self.session)
+            
+            return foyer_wrapper.lunar_files
 
         # Stage 1: Assign atom types using the specified force field
         atom_typing_result = self._run_LUNAR_atom_typing(

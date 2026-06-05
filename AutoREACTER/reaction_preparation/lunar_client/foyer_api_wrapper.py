@@ -30,7 +30,7 @@ from AutoREACTER.input_parser import SimulationSetup
 from AutoREACTER.reaction_preparation.lunar_client.locate_lunar import get_LUNAR_loc
 from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import ReactionMetadata
 from AutoREACTER.reaction_preparation.lunar_client.ff_validator import FFValidator
-from AutoREACTER.reaction_preparation.lunar_client.foyer_lammps_support import GetForceFieldDataFile
+from AutoREACTER.reaction_preparation.lunar_client.foyer_lammps_support import GetForceFieldDataFile, DATAFile2LAMMPSMolecule
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -168,6 +168,14 @@ class FoyerAPIWrapper:
         # Validate the generated force field data file
         FFValidator.validate_force_field_data_file(self.force_field_data_file)
 
+
+        self.lunar_files = self._run_bond_react_merge(self.atom_typing_results)
+       
+
+
+
+        
+
     def _foyer_atom_typing(self, mol_file: Path, output_dir: Path, entry_name: str, molecule: bool, force_field: str) -> AtomTypingResult:
 
         if force_field not in ['oplsaa', 'gaff']:
@@ -205,7 +213,7 @@ class FoyerAPIWrapper:
         updated_inputs: SimulationSetup,
         prepared_reactions: list[ReactionMetadata],
         force_field: str
-    ) -> tuple[SimulationSetup, list[ReactionMetadata]]:
+    ) -> list[AtomTypingResult]:
         
         atom_typing_result = []
         self.force_field = force_field
@@ -257,6 +265,110 @@ class FoyerAPIWrapper:
                 time.sleep(0.1)  # Simulate processing time for demonstration purposes
 
         return atom_typing_result
+    
+
+    def _run_bond_react_merge(
+        self,
+        atom_typing_results: list[AtomTypingResult]
+    ) -> LunarFiles:
+        """
+        Execute the final bond_react_merge step.
+        
+        This combines all molecules and reaction templates into the final
+        simulation files: merged data files, force_field.data, and the
+        LAMMPS input script.
+        
+        Args:
+            atom_typing_results: Results from atom typing stage (used for verification)
+
+        Returns:
+            LunarFiles object containing all final output paths
+        """
+
+        molecule_files = []
+        template_files = []
+        output_dir = self.cache_bond_react_merge
+
+        self._move_merge_outputs(self.cache_all2lmp, self.cache_bond_react_merge)
+
+        # Organize output files by type (molecule vs. template)
+        for result in atom_typing_results:
+            name = result.id
+            is_molecule = result.molecule
+            typed_data_file = result.typed_data_file
+
+
+            if is_molecule:
+                converter = DATAFile2LAMMPSMolecule(data_file=result.typed_data_file)
+                molecule_file_path = converter.extract_and_write(molecule_id=1)
+                path_dir = molecule_file_path.parent
+                molecule_files.append(MoleculeFile(
+                    id=name,
+                    molecule_files=DataFiles(
+                        data_file=Path(typed_data_file),
+                        lmp_molecule_file=Path(molecule_file_path)
+                    )
+                ))
+            else:
+                # Handle pre-reaction templates
+                converter_pre = DATAFile2LAMMPSMolecule(data_file=result.typed_data_file)
+                pre_molecule_file_path = converter_pre.extract_and_write(molecule_id=1)
+
+                if name.startswith("pre"):
+                    rid = self._get_ending_integer(name)
+                    template_files.append(TemplateFile(
+                        reaction_id=rid,
+                        pre_reaction_file=DataFiles(
+                            data_file=Path(typed_data_file),
+                            lmp_molecule_file=Path(pre_molecule_file_path)
+                        )
+                    ))
+                # Handle post-reaction templates
+                elif name.startswith("post"):
+                    rid = self._get_ending_integer(name)
+                    # Find the corresponding pre-reaction template to update
+                    converter_post = DATAFile2LAMMPSMolecule(data_file=result.typed_data_file)
+                    post_molecule_file_path = converter_post.extract_and_write(molecule_id=1)
+                    for template in template_files:
+                        if template.reaction_id == rid:
+                            template.post_reaction_file = DataFiles(
+                                data_file=Path(typed_data_file),
+                                lmp_molecule_file=Path(post_molecule_file_path)  # Reusing the same path for simplicity
+                            )
+                    else:
+                        raise ValueError(f"Post-reaction template '{name}' has no matching pre-reaction template with ID {rid}.")
+
+        # Verify all expected outputs exist
+        for m in molecule_files:
+            if m.molecule_files.data_file.is_file() and m.molecule_files.lmp_molecule_file.is_file():
+                print(f"[LUNAR bond_react_merge] Generated molecule files for {m.id}")
+            else:
+                raise FileNotFoundError(
+                    f"Missing output files for molecule {m.id}"
+                )
+                
+        for t in template_files:
+            pre_exists = t.pre_reaction_file.data_file.is_file()
+            post_exists = t.post_reaction_file.data_file.is_file()
+            if pre_exists and post_exists:
+                print(f"[LUNAR bond_react_merge] Generated template files for reaction {t.reaction_id}")
+            else:
+                raise FileNotFoundError(
+                    f"Missing template files for reaction {t.reaction_id}: "
+                    f"{t.pre_reaction_file.data_file}, {t.post_reaction_file.data_file}"
+                )
+        
+        # Collect all final file paths
+        lunar_files = LunarFiles(
+            force_field_data=Path(output_dir) / "force_field.data",
+            in_file=None, # LUNAR's generated input script
+            molecule_files=molecule_files,
+            template_files=template_files
+        )
+
+        FFValidator(lunar_files)  # Validate the generated force field file
+
+        return lunar_files
         
 
 

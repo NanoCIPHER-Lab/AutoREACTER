@@ -133,3 +133,60 @@ class GetForceFieldDataFile:
             os.remove(empty_data_path)
 
         return output_file
+    
+
+class DATAFile2LAMMPSMolecule:
+    def __init__(self, data_file: Path, units: str = "real", atom_style: str = "full"):
+        """
+        Initializes the LAMMPS instance and loads the data file.
+        Units and atom_style are parameterized to match the data file.
+        """
+        self.data_file = data_file
+        self.units = units
+        self.atom_style = atom_style
+        
+        # Keep the active LAMMPS instance as an attribute
+        self.lmp = self._load_data_file(self.data_file)
+
+    def _load_data_file(self, data_file: Path) -> lammps:
+        """Loads a LAMMPS data file into the LAMMPS instance."""
+        lmp = lammps(cmdargs=['-log', 'none', '-echo', 'none'])
+        lmp.command(f"units {self.units}")
+        lmp.command(f"atom_style {self.atom_style}")
+        lmp.command(f"read_data {data_file.as_posix()}")
+        return lmp
+
+    def extract_and_write(self, molecule_id: int = 1, output_file: Path = None) -> Path:
+        """
+        Groups a specific molecule by its ID and writes it to a LAMMPS molecule file.
+        If no output_file is specified, it automatically creates one by changing 
+        the input file's extension from .data to .molecule.
+        
+        Returns the Path object of the generated molecule file.
+        """
+        # Automatically handle the .data -> .molecule conversion if no path is given
+        if output_file is None:
+            output_file = self.data_file.with_suffix('.molecule')
+            
+        group_name = f"single_mol_{molecule_id}"
+        
+        try:
+            # Group the specific molecule ID
+            self.lmp.command(f"group {group_name} molecule {molecule_id}")
+            
+            # Write out to native LAMMPS molecule format
+            self.lmp.command(f"write_molecule {group_name} {output_file.as_posix()}")
+            
+            # Return the path so it can be passed directly to your dataclass
+            return output_file
+            
+        except Exception as e:
+            print(f"An error occurred while writing the molecule: {e}")
+            raise e
+
+
+
+
+
+
+            
