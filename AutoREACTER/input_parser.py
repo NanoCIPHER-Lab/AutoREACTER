@@ -46,7 +46,7 @@ ForceFieldType = Literal[
     "CVFF",
     "Clay-FF",
     "DRIEDING",
-    "OPLS-AA",
+    "OPLSAA",
 ]
 
 
@@ -396,7 +396,7 @@ class InputParser:
             "CVFF",
             "Clay-FF",
             "DRIEDING",
-            "OPLS-AA",
+            "OPLSAA",
         }
 
         if force_field is None:
