@@ -210,5 +210,4 @@ class FunctionalGroupsLibrary:
             #     "group_name": "di_epoxide"
             # }
             # need to add more functional groups here from "J. Chem. Inf. Model. 2023, 63, 5539−5548"
-        }
         # is there monomers with both COCl and COOH groups?
