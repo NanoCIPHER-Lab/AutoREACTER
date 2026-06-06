@@ -53,7 +53,7 @@ class FFWrapper:
         self,
         updated_inputs: SimulationSetup,
         prepared_reactions: list[ReactionMetadata]
-    ) -> LunarFiles:
+    ) -> FFFiles:
         
         force_field = updated_inputs.force_field.lower() if updated_inputs.force_field else ""
 
