@@ -2,8 +2,10 @@ import sys
 import os
 import time
 from PIL import Image
-from AutoREACTER._compat import apply_legacy_patches
-apply_legacy_patches()
+# from AutoREACTER._compat import apply_legacy_patches
+# apply_legacy_patches()
+# this will be need when foyer integration is added back in, but for now it causes issues with the current foyer version.
+#  We can re-add it when we add foyer back in, and it should be compatible with the current version of foyer at that time.
 
 from AutoREACTER.session import read_input
 from AutoREACTER.cache import RunDirectoryManager
