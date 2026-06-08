@@ -35,6 +35,8 @@ class SmilesValidationError(InputError):
 class DuplicateMonomerError(InputError):
     """Raised when duplicate monomer definitions are detected."""
 
+class CompatibilityError(InputError):
+    """Raised when input combinations are incompatible with the current workflow."""
 
 # Type aliases for clarity and validation.
 CompositionMethodType = Literal["counts", "ratio"]
@@ -410,6 +412,12 @@ class InputParser:
         """
         if force_field is None:
             return "PCFF"
+        
+        if force_field in ["OPLSAA", "GAFF"]:
+            raise CompatibilityError(
+                f"Force field '{force_field}' is currently not supported in the LUNAR workflow. "
+                "Please use a supported force field."
+            )
 
         if not isinstance(force_field, str) or not force_field.strip():
             raise InputSchemaError(
