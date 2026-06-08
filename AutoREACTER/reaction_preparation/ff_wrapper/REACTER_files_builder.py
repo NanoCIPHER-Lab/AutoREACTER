@@ -28,10 +28,10 @@ import datetime
 import re
 from AutoREACTER import session
 from AutoREACTER.input_parser import SimulationSetup
-from AutoREACTER.reaction_preparation.lunar_client.lunar_api_wrapper import LunarFiles
+from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper import FFFiles
 from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import ReactionMetadata 
 from AutoREACTER.input_parser import SimulationSetup
-from AutoREACTER.reaction_preparation.lunar_client.modifiers_molecule_files import (
+from AutoREACTER.reaction_preparation.ff_wrapper.modifiers_molecule_files import (
     modify_types, modify_charges, modify_coords,
     modify_bonds, modify_angles, modify_dihedrals, modify_impropers,
 )
@@ -648,7 +648,7 @@ Types
 
                 return pre_out, post_out, map_path
     
-    def _copy_lunar_files_to_cache(self, lunar_files: LunarFiles) -> tuple[Path, Path, list[MoleculeFile]]:
+    def _copy_lunar_files_to_cache(self, ff_files: FFFiles) -> tuple[Path, Path, list[MoleculeFile]]:
         """
         Copy all LUNAR output files into cache_dir.
         
@@ -656,7 +656,7 @@ Types
 
         Parameters
         ----------
-        lunar_files : LunarFiles
+        ff_files : FFFiles
 
         Returns
         -------
@@ -665,12 +665,12 @@ Types
             - in_file destination path  
             - list of MoleculeFile with updated cache paths
         """
-        ff_dest = self.cache_dir / lunar_files.force_field_data.name
+        ff_dest = self.cache_dir / ff_files.force_field_data.name
         try:
-            shutil.copy2(lunar_files.force_field_data, ff_dest)
+            shutil.copy2(ff_files.force_field_data, ff_dest)
         except Exception as e:
             raise FileNotFoundError(
-                f"Failed to copy force field data from '{lunar_files.force_field_data}' to '{ff_dest}'."
+                f"Failed to copy force field data from '{ff_files.force_field_data}' to '{ff_dest}'."
             ) from e
 
         if not ff_dest.is_file():
@@ -678,11 +678,11 @@ Types
                 f"Force field data was not copied successfully to '{ff_dest}'."
             )
 
-        in_dest = self.cache_dir / lunar_files.in_file.name
-        shutil.copy2(lunar_files.in_file, in_dest)
+        in_dest = self.cache_dir / ff_files.in_file.name
+        shutil.copy2(ff_files.in_file, in_dest)
 
         molecule_files: list[MoleculeFile] = []
-        for mol in lunar_files.molecule_files:
+        for mol in ff_files.molecule_files:
             src = mol.molecule_files.lmp_molecule_file
             dest = self.cache_dir / f"{mol.id}.molecule"
             shutil.copy2(src, dest)
@@ -694,14 +694,14 @@ Types
         return ff_dest, in_dest, molecule_files
 
 
-    def molecule_template_preparation(self, lunar_files: LunarFiles, prepared_reactions_with_3d_mols: list[ReactionMetadata]) -> REACTERFiles:
+    def molecule_template_preparation(self, ff_files: FFFiles, prepared_reactions_with_3d_mols: list[ReactionMetadata]) -> REACTERFiles:
         """
         Top-level orchestrator that loops over reactions and prepares template
         files and mappings for each reaction.
 
         Parameters
         ----------
-        lunar_files : LunarFiles
+        ff_files : FFFiles
         Container for all input files and paths needed for the preparation process.
         prepared_reactions_with_3d_mols : list[ReactionMetadata]
         List of ReactionMetadata objects, each containing information about a reaction,
@@ -714,8 +714,8 @@ Types
         A complete collection of output files generated from the preparation process,
         """
         template_files = []
-        pre_and_post_files = lunar_files.template_files
-        force_field_data, in_file, molecule_files = self._copy_lunar_files_to_cache(lunar_files)
+        pre_and_post_files = ff_files.template_files
+        force_field_data, in_file, molecule_files = self._copy_lunar_files_to_cache(ff_files)
         updated_inputs_with_3d_mols= self.updated_inputs_with_3d_mols
         # Iterate each reaction entry and build templates for that single reaction only.
         for rxn in pre_and_post_files:

@@ -2,6 +2,8 @@ import sys
 import os
 import time
 from PIL import Image
+from AutoREACTER._compat import apply_legacy_patches
+apply_legacy_patches()
 
 from AutoREACTER.session import read_input
 from AutoREACTER.cache import RunDirectoryManager
@@ -9,9 +11,9 @@ from AutoREACTER.detectors.functional_groups_detector import FunctionalGroupsDet
 from AutoREACTER.detectors.reaction_detector import ReactionDetector
 from AutoREACTER.detectors.non_monomer_detector import NonReactantsDetector
 from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import PrepareReactions
-from AutoREACTER.reaction_preparation.lunar_client.molecule_3d_preparation import Molecule3DPreparation
-from AutoREACTER.reaction_preparation.lunar_client.lunar_api_wrapper import LunarAPIWrapper
-from AutoREACTER.reaction_preparation.lunar_client.REACTER_files_builder import REACTERFilesBuilder
+from AutoREACTER.reaction_preparation.ff_wrapper.molecule_3d_preparation import Molecule3DPreparation
+from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper import FFWrapper
+from AutoREACTER.reaction_preparation.ff_wrapper.REACTER_files_builder import REACTERFilesBuilder
 from AutoREACTER.sim_setup.simulation_setup import SimulationSetupManager
 
 
@@ -171,11 +173,11 @@ def AutoREACTER(input_file: str) -> None:
     )
 
     # === 7. Lunar API Processing ===
-    lunar_api = LunarAPIWrapper(session)
-    lunar_results = lunar_api.lunar_workflow(
-        updated_inputs_3d, prepared_reactions_3d
+    ff_wrapper = FFWrapper(session)
+    ff_wrapper_results = ff_wrapper.generate_force_field_files(
+        updated_inputs=updated_inputs_3d, 
+        prepared_reactions=prepared_reactions_3d
     )
-
     print("\n")
     loading_message("Lunar API workflow completed. Proceeding to build REACTER files")
     time.sleep(1.5)
@@ -188,7 +190,7 @@ def AutoREACTER(input_file: str) -> None:
     )
 
     reacter_files = builder.molecule_template_preparation(
-        lunar_files=lunar_results,
+        ff_files=ff_wrapper_results,
         prepared_reactions_with_3d_mols=prepared_reactions_3d
     )
 

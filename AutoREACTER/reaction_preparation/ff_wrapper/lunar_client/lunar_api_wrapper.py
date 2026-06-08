@@ -18,10 +18,10 @@ from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper import FFFiles
 from AutoREACTER.reaction_preparation.ff_wrapper.ff_locator import get_force_field_file
 
 # Import Local LUNAR Components
-from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper.lunar_clinet.locate_lunar import get_LUNAR_loc
-from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper.lunar_clinet.lunar_executor import LunarExecutor
-from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper.lunar_clinet.merge_builder import write_bond_react_merge_input
-from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper.lunar_clinet.lunar_utils import loading_screen
+from AutoREACTER.reaction_preparation.ff_wrapper.lunar_client.locate_lunar import get_LUNAR_loc
+from AutoREACTER.reaction_preparation.ff_wrapper.lunar_client.lunar_executor import LunarExecutor
+from AutoREACTER.reaction_preparation.ff_wrapper.lunar_client.merge_builder import write_bond_react_merge_input
+from AutoREACTER.reaction_preparation.ff_wrapper.lunar_client.lunar_utils import loading_screen
 
 if TYPE_CHECKING:
     from AutoREACTER.session import ARXSession

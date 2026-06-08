@@ -20,7 +20,7 @@ from AutoREACTER.reaction_preparation.ff_wrapper.ff_validator import FFValidator
 from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper import FFFiles, MoleculeFile, TemplateFile, DataFiles
 
 # Local utility imports
-from AutoREACTER.reaction_preparation.lunar_client.lunar_utils import move_merge_outputs, get_ending_integer
+from AutoREACTER.reaction_preparation.ff_wrapper.lunar_client.lunar_utils import move_merge_outputs, get_ending_integer
 
 # =============================================================================
 # LUNAR-Specific Data Structures
@@ -174,16 +174,19 @@ class LunarExecutor:
         all2lmp_results: list[All2LMPResult]
     ) -> FFFiles:
         """Executes bond_react_merge.py to create the final unified simulation setup."""
+        env = os.environ.copy()
+        env["QT_QPA_PLATFORM"] = "offscreen"
         subprocess.run(
             [
                 sys.executable,
                 str(self.bond_react_merge_py),
-                "-files", f"infile:{merge_input_file_path.name}", # Pass just the filename, run in cwd
+                "-files", f"infile:{merge_input_file_path.name}", 
                 "-atomstyle", "full",
                 "-tl", "T",
                 "-wrd", "T",
             ],
             cwd=str(self.cache_bond_react_merge),
+            env=env,
             check=True
         )
 

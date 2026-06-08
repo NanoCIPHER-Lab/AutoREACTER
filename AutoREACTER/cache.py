@@ -2,7 +2,7 @@ from pathlib import Path
 import shutil
 import tempfile
 import uuid
-from AutoREACTER.reaction_preparation.lunar_client.REACTER_files_builder import REACTERFiles
+from AutoREACTER.reaction_preparation.ff_wrapper.REACTER_files_builder import REACTERFiles
 
 
 class GetCacheDir:

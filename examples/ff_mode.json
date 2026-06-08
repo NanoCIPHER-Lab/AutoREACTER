@@ -36,7 +36,7 @@
     "monomers": [
         {
             "name": "tmc",
-            "smiles": "ClC(=O)c1cc(cc(c1)C(Cl)=O)C(Cl)=O"
+            "smiles": "O=C(O)C(=O)O"
         },
         {
             "name": "mpd",

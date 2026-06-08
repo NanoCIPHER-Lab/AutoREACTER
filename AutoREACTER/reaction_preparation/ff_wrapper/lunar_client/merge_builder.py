@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 # Local utility imports
-from AutoREACTER.reaction_preparation.lunar_client.lunar_utils import normalize_path, get_ending_integer
+from AutoREACTER.reaction_preparation.ff_wrapper.lunar_client.lunar_utils import normalize_path, get_ending_integer
 
 if TYPE_CHECKING:
     # Forward declaration for type hinting to avoid circular imports during refactor

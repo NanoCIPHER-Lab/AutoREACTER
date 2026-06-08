@@ -27,12 +27,9 @@ from typing import TYPE_CHECKING, List
 # Ensure these match your actual import paths
 from AutoREACTER.input_parser import SimulationSetup
 from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import ReactionMetadata
-from AutoREACTER.reaction_preparation.ff_wrapper.ff_validator import FFValidator
-from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper import FFFiles, MoleculeFile, DataFiles, TemplateFile
-from AutoREACTER.reaction_preparation.ff_wrapper.foyer_client.foyer_lammps_support import GetForceFieldDataFile, DATAFile2LAMMPSMolecule
-from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper.lunar_clinet.locate_lunar import get_LUNAR_loc
-from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper.lunar_clinet.merge_builder import write_bond_react_merge_input
-from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper.lunar_clinet.lunar_executor import LunarExecutor
+from AutoREACTER.reaction_preparation.ff_wrapper.lunar_client.locate_lunar import get_LUNAR_loc
+from AutoREACTER.reaction_preparation.ff_wrapper.lunar_client.merge_builder import write_bond_react_merge_input
+from AutoREACTER.reaction_preparation.ff_wrapper.lunar_client.lunar_executor import LunarExecutor
 
 
 if TYPE_CHECKING:
@@ -64,7 +61,7 @@ class FoyerAPIWrapper:
     High-level interface for executing LUNAR preparation workflows.
     """
 
-    def __init__(self, ARX: "ARXSession"):
+    def __init__(self, ARX: "ARXSession", prepared_reactions_with_3d_mols: List[ReactionMetadata]):
         """
         Initialize the LUNAR wrapper and set up cache directories.
         """
@@ -86,7 +83,7 @@ class FoyerAPIWrapper:
         # Run Foyer atom typing and store results
         self.atom_typing_results = self._run_foyer_atom_typing(
             updated_inputs=self.inputs,
-            prepared_reactions=self.session.prepared_reactions,
+            prepared_reactions=prepared_reactions_with_3d_mols,
             force_field=self.inputs.force_field
         )
         self.LUNAR_LOCATION = Path(get_LUNAR_loc(use_gui=False))
@@ -172,7 +169,12 @@ class FoyerAPIWrapper:
         ff = Forcefield(name=force_field.lower())
 
         # Apply atom typing / parameters
-        typed_molecule = ff.apply(untyped_molecule)
+        typed_molecule = ff.apply(
+            untyped_molecule, 
+            assert_bond_params=False, 
+            assert_angle_params=False, 
+            assert_dihedral_params=False
+        )
 
         # FIX: Shift molecule IDs so they start at 1 instead of 0
         # LAMMPS prefers molecule IDs to be >= 1 for many compute commands.
@@ -193,9 +195,9 @@ class FoyerAPIWrapper:
             typed_molecule,
             str(output_file_path),
             atom_style="full",
-            unit_style="real",
-            mins=mins,
-            maxs=maxs,
+            # unit_style="real",
+            # mins=mins,
+            # maxs=maxs,
             use_rb_torsions=True,
             use_dihedrals=False,
         )
@@ -209,7 +211,8 @@ class FoyerAPIWrapper:
 
         # Process each molecule in the updated_inputs
         monomer_entries = updated_inputs.monomers
-        for entry in monomer_entries.values():
+        for entry in monomer_entries:
+            print(f"Processing molecule: {entry.name}") 
             if getattr(entry, "status", True) is False:
                 continue
 

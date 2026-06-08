@@ -30,10 +30,11 @@ class TemplateFile:
 @dataclass(slots=True)
 class FFFiles:
     """The final compiled output from the chosen Force Field engine."""
-    force_field_data: Path
-    in_file: Optional[Path] = None
+    
     molecule_files: list[MoleculeFile]
     template_files: list[TemplateFile]
+    force_field_data: Path
+    in_file: Optional[Path] = None
 
 
 class FFWrapper:
@@ -71,7 +72,7 @@ class FFWrapper:
         if ff_name in foyer_supported:
             from AutoREACTER.reaction_preparation.ff_wrapper.foyer_client.foyer_api_wrapper import FoyerAPIWrapper
             print(f"Routing to Foyer for force field: {ff_name}")
-            foyer_wrapper = FoyerAPIWrapper(ARX=self.session)
+            foyer_wrapper = FoyerAPIWrapper(ARX=self.session, prepared_reactions_with_3d_mols=prepared_reactions)
             return foyer_wrapper.final_foyer_files
 
         # Route to LUNAR
