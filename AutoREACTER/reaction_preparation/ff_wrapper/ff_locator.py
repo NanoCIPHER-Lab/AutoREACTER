@@ -17,7 +17,7 @@ def get_force_field_file(force_field: str, lunar_location: Optional[Path] = None
     as well as external engine-specific files (like LUNAR's install directory).
     
     Args:
-        force_field: Name of the force field (e.g., "PCFF-IFF", "CVFF", "OPLS")
+        force_field: Name of the force field (e.g., "PCFF-IFF", "CVFF", "OPLSAA")
         lunar_location: Path to the LUNAR installation directory (required for some LUNAR FFs)
         
     Returns:
@@ -28,10 +28,9 @@ def get_force_field_file(force_field: str, lunar_location: Optional[Path] = None
         RuntimeError: If there is an issue with pkg_resources.
         NotImplementedError: If the force field is planned but not yet implemented.
     """
-    target_ff = force_field.lower()
 
     # 1. LUNAR Force Fields (.frc files)
-    if target_ff in {"pcff", "pcff-iff", "compass", "cvff", "cvff-iff", "drieding"}:
+    if force_field in {"PCFF", "PCFF-IFF", "Compass", "CVFF", "CVFF-IFF", "DRIEDING"}:
         paths = {}
         
         # Load internal PCFF via pkg_resources
@@ -40,8 +39,8 @@ def get_force_field_file(force_field: str, lunar_location: Optional[Path] = None
                 pkg_resources.files("AutoREACTER").joinpath("reaction_preparation", "ff_wrapper", "FF_files")
             )
             pcff_frc = internal_ff_dir / "pcff.frc"
-            paths["pcff-iff"] = pcff_frc
-            paths["pcff"] = pcff_frc
+            paths["PCFF-IFF"] = pcff_frc
+            paths["PCFF"] = pcff_frc
         except Exception as e:
             raise RuntimeError(f"Error locating FF_files directory using pkg_resources: {e}")
 
@@ -49,25 +48,24 @@ def get_force_field_file(force_field: str, lunar_location: Optional[Path] = None
         if lunar_location:
             lunar_base = Path(lunar_location) / "frc_files"
             paths.update({
-                "compass": lunar_base / "compass_published.frc",
-                "cvff-iff": lunar_base / "cvff_aug.frc",
-                "cvff": lunar_base / "cvff.frc",
-                "drieding": lunar_base / "all2lmp_dreiding.frc",
+                "Compass": lunar_base / "compass_published.frc",
+                "CVFF-IFF": lunar_base / "cvff_aug.frc",
+                "CVFF": lunar_base / "cvff.frc",
+                "DRIEDING": lunar_base / "all2lmp_dreiding.frc",
             })
 
-        if target_ff not in paths:
+        if force_field not in paths:
             raise ValueError(f"Required LUNAR installation not found to resolve: {force_field}")
 
-        ff_path = paths[target_ff]
+        ff_path = paths[force_field]
         
         if ff_path.is_file():
             return ff_path
             
         raise ValueError(f"Force field file not found at {ff_path}. Check LUNAR installation.")
 
-
     # 2. Foyer Force Fields (.xml files) - PLACEHOLDER
-    elif target_ff in {"oplsaa", "opls", "opls-aa", "gaff"}:
+    elif force_field in {"OPLSAA", "GAFF"}:
         # Keep this as a working placeholder for future implementation
         raise NotImplementedError(f"Foyer force field '{force_field}' support is currently in development.")
 
