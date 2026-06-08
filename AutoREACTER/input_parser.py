@@ -50,6 +50,8 @@ ForceFieldType = Literal[
 ]
 
 
+
+
 @dataclass(slots=True)
 class MonomerEntry:
     """
@@ -272,6 +274,7 @@ class InputParser:
                 raise InputSchemaError(
                     f"Missing required key: {key!r} in inputs dictionary."
                 )
+            
 
     def _get_inputs_mode(self, replicas_list: list) -> CompositionMethodType:
         """
@@ -374,31 +377,37 @@ class InputParser:
             )
 
         return density_value
+    
+    _FF_ALIASES: dict[str, ForceFieldType] = {
+        "pcff-iff": "PCFF-IFF",
+        "pcff": "PCFF",
+        "compass": "Compass",
+        "cvff-iff": "CVFF-IFF",
+        "cvff": "CVFF",
+        "clay-ff": "Clay-FF",
+        "clayff": "Clay-FF",     # common variation
+        "dreiding": "DRIEDING",  # correct spelling
+        "drieding": "DRIEDING",  # catching the typo
+        "oplsaa": "OPLSAA",
+        "opls": "OPLSAA",        # mapped to OPLSAA
+        "opls-aa": "OPLSAA",     # mapped to OPLSAA
+        "gaff": "GAFF",
+    }
 
-    def _validate_force_field(self, force_field: Any) -> str:
+    
+    def _validate_force_field(self, force_field: Any) -> ForceFieldType:
         """
-        Validates the force field input.
+        Validates and normalizes the force field input.
 
         Args:
             force_field: Force field name as a string.
 
         Returns:
-            Validated force field name.
+            Validated, canonical force field name.
 
         Raises:
             InputSchemaError: If force field is unsupported.
         """
-        allowed: set[ForceFieldType] = {
-            "PCFF-IFF",
-            "PCFF",
-            "Compass",
-            "CVFF-IFF",
-            "CVFF",
-            "Clay-FF",
-            "DRIEDING",
-            "OPLSAA",
-        }
-
         if force_field is None:
             return "PCFF"
 
@@ -407,10 +416,14 @@ class InputParser:
                 f"'force_field' must be a non-empty string. Got: {force_field!r}"
             )
 
-        if force_field not in allowed:
+        # Normalize the input to lowercase and strip extra spaces to check against our dictionary
+        normalized_input = force_field.strip().lower()
+
+        if normalized_input not in self._FF_ALIASES:
             raise InputSchemaError(f"Unsupported force field: {force_field!r}")
 
-        return force_field
+        # Return the exact string required by the Literal type
+        return self._FF_ALIASES[normalized_input]
 
     def _validate_composition(
         self,
