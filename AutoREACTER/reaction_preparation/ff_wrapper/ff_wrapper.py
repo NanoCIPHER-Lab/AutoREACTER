@@ -7,9 +7,9 @@ from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions impor
 if TYPE_CHECKING:
     from AutoREACTER.session import ARXSession
 
-# =============================================================================
-# Shared Data Structures (Imported by both LUNAR and Foyer wrappers)
-# =============================================================================
+
+# Shared data structures for molecule and template files across both LUNAR and FOYER outputs and future extensions. 
+# This allows the FFWrapper to return a consistent output format regardless of the underlying engine used.
 
 @dataclass(slots=True)
 class DataFiles:
@@ -36,10 +36,6 @@ class FFFiles:
     template_files: list[TemplateFile]
 
 
-# =============================================================================
-# The Central Wrapper Manager
-# =============================================================================
-
 class FFWrapper:
     """
     Central router that delegates molecule preparation to the correct 
@@ -51,25 +47,39 @@ class FFWrapper:
 
     def generate_force_field_files(
         self,
-        updated_inputs: SimulationSetup,
-        prepared_reactions: list[ReactionMetadata]
+        prepared_reactions: list[ReactionMetadata],
+        updated_inputs: Optional[SimulationSetup] = None
     ) -> FFFiles:
-        
-        force_field = updated_inputs.force_field.lower() if updated_inputs.force_field else ""
+        if updated_inputs is None:
+            updated_inputs = self.inputs
+            
+        if updated_inputs is None:
+            raise ValueError("No inputs provided to FFWrapper and session inputs are None.")
+
+        # Since input_parser already normalized this, we just grab the canonical name.
+        # It should never be None at this stage if the parser did its job, but we fallback safely.
+        ff_name = updated_inputs.force_field or "PCFF"
+
+        # Define engine routing based on strict canonical names from the parser
+        foyer_supported = {"OPLSAA", "GAFF"}
+        lunar_supported = {
+            "PCFF", "PCFF-IFF", "Compass", 
+            "CVFF", "CVFF-IFF", "DRIEDING", "Clay-FF"
+        }
 
         # Route to FOYER
-        if force_field in ["oplsaa", "opls", "opls-aa", "gaff"]: # this should be normalized in the input parser, not in this wrapper
+        if ff_name in foyer_supported:
             from AutoREACTER.reaction_preparation.ff_wrapper.foyer_client.foyer_api_wrapper import FoyerAPIWrapper
-            print(f"Routing to Foyer for force field: {updated_inputs.force_field}")
+            print(f"Routing to Foyer for force field: {ff_name}")
             foyer_wrapper = FoyerAPIWrapper(ARX=self.session)
             return foyer_wrapper.run_workflow(updated_inputs, prepared_reactions)
 
         # Route to LUNAR
-        elif force_field in ["pcff", "pcff-iff", "compass", "cvff", "cvff-iff", "drieding"]:
+        elif ff_name in lunar_supported:
             from AutoREACTER.reaction_preparation.ff_wrapper.lunar_client.lunar_api_wrapper import LunarAPIWrapper
-            print(f"Routing to LUNAR for force field: {updated_inputs.force_field}")
+            print(f"Routing to LUNAR for force field: {ff_name}")
             lunar_wrapper = LunarAPIWrapper(ARX=self.session)
             return lunar_wrapper.lunar_workflow(updated_inputs, prepared_reactions)
 
         else:
-            raise ValueError(f"Unsupported force field requested: {updated_inputs.force_field}")
+            raise ValueError(f"Unsupported or unrecognized force field requested: {ff_name}")
