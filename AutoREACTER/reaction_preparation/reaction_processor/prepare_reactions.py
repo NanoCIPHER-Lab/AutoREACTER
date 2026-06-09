@@ -26,10 +26,6 @@ from AutoREACTER.reaction_preparation.reaction_processor.utils import (
     add_dict_as_new_columns, add_column_safe, compare_set, prepare_paths
 )
 from AutoREACTER.reaction_preparation.reaction_processor.walker import reaction_atom_walker
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from AutoREACTER.session import ARXSession
 
 
 class MappingError(Exception):
@@ -91,14 +87,9 @@ class ReactionMetadata:
 class PrepareReactions:
     """Processes chemical reactions: builds atom mappings, identifies reaction centers, and detects byproducts."""
 
-    def __init__(self, session: "ARXSession"):
-        """Initialize using the shared AutoREACTER session object."""
-        self.session = session
-        self.inputs = session.inputs
-
-        # In AutoREACTER, staging_dir is the working/cache directory.
-        self.staging_dir = Path(session.staging_dir)
-        self.cache = self.staging_dir
+    def __init__(self, cache: Path):
+        """Initialize with cache directory for storing reaction CSVs."""
+        self.cache = Path(cache)
         self.csv_cache = prepare_paths(self.cache, "csv_cache")
 
     # --- PUBLIC ---

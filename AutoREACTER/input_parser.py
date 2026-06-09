@@ -35,8 +35,6 @@ class SmilesValidationError(InputError):
 class DuplicateMonomerError(InputError):
     """Raised when duplicate monomer definitions are detected."""
 
-class CompatibilityError(InputError):
-    """Raised when input combinations are incompatible with the current workflow."""
 
 # Type aliases for clarity and validation.
 CompositionMethodType = Literal["counts", "ratio"]
@@ -48,10 +46,8 @@ ForceFieldType = Literal[
     "CVFF",
     "Clay-FF",
     "DRIEDING",
-    "OPLSAA",
+    "OPLS-AA",
 ]
-
-
 
 
 @dataclass(slots=True)
@@ -93,12 +89,18 @@ class MonomerEntry:
 @dataclass(slots=True)
 class Replica:
     """
-    Container for individual simulation replica/system definitions.
+    Structured representation of one simulation case.
+
+    This class was originally introduced when the input schema used the
+    top-level JSON key "replicas". The public input schema now uses
+    "simulations", but this internal class is still kept as Replica because it
+    represents one validated simulation condition/case used throughout the
+    workflow.
 
     Attributes:
-        tag: Unique identifier for the replica.
-        temperature: Replica temperature in Kelvin.
-        density: Replica density in g/cm^3.
+        tag: Unique identifier for the simulation case.
+        temperature: Target temperature in Kelvin.
+        density: Target density in g/cm^3.
         monomer_counts: Mapping of monomer names to counts in counts mode.
         monomer_ratios: Mapping of monomer names to ratios in ratio mode.
         total_atoms: Total target atom count, required for ratio mode.
@@ -134,7 +136,7 @@ class SimulationSetup:
         monomers: List of MonomerEntry objects representing the system composition.
         replicas: List of validated Replica objects.
         composition_method: Composition method, either "counts" or "ratio".
-        composition: Normalized composition dictionary from the input replicas.
+        composition: Normalized composition dictionary from the input simulations.
         ratio: Optional mapping of monomer IDs to ratios.
         number_of_total_atoms: Optional list of total atom targets.
         box_estimates: Optional estimated box size placeholder.
@@ -175,11 +177,11 @@ class InputParser:
         self.validate_basic_format(inputs)
 
         simulation_name = inputs["simulation_name"]
-        replicas_list = inputs["replicas"]
-        composition_method = self._get_inputs_mode(replicas_list)
+        simulations_list = inputs["simulations"]
+        composition_method = self._get_inputs_mode(simulations_list)
 
         validated_replicas = self._validate_replicas(
-            replicas_list,
+            simulations_list,
             composition_method,
         )
 
@@ -270,20 +272,24 @@ class InputParser:
                 f"Expected input to be a dictionary. Got {type(inputs).__name__} instead."
             )
 
-        required_keys = ["simulation_name", "replicas", "monomers"]
+        if "simulations" not in inputs and "replicas" in inputs:
+            raise InputSchemaError(
+                "Input key 'replicas' has been renamed to 'simulations'. Please update your input schema."
+            )
+
+        required_keys = ["simulation_name", "simulations", "monomers"]
         for key in required_keys:
             if key not in inputs:
                 raise InputSchemaError(
                     f"Missing required key: {key!r} in inputs dictionary."
                 )
-            
 
-    def _get_inputs_mode(self, replicas_list: list) -> CompositionMethodType:
+    def _get_inputs_mode(self, simulations_list: list) -> CompositionMethodType:
         """
-        Determines the composition method from the replicas list.
+        Determines the composition method from the simulations list.
 
         Args:
-            replicas_list: The 'replicas' list from the input dictionary.
+            simulations_list: The 'simulations' list from the input dictionary.
 
         Returns:
             Composition method, either "counts" or "ratio".
@@ -292,14 +298,14 @@ class InputParser:
             InputSchemaError: If the list is invalid or mode cannot be inferred.
             InputConflictError: If a replica contains both counts and ratios.
         """
-        if not isinstance(replicas_list, list) or len(replicas_list) == 0:
+        if not isinstance(simulations_list, list) or len(simulations_list) == 0:
             raise InputSchemaError(
-                f"'replicas' must be a non-empty list. Got {type(replicas_list).__name__} instead."
+                f"'simulations' must be a non-empty list. Got {type(simulations_list).__name__} instead."
             )
 
         detected_modes: set[CompositionMethodType] = set()
 
-        for replica in replicas_list:
+        for replica in simulations_list:
             if not isinstance(replica, dict):
                 raise InputSchemaError(
                     f"Each replica must be a dictionary. Got {type(replica).__name__} instead."
@@ -325,7 +331,7 @@ class InputParser:
 
         if len(detected_modes) != 1:
             raise InputConflictError(
-                "All replicas must use the same composition method. Do not mix counts and ratio modes."
+                "All simulations must use the same composition method. Do not mix counts and ratio modes."
             )
 
         return detected_modes.pop()
@@ -379,59 +385,43 @@ class InputParser:
             )
 
         return density_value
-    
-    _FF_ALIASES: dict[str, ForceFieldType] = {
-        "pcff-iff": "PCFF-IFF",
-        "pcff": "PCFF",
-        "compass": "Compass",
-        "cvff-iff": "CVFF-IFF",
-        "cvff": "CVFF",
-        "clay-ff": "Clay-FF",
-        "clayff": "Clay-FF",     # common variation
-        "dreiding": "DRIEDING",  # correct spelling
-        "drieding": "DRIEDING",  # catching the typo
-        "oplsaa": "OPLSAA",
-        "opls": "OPLSAA",        # mapped to OPLSAA
-        "opls-aa": "OPLSAA",     # mapped to OPLSAA
-        "gaff": "GAFF",
-    }
 
-    
-    def _validate_force_field(self, force_field: Any) -> ForceFieldType:
+    def _validate_force_field(self, force_field: Any) -> str:
         """
-        Validates and normalizes the force field input.
+        Validates the force field input.
 
         Args:
             force_field: Force field name as a string.
 
         Returns:
-            Validated, canonical force field name.
+            Validated force field name.
 
         Raises:
             InputSchemaError: If force field is unsupported.
         """
+        allowed: set[ForceFieldType] = {
+            "PCFF-IFF",
+            "PCFF",
+            "Compass",
+            "CVFF-IFF",
+            "CVFF",
+            "Clay-FF",
+            "DRIEDING",
+            "OPLS-AA",
+        }
+
         if force_field is None:
             return "PCFF"
-        
-        if force_field in ["OPLSAA", "GAFF"]:
-            raise CompatibilityError(
-                f"Force field '{force_field}' is currently not supported in the LUNAR workflow. "
-                "Please use a supported force field."
-            )
 
         if not isinstance(force_field, str) or not force_field.strip():
             raise InputSchemaError(
                 f"'force_field' must be a non-empty string. Got: {force_field!r}"
             )
 
-        # Normalize the input to lowercase and strip extra spaces to check against our dictionary
-        normalized_input = force_field.strip().lower()
-
-        if normalized_input not in self._FF_ALIASES:
+        if force_field not in allowed:
             raise InputSchemaError(f"Unsupported force field: {force_field!r}")
 
-        # Return the exact string required by the Literal type
-        return self._FF_ALIASES[normalized_input]
+        return force_field
 
     def _validate_composition(
         self,
@@ -443,7 +433,7 @@ class InputParser:
 
         Note:
             This method is kept for compatibility with older input schemas. The
-            current parser path validates composition through the 'replicas' section.
+            current parser path validates composition through the 'simulations' section.
 
         Args:
             composition_dict: Composition dictionary to validate.
@@ -505,7 +495,7 @@ class InputParser:
 
         Args:
             inputs: Raw input dictionary containing the top-level 'monomers' list.
-            systems: List of system dictionaries from the replicas section.
+            systems: List of system dictionaries from the simulations section.
             method: Composition method, either "counts" or "ratio".
 
         Raises:
@@ -554,7 +544,7 @@ class InputParser:
         Args:
             inputs: Raw input dictionary.
             method: Composition method, either "counts" or "ratio".
-            systems: Validated system dictionaries from the replicas section.
+            systems: Validated system dictionaries from the simulations section.
 
         Returns:
             A list of validated MonomerEntry objects.
@@ -815,18 +805,18 @@ class InputParser:
         method: CompositionMethodType,
     ) -> dict:
         """
-        Validates the 'replicas' section of the input.
+        Validates the 'simulations' section of the input.
 
         Args:
-            systems: List of replica dictionaries.
+            systems: List of simulation dictionaries.
             method: Composition method, either "counts" or "ratio".
 
         Returns:
-            Normalized replicas dictionary.
+            Normalized simulations dictionary.
         """
         if not isinstance(systems, list) or not systems:
             raise InputSchemaError(
-                "'replicas' must be a non-empty list."
+                "'simulations' must be a non-empty list."
             )
 
         seen_tags: set[str] = set()
@@ -951,7 +941,7 @@ if __name__ == "__main__":
     # Example 1: Counts Mode
     inputs = {
         "simulation_name": "Example_Count_Mode",
-        "replicas": [
+        "simulations": [
             {
                 "tag": "10k",
                 "temperature": 300,
@@ -992,7 +982,7 @@ if __name__ == "__main__":
     # Example 2: Ratio Mode
     inputs_ratio = {
         "simulation_name": "Example_Ratio_Mode",
-        "replicas": [
+        "simulations": [
             {
                 "tag": "10k_base",
                 "temperature": 300,
@@ -1035,7 +1025,7 @@ if __name__ == "__main__":
     input_ff = {
         "simulation_name": "Example_Count_Mode_FF",
         "force_field": "PCFF",
-        "replicas": [
+        "simulations": [
             {
                 "tag": "10k",
                 "temperature": 300,

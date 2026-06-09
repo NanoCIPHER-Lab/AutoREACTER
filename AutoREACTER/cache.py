@@ -1,31 +1,45 @@
 from pathlib import Path
+import os
+import re
 import shutil
-import tempfile
-import uuid
-from AutoREACTER.reaction_preparation.ff_wrapper.REACTER_files_builder import REACTERFiles
-
+import subprocess
+import datetime as dt
+from AutoREACTER.reaction_preparation.lunar_client.REACTER_files_builder import REACTERFiles
 
 class GetCacheDir:
-    def __init__(self, clear_staging: bool = True):
+    """
+    Manages the base cache directory for the AutoREACTER workflow.
+    
+    This class determines the root of the git repository (or falls back to a
+    path relative to the script) and creates a standardized cache directory
+    structure with a staging area.
+    """
+
+    def __init__(self, clear_staging: bool = False):
         """
-        Initializes the cache manager.
-        
+        Initialize cache directory structure.
+
         Args:
-            clear_staging: 
-                If True, clear all contents inside the staging directory.
-                The staging directory itself is preserved.
+            clear_staging:
+                If True, clear all contents inside cache/00_cache.
+                The 00_cache directory itself is preserved.
         """
-        # Generate a unique staging directory for this run to prevent concurrent conflicts
-        run_id = uuid.uuid4().hex[:8]
-        self.staging_dir = Path(tempfile.gettempdir()) / f"AutoREACTER_staging_{run_id}"
+        self.git_root = self.get_git_root()
+        self.cache_base_dir = self.git_root / "cache"
+        self.cache_base_dir.mkdir(parents=True, exist_ok=True)
+
+        # Staging directory for temporary files before moving to dated run folders
+        self.staging_dir = self.cache_base_dir / "00_cache"
         self.staging_dir.mkdir(parents=True, exist_ok=True)
-        self.clear_staging_dir()
+
+        if clear_staging:
+            self.clear_staging_dir()
 
     def clear_staging_dir(self) -> None:
         """
         Clear all files and folders inside the staging cache directory.
 
-        This only clears the temporary staging directory contents.
+        This only clears cache/00_cache contents.
         It does not delete dated run folders.
         """
         self.staging_dir.mkdir(parents=True, exist_ok=True)
@@ -46,6 +60,28 @@ class GetCacheDir:
         else:
             print(f"[OK] Cleared staging cache: {self.staging_dir}")
 
+    def get_git_root(self) -> Path:
+        """
+        Return the root directory of the current git repository.
+        
+        Falls back to a path derived from this script's location if git
+        command fails.
+        """
+        try:
+            out = subprocess.check_output(
+                ["git", "rev-parse", "--show-toplevel"],
+                text=True
+            ).strip()
+            return Path(out)
+        except Exception:
+            script_dir = Path(__file__).resolve().parent
+        
+            for parent in [script_dir] + list(script_dir.parents):
+                if (parent / ".git").exists() or (parent / "pyproject.toml").exists():
+                    return parent
+        
+            return script_dir.parent
+
 
 class RunDirectoryManager:
     """
@@ -64,10 +100,50 @@ class RunDirectoryManager:
         """
         self.base_dir = Path(base_dir)
         self.base_dir.mkdir(parents=True, exist_ok=True)
-    
+
+    def _is_empty(self, path: Path) -> bool:
+        """Check if a directory contains no files or subdirectories."""
+        return not any(path.iterdir())
+
+    def make_dated_run_dir(self) -> Path:
+        """
+        Create and return a dated run directory following the pattern: {base}/{today}/{run_number}.
+        
+        Reuses the latest run directory if it is empty. Otherwise, increments the run number.
+        
+        Returns:
+            Path: Path to the final run directory
+        """
+        today = dt.date.today().isoformat()
+        date_dir = self.base_dir / today
+        date_dir.mkdir(parents=True, exist_ok=True)
+
+        # Find existing run numbers (directories named with integers)
+        existing_runs = [
+            int(p.name) for p in date_dir.iterdir()
+            if p.is_dir() and p.name.isdigit()
+        ]
+
+        if existing_runs:
+            latest_run = date_dir / str(max(existing_runs))
+            if self._is_empty(latest_run):
+                print(f"[INFO] Final directory: {latest_run}")
+                return latest_run
+
+        # Create new run directory with incremented number
+        run_number = max(existing_runs, default=0) + 1
+        run_dir = date_dir / str(run_number)
+        run_dir.mkdir()
+
+        print(f"[INFO] Final directory: {run_dir}")
+        return run_dir
+
     def remove_path(self, path: Path) -> None:
         """
         Remove a file, symlink, or directory recursively.
+        
+        Args:
+            path: Path to remove
         """
         if path.is_symlink() or path.is_file():
             path.unlink()
@@ -152,3 +228,73 @@ class RunDirectoryManager:
         print(f"[OK] REACTER files moved → {new_base}")
         return reacter_files
 
+
+class RetentionCleanup:
+    """
+    Provides interactive cleanup functionality for old cache directories.
+    
+    Allows users to delete simulation run folders older than a chosen retention
+    period (1 week, 1 month, 3 months) or delete everything.
+    """
+
+    def __init__(self, base_dir: Path):
+        """
+        Initialize cleanup manager with target base directory.
+        
+        Args:
+            base_dir: Cache base directory to clean up
+        """
+        self.base_dir = Path(base_dir)
+
+    def run(self, mode="skip"):
+        """
+        Run the cleanup process based on the specified mode.
+        Modes are:
+            - "skip": Do not perform any cleanup
+            - "all": Delete all dated run directories
+            - int (number of days): Delete directories older than this many days
+        Args:
+            mode: Cleanup mode - "skip", int(number of days), or "all"
+        Returns:
+            None
+        """
+        print(f"\n[INFO] Cache directory: {self.base_dir}")
+
+        if mode == "skip":
+            print("[INFO] Cache cleanup skipped.")
+            return
+
+        pattern = re.compile(r"\d{4}-\d{2}-\d{2}")
+        protected = {"00_cache"}
+        
+        if mode == "all":
+            for folder in self.base_dir.iterdir():
+                if (
+                    folder.is_dir()
+                    and folder.name not in protected
+                    and pattern.match(folder.name)
+                ):
+                    shutil.rmtree(folder)
+                    print(f"[OK] Deleted: {folder}")
+            return
+
+        try:
+            days = int(mode)
+        except Exception:
+            print(f"[WARN] Invalid cleanup mode: {mode}")
+            return
+
+        cutoff = dt.date.today() - dt.timedelta(days=days)
+
+        for folder in self.base_dir.iterdir():
+            if not folder.is_dir() or folder.name == "00_cache":
+                continue
+
+            try:
+                folder_date = dt.datetime.strptime(folder.name, "%Y-%m-%d").date()
+            except ValueError:
+                continue
+
+            if folder_date < cutoff:
+                shutil.rmtree(folder)
+                print(f"[OK] Deleted: {folder}")

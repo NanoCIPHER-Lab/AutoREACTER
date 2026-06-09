@@ -1,6 +1,6 @@
 from dataclasses import dataclass, fields
 
-from AutoREACTER.reaction_preparation.ff_wrapper.REACTER_files_builder import REACTERFiles
+from AutoREACTER.reaction_preparation.lunar_client.REACTER_files_builder import REACTERFiles
 
 @dataclass(slots=True)
 class LammpsSettings:

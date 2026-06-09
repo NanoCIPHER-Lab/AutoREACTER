@@ -25,10 +25,6 @@ from rdkit.Chem import Descriptors
 # Local imports from the AutoREACTER package
 from AutoREACTER.input_parser import SimulationSetup
 from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import ReactionMetadata
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from AutoREACTER.session import ARXSession
 
 
 class Molecule3DPreparationError(Exception):
@@ -56,21 +52,19 @@ class Molecule3DPreparation:
         full_templates_path: Directory for combined reactant/product complexes.
     """
 
-    def __init__(self, session: "ARXSession"):
-        """Initialize the 3D preparation utility using the shared AutoREACTER session.
+    def __init__(self, cache_dir: Path):
+        """Initialize the 3D preparation utility and create required directories.
 
-        In AutoREACTER, session.staging_dir is the working/cache directory.
+        Args:
+            cache_dir: Base directory where 3D molecule files will be stored.
         """
-        self.session = session
-        self.inputs = session.inputs
-
-        self.cache_dir = Path(session.staging_dir) / "3D_molecules"
+        self.cache_dir = Path(cache_dir / "3D_molecules")
         os.makedirs(self.cache_dir, exist_ok=True)
 
-        self.molecule_3d_path = self.cache_dir / "molecules_3Dmol"
+        self.molecule_3d_path = Path(self.cache_dir / "molecules_3Dmol")
         os.makedirs(self.molecule_3d_path, exist_ok=True)
 
-        self.full_templates_path = self.cache_dir / "full_templates_3Dmol"
+        self.full_templates_path = Path(self.cache_dir / "full_templates_3Dmol")
         os.makedirs(self.full_templates_path, exist_ok=True)
 
     @property

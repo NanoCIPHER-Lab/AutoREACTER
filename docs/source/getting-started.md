@@ -86,4 +86,12 @@ python AutoREACTER.py -i examples/example_1_inputs_ratio_mode.json
 
 **Note:** Replace `examples/example_1_inputs_ratio_mode.json` with the actual relative path of a JSON file in your computer.
 
-AutoREACTER parses the JSON, processes the chemistry, and exports all LAMMPS scripts to a new directory named after your specific simulation.
+AutoREACTER will read the JSON, process the chemistry, output your LAMMPS setup scripts into a newly generated, timestamped run directory.
+
+**Note:** A timestamped run directory means that AutoREACTER creates a folder at:
+
+`root_directory/cache/<today>/N`
+
+- `<today>` is the current date in `yyyy-mm-dd` format  
+- `N` is an incrementing integer starting from 1 (e.g., 1, 2, 3, ...)
+

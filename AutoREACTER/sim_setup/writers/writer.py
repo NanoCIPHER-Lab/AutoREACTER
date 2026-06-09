@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from AutoREACTER.sim_setup.writers.lammps_settings import LammpsInitialSettings
-from AutoREACTER.reaction_preparation.ff_wrapper.REACTER_files_builder import REACTERFiles
+from AutoREACTER.reaction_preparation.lunar_client.REACTER_files_builder import REACTERFiles
 from AutoREACTER.sim_setup.writers.densification_writer import DensificationWriter
 from AutoREACTER.sim_setup.writers.pre_eq_writer import PreEqWriter
 from AutoREACTER.sim_setup.writers.rxn_first_stage_writer import RxnFirstStageWriter

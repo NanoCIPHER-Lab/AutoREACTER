@@ -1,3 +1,4 @@
 ## Title of the Documentation
 
-titles should start with ## since the main title is already in Getting Started and overview pages.
+alsways start with a title and a logo!
+titles should strat with ## since the main title is already in Getting Started and overview pages.

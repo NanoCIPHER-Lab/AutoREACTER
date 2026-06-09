@@ -3,7 +3,7 @@ from pathlib import Path
 from AutoREACTER.input_parser import SimulationSetup
 from AutoREACTER.sim_setup.system_property_calculations import SystemPropertyCalculations
 from AutoREACTER.sim_setup.writers.writer import Writer
-from AutoREACTER.reaction_preparation.ff_wrapper.REACTER_files_builder import REACTERFiles
+from AutoREACTER.reaction_preparation.lunar_client.REACTER_files_builder import REACTERFiles
 
 
 class SimulationSetupManager:

@@ -16,7 +16,7 @@ class Initialization:
     @classmethod
     def moldule_imports(cls):
         try:
-            for module in ['rdkit', 'pandas', 'numpy', 'networkx' ]:
+            for module in ['rdkit', 'pandas', 'numpy', 'networkx']:
                 importlib.import_module(module)
             print("All required modules are successfully imported.")
         except ModuleNotFoundError as e:
