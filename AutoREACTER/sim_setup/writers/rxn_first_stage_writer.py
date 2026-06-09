@@ -2,7 +2,7 @@ import random
 import shutil
 from pathlib import Path
 from datetime import datetime
-from AutoREACTER.reaction_preparation.lunar_client.REACTER_files_builder import REACTERFiles
+from AutoREACTER.reaction_preparation.ff_wrapper.REACTER_files_builder import REACTERFiles
 from AutoREACTER.sim_setup.writers.lammps_settings import LammpsSettings
 from AutoREACTER.input_parser import Replica
 
