@@ -1,0 +1,6 @@
+numpy==2.4.6
+pandas==3.0.3
+Pillow==12.2.0
+pytest==8.4.2
+rdkit==2025.3.3
+networkx
