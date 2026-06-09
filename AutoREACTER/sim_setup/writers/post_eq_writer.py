@@ -11,7 +11,7 @@ from pathlib import Path
 from datetime import datetime
 
 from AutoREACTER.sim_setup.writers.lammps_settings import LammpsSettings
-from AutoREACTER.input_parser import Replica
+from AutoREACTER.input_parser import Simulations
 
 
 # Timestamp used in generated file headers so output scripts are traceable.
@@ -31,14 +31,14 @@ class PostEqWriter:
         sim_name (str): Base simulation name used in file naming.
     """
 
-    def __init__(self, out_dir: Path, settings: LammpsSettings, replica: Replica, sim_name: str):
+    def __init__(self, out_dir: Path, settings: LammpsSettings, simulation: Simulations, sim_name: str):
         """
         Initialize the writer and generate the post-equilibration input script.
 
         Args:
             out_dir (Path): Root directory where stage-specific folders are created.
             settings (LammpsSettings): LAMMPS force-field and run parameters.
-            replica (Replica): Replica-specific settings such as tag and temperature.
+            simulation (Simulations): Simulation-specific settings such as tag and temperature.
             sim_name (str): Simulation name prefix used to build output filenames.
         """
         self.settings = settings
@@ -46,9 +46,9 @@ class PostEqWriter:
         self.sim_name = sim_name
 
         # Write the post-equilibration file immediately during construction.
-        self.write_post_eq_file(replica=replica)
+        self.write_post_eq_file(simulation=simulation)
 
-    def write_post_eq_file(self, replica: Replica) -> str:
+    def write_post_eq_file(self, simulation: Simulations) -> str:
         """
         Create the LAMMPS input script for the post-equilibration stage.
 
@@ -61,12 +61,12 @@ class PostEqWriter:
         6. Writes the final data and restart files.
 
         Args:
-            replica (Replica): Replica configuration, including the run tag and temperature.
+            simulation (Simulations): Simulation configuration, including the run tag and temperature.
 
         Returns:
             str: The filename of the generated LAMMPS input script.
         """
-        tag = f"{self.sim_name}_{replica.tag}"
+        tag = f"{self.sim_name}_{simulation.tag}"
 
         # Store all post-equilibration artifacts in a dedicated stage folder.
         post_dir = self.out_dir / "5_post_equilibration"
@@ -133,8 +133,8 @@ class PostEqWriter:
             # Create rolling restart files so the run can be resumed if needed.
             f"{'restart':<16} 100 {restart_1} {restart_2}",
             "",
-            # Stage 1: bring the system from the replica temperature to 300 K under NVT.
-            f"{'fix':<16} nvt_1 all nvt temp {replica.temperature} 300.0 100.0",
+            # Stage 1: bring the system from the simulation temperature to 300 K under NVT.
+            f"{'fix':<16} nvt_1 all nvt temp {simulation.temperature} 300.0 100.0",
             f"{'run':<16} 100000",
             f"{'unfix':<16} nvt_1",
             "",

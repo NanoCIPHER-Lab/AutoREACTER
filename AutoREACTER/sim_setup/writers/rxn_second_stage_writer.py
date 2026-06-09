@@ -12,7 +12,7 @@ from pathlib import Path
 from datetime import datetime
 from AutoREACTER.reaction_preparation.ff_wrapper.REACTER_files_builder import REACTERFiles
 from AutoREACTER.sim_setup.writers.lammps_settings import LammpsSettings
-from AutoREACTER.input_parser import Replica
+from AutoREACTER.input_parser import Simulations
 
 # Generate current date string for file headers and timestamping
 now = datetime.now().strftime("%Y-%m-%d")
@@ -34,7 +34,7 @@ class RxnSecondStageWriter:
         second_stage_file_name (str): Name of the generated second-stage input file
     """
 
-    def __init__(self, out_dir: Path, settings: LammpsSettings, reacter_files: REACTERFiles, replica: Replica, sim_name: str):
+    def __init__(self, out_dir: Path, settings: LammpsSettings, reacter_files: REACTERFiles, simulation: Simulations, sim_name: str):
         """
         Initialize the RxnSecondStageWriter and generate second-stage reaction files.
         
@@ -42,7 +42,7 @@ class RxnSecondStageWriter:
             out_dir (Path): Root output directory for simulation files
             settings (LammpsSettings): LAMMPS simulation settings and force field parameters
             reacter_files (REACTERFiles): Container with reaction template and molecule files
-            replica (Replica): Replica configuration with temperature and tag information
+            simulation (Simulations): Simulation configuration with temperature and tag information
             sim_name (str): Base simulation name used for file naming
         """
         self.settings = settings
@@ -50,9 +50,9 @@ class RxnSecondStageWriter:
         self.sim_name = sim_name
         self.reacter_files = reacter_files
         # Generate and store the second-stage input file name
-        self.second_stage_file_name = self.write_second_stage_reaction_files(replica=replica)
+        self.second_stage_file_name = self.write_second_stage_reaction_files(simulation=simulation)
 
-    def write_second_stage_reaction_files(self, replica: Replica) -> str:
+    def write_second_stage_reaction_files(self, simulation: Simulations) -> str:
         """
         Generate LAMMPS input script for second-stage inter-molecular reactions.
         
@@ -61,7 +61,7 @@ class RxnSecondStageWriter:
         between molecules at medium intermolecular distances (1M-3.5 Angstroms).
         
         Args:
-            replica (Replica): Replica configuration containing temperature and unique tag
+            simulation (Simulations): Simulation configuration containing temperature and unique tag
             
         Returns:
             str: Filename of the generated second-stage input script
@@ -69,7 +69,7 @@ class RxnSecondStageWriter:
         Raises:
             FileNotFoundError: If required reaction template files are missing
         """
-        tag = f"{self.sim_name}_{replica.tag}"
+        tag = f"{self.sim_name}_{simulation.tag}"
         rxn_dir = self.out_dir / "4_reaction_second_stage"
         rxn_dir.mkdir(parents=True, exist_ok=True)
         
@@ -123,7 +123,7 @@ class RxnSecondStageWriter:
             # Initial energy minimization and simulation setup
             "#------------Minimization and Velocity Initialization------------",
             f"{'minimize':<16} 1.0e-4 1.0e-6 1000 10000",
-            f"{'velocity':<16} all create {replica.temperature} {random.randint(10000, 9999999)} loop geom",
+            f"{'velocity':<16} all create {simulation.temperature} {random.randint(10000, 9999999)} loop geom",
             f"{'timestep':<16} 1.0",
             f"{'thermo':<16} 100",
             f"{'reset_timestep':<16} 1000000",
@@ -165,8 +165,8 @@ class RxnSecondStageWriter:
             "#       (e.g., RXN_i_with_delete_ids.map). ", 
             "#       NPT is recommended for deletion to account for density changes.\n",
             # NVT thermostat for stabilized group (uncomment NPT if density changes expected)
-            f"{'fix':<16} 1 statted_grp_REACT nvt temp {replica.temperature} {replica.temperature} 100.0\n",   
-            f"#{'fix':<16} 1 statted_grp_REACT npt temp {replica.temperature} {replica.temperature} 100.0 iso 0.0 0.0 1000.0",
+            f"{'fix':<16} 1 statted_grp_REACT nvt temp {simulation.temperature} {simulation.temperature} 100.0\n",   
+            f"#{'fix':<16} 1 statted_grp_REACT npt temp {simulation.temperature} {simulation.temperature} 100.0 iso 0.0 0.0 1000.0",
             "",
             # Output configuration
             f"{'thermo_style':<16} custom step time temp f_rxns[*] press density vol pe ke etotal",

@@ -11,7 +11,7 @@ from .input_parser import (
     InputParser,
     SimulationSetup,
     MonomerEntry,
-    Replica,
+    Simulations,
     InputError,
     InputSchemaError,
     InputConflictError,

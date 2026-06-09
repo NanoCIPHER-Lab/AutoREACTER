@@ -91,7 +91,7 @@ class MonomerEntry:
 
 
 @dataclass(slots=True)
-class Simulation:
+class Simulations:
     """
     Container for individual simulation replica/system definitions.
 
@@ -145,7 +145,7 @@ class SimulationSetup:
     density: list[float]
     force_field: str | None
     monomers: list[MonomerEntry]
-    simulations: list[Simulation] | None = None
+    simulations: list[Simulations] | None = None
     composition_method: CompositionMethodType | None = None
     composition: dict[str, Any] | None = None
     ratio: dict[int, float] | None = None
@@ -750,7 +750,7 @@ class InputParser:
 
     def _validate_single_simulation(
         self,
-        simulation: Simulation,
+        simulation: Simulations,
         method: CompositionMethodType,
     ) -> None:
         """
@@ -823,7 +823,7 @@ class InputParser:
         seen_tags: set[str] = set()
         temperatures: list[float] = []
         density: list[float] = []
-        simulations: list[Simulation] = []
+        simulations: list[Simulations] = []
         reference_ratios: dict | None = None
 
         for system in systems:
@@ -884,7 +884,7 @@ class InputParser:
                         "All systems must use identical 'monomer_ratios'."
                     )
 
-                simulation = Simulation(
+                simulation = Simulations(
                     tag=system["tag"],
                     temperature=system["temperature"],
                     density=system["density"],
@@ -915,7 +915,7 @@ class InputParser:
                         "'total_atoms' should not appear in counts mode."
                     )
 
-                simulation = Simulation(
+                simulation = Simulations(
                     tag=system["tag"],
                     temperature=system["temperature"],
                     density=system["density"],
