@@ -16,7 +16,6 @@ requires-python = ">=3.12"
 dependencies = [
     "numpy",
     "pandas",
-    "lammps",
     "networkx",
     "rdkit",
     "pillow"
