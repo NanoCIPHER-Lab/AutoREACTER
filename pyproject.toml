@@ -19,11 +19,13 @@ dependencies = [
     "networkx",
     "rdkit",
     "pillow",
-    "parmed",
-    "foyer",
-    "setuptools"
+    "setuptools",
+    "matplotlib"
 ]
 
 [tool.setuptools.packages.find]
 [tool.setuptools.package-data]
-AutoREACTER = ["frc_files/*.frc"]
+AutoREACTER = [
+    "reaction_preparation/ff_wrapper/FF_files/*.frc",
+    "reaction_preparation/ff_wrapper/FF_files/*.xml"
+]
