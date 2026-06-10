@@ -91,7 +91,7 @@ class MonomerEntry:
 
 
 @dataclass(slots=True)
-class Simulations:
+class Simulation:
     """
     Container for individual simulation replica/system definitions.
 
@@ -132,7 +132,7 @@ class SimulationSetup:
         density: List of density values in g/cm^3.
         force_field: Force field name. Defaults to "PCFF" if not provided.
         monomers: List of MonomerEntry objects representing the system composition.
-        simulations: List of validated Simulations objects.
+        simulations: List of validated Simulation objects.
         composition_method: Composition method, either "counts" or "ratio".
         composition: Normalized composition dictionary from the input simulations.
         ratio: Optional mapping of monomer IDs to ratios.
@@ -145,7 +145,7 @@ class SimulationSetup:
     density: list[float]
     force_field: str | None
     monomers: list[MonomerEntry]
-    simulations: list[Simulations] | None = None
+    simulations: list[Simulation] | None = None
     composition_method: CompositionMethodType | None = None
     composition: dict[str, Any] | None = None
     ratio: dict[int, float] | None = None
@@ -319,7 +319,7 @@ class InputParser:
                 detected_modes.add("ratio")
             else:
                 raise InputSchemaError(
-                    "Could not infer composition method. Simulations must contain either "
+                    "Could not infer composition method. Simulation must contain either "
                     "'monomer_counts' or 'monomer_ratios'."
                 )
 
@@ -750,7 +750,7 @@ class InputParser:
 
     def _validate_single_simulation(
         self,
-        simulation: Simulations,
+        simulation: Simulation,
         method: CompositionMethodType,
     ) -> None:
         """
@@ -823,7 +823,7 @@ class InputParser:
         seen_tags: set[str] = set()
         temperatures: list[float] = []
         density: list[float] = []
-        simulations: list[Simulations] = []
+        simulations: list[Simulation] = []
         reference_ratios: dict | None = None
 
         for system in systems:
@@ -884,7 +884,7 @@ class InputParser:
                         "All systems must use identical 'monomer_ratios'."
                     )
 
-                simulation = Simulations(
+                simulation = Simulation(
                     tag=system["tag"],
                     temperature=system["temperature"],
                     density=system["density"],
@@ -915,7 +915,7 @@ class InputParser:
                         "'total_atoms' should not appear in counts mode."
                     )
 
-                simulation = Simulations(
+                simulation = Simulation(
                     tag=system["tag"],
                     temperature=system["temperature"],
                     density=system["density"],

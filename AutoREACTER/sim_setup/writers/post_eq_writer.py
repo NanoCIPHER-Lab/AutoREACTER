@@ -11,7 +11,7 @@ from pathlib import Path
 from datetime import datetime
 
 from AutoREACTER.sim_setup.writers.lammps_settings import LammpsSettings
-from AutoREACTER.input_parser import Simulations
+from AutoREACTER.input_parser import Simulation
 
 
 # Timestamp used in generated file headers so output scripts are traceable.
@@ -31,14 +31,14 @@ class PostEqWriter:
         sim_name (str): Base simulation name used in file naming.
     """
 
-    def __init__(self, out_dir: Path, settings: LammpsSettings, simulation: Simulations, sim_name: str):
+    def __init__(self, out_dir: Path, settings: LammpsSettings, simulation: Simulation, sim_name: str):
         """
         Initialize the writer and generate the post-equilibration input script.
 
         Args:
             out_dir (Path): Root directory where stage-specific folders are created.
             settings (LammpsSettings): LAMMPS force-field and run parameters.
-            simulation (Simulations): Simulation-specific settings such as tag and temperature.
+            simulation (Simulation): Simulation-specific settings such as tag and temperature.
             sim_name (str): Simulation name prefix used to build output filenames.
         """
         self.settings = settings
@@ -48,7 +48,7 @@ class PostEqWriter:
         # Write the post-equilibration file immediately during construction.
         self.write_post_eq_file(simulation=simulation)
 
-    def write_post_eq_file(self, simulation: Simulations) -> str:
+    def write_post_eq_file(self, simulation: Simulation) -> str:
         """
         Create the LAMMPS input script for the post-equilibration stage.
 
@@ -61,7 +61,7 @@ class PostEqWriter:
         6. Writes the final data and restart files.
 
         Args:
-            simulation (Simulations): Simulation configuration, including the run tag and temperature.
+            simulation (Simulation): Simulation configuration, including the run tag and temperature.
 
         Returns:
             str: The filename of the generated LAMMPS input script.
