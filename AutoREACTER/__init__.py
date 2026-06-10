@@ -5,7 +5,7 @@ Automated generation of LAMMPS/REACTER-ready reaction templates
 for polymerization workflows.
 """
 
-__version__ = "0.2.2b0"
+__version__ = "0.2.2b1"
 
 from .input_parser import (
     InputParser,
