@@ -23,15 +23,8 @@ This guide covers setup, input configuration, and supported reactions.
 
    overview.md
    getting-started.md
-   developer_page.md
    input-configuration.md
    supported-reactions.md
    supported-force-fields.md
-   change_log.md  
+   change_log.md
    contact.md
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Developer API:
-
-   modules

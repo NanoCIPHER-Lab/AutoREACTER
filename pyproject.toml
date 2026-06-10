@@ -21,6 +21,7 @@ dependencies = [
     "pillow",
     "setuptools",
     "matplotlib"
+    "scipy"
 ]
 
 [tool.setuptools.packages.find]
