@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from AutoREACTER.sim_setup.writers.lammps_settings import LammpsInitialSettings
-from AutoREACTER.reaction_preparation.lunar_client.REACTER_files_builder import REACTERFiles
+from AutoREACTER.reaction_preparation.ff_wrapper.REACTER_files_builder import REACTERFiles
 from AutoREACTER.sim_setup.writers.densification_writer import DensificationWriter
 from AutoREACTER.sim_setup.writers.pre_eq_writer import PreEqWriter
 from AutoREACTER.sim_setup.writers.rxn_first_stage_writer import RxnFirstStageWriter
@@ -21,23 +21,23 @@ class Writer:
         lammps_dir = run_dir / "LAMMPS_input_files"
         lammps_dir.mkdir(parents=True, exist_ok=True)
 
-        replicas = simulation_setup.replicas
-        for replica in replicas:
-            sub_dir = lammps_dir / f"{sim_name}_{replica.tag}"
+        simulations = simulation_setup.simulations
+        for simulation in simulations:
+            sub_dir = lammps_dir / f"{sim_name}_{simulation.tag}"
             sub_dir.mkdir(parents=True, exist_ok=True)
             
             DensificationWriter(
                 out_dir=sub_dir, 
                 settings=self.settings, 
                 reacter_files=self.reacter_files, 
-                replica=replica, 
+                simulation=simulation, 
                 sim_name=sim_name
             )
             
             PreEqWriter(
                 out_dir=sub_dir, 
                 settings=self.settings, 
-                replica=replica, 
+                simulation=simulation, 
                 sim_name=sim_name
             )
 
@@ -45,7 +45,7 @@ class Writer:
                 out_dir=sub_dir,
                 settings=self.settings,
                 reacter_files=self.reacter_files,
-                replica=replica,
+                simulation=simulation,
                 sim_name=sim_name
             )
 
@@ -54,14 +54,14 @@ class Writer:
                 out_dir=sub_dir,
                 settings=self.settings,
                 reacter_files=self.reacter_files,
-                replica=replica,
+                simulation=simulation,
                 sim_name=sim_name
             )
 
             PostEqWriter(
                 out_dir=sub_dir,
                 settings=self.settings,
-                replica=replica,
+                simulation=simulation,
                 sim_name=sim_name
             )
         
