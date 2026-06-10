@@ -2,7 +2,7 @@ import math
 from rdkit.Chem import Descriptors
 
 from AutoREACTER.input_parser import SimulationSetup
-from AutoREACTER.input_parser import Simulations
+from AutoREACTER.input_parser import Simulation
 
 # Physical constants
 N_A = 6.02214076e23      # Avogadro's constant (mol⁻¹)
@@ -101,7 +101,7 @@ class SystemPropertyCalculations:
             # 2. Calculate initial (sparse) and target box dimensions from mass and density
             self._calculate_box_dimensions(simulation, active_monomers)
 
-    def _get_monomer_counts(self, simulation: Simulations, active_monomers: dict) -> None:
+    def _get_monomer_counts(self, simulation: Simulation, active_monomers: dict) -> None:
         """
         Convert monomer ratios into integer counts that sum close to the requested total_atoms.
         
@@ -145,7 +145,7 @@ class SystemPropertyCalculations:
                     active_monomers[m_name].count = {}
                 active_monomers[m_name].count[simulation.tag] = calculated_count
 
-    def _calculate_box_dimensions(self, simulation: Simulations, active_monomers: dict) -> None:
+    def _calculate_box_dimensions(self, simulation: Simulation, active_monomers: dict) -> None:
         """
         Compute the initial (low-density) simulation box size based on total mass and target density.
         

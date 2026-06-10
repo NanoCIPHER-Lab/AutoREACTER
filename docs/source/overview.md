@@ -2,7 +2,7 @@
 
 **AutoREACTER v0.2.2**
 
-AutoREACTER is a Python-based toolkit for managing and automating reaction modeling in LAMMPS, for REACETER simulations. It provides a streamlined workflow for generating LAMMPS input files from simple chemical descriptions, eliminating the need for manual template preparation and atom typing.
+AutoREACTER is a Python-based toolkit for managing and automating reaction modeling in LAMMPS, for REACTER simulations. It provides a streamlined workflow for generating LAMMPS input files from simple chemical descriptions, eliminating the need for manual template preparation and atom typing.
 
 **Note: AutoREACTER is currently in v0.2.2. It is under active development, and APIs or functionality may change as we continue to expand the reaction library and force field support.**
 

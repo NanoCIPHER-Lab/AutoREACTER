@@ -1,7 +1,7 @@
 from pathlib import Path
 from datetime import datetime
 from AutoREACTER.sim_setup.writers.lammps_settings import LammpsSettings
-from AutoREACTER.input_parser import Simulations
+from AutoREACTER.input_parser import Simulation
 
 
 class PreEqWriter:
@@ -21,7 +21,7 @@ class PreEqWriter:
         self,
         out_dir: Path,
         settings: LammpsSettings,
-        simulation: Simulations,
+        simulation: Simulation,
         sim_name: str,
     ):
         """
@@ -38,7 +38,7 @@ class PreEqWriter:
         self.sim_name = sim_name
         self.in_pre_eq_file_name = self.write_pre_eq_file(simulation=simulation)
 
-    def write_pre_eq_file(self, simulation: Simulations) -> str:
+    def write_pre_eq_file(self, simulation: Simulation) -> str:
         """
         Creates the complete LAMMPS input script for pre-equilibration and writes
         it to the '2_pre_equilibration' subdirectory.
@@ -50,7 +50,7 @@ class PreEqWriter:
         - Extended NVT equilibration at the final temperature
 
         Args:
-            simulation: Simulations object containing temperature and simulation tag
+            simulation: Simulation object containing temperature and simulation tag
 
         Returns:
             str: The filename of the generated LAMMPS input script

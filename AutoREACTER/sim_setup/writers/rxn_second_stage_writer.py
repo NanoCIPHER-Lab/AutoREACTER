@@ -12,7 +12,7 @@ from pathlib import Path
 from datetime import datetime
 from AutoREACTER.reaction_preparation.ff_wrapper.REACTER_files_builder import REACTERFiles
 from AutoREACTER.sim_setup.writers.lammps_settings import LammpsSettings
-from AutoREACTER.input_parser import Simulations
+from AutoREACTER.input_parser import Simulation
 
 # Generate current date string for file headers and timestamping
 now = datetime.now().strftime("%Y-%m-%d")
@@ -34,7 +34,7 @@ class RxnSecondStageWriter:
         second_stage_file_name (str): Name of the generated second-stage input file
     """
 
-    def __init__(self, out_dir: Path, settings: LammpsSettings, reacter_files: REACTERFiles, simulation: Simulations, sim_name: str):
+    def __init__(self, out_dir: Path, settings: LammpsSettings, reacter_files: REACTERFiles, simulation: Simulation, sim_name: str):
         """
         Initialize the RxnSecondStageWriter and generate second-stage reaction files.
         
@@ -42,7 +42,7 @@ class RxnSecondStageWriter:
             out_dir (Path): Root output directory for simulation files
             settings (LammpsSettings): LAMMPS simulation settings and force field parameters
             reacter_files (REACTERFiles): Container with reaction template and molecule files
-            simulation (Simulations): Simulation configuration with temperature and tag information
+            simulation (Simulation): Simulation configuration with temperature and tag information
             sim_name (str): Base simulation name used for file naming
         """
         self.settings = settings
@@ -52,7 +52,7 @@ class RxnSecondStageWriter:
         # Generate and store the second-stage input file name
         self.second_stage_file_name = self.write_second_stage_reaction_files(simulation=simulation)
 
-    def write_second_stage_reaction_files(self, simulation: Simulations) -> str:
+    def write_second_stage_reaction_files(self, simulation: Simulation) -> str:
         """
         Generate LAMMPS input script for second-stage inter-molecular reactions.
         
@@ -61,7 +61,7 @@ class RxnSecondStageWriter:
         between molecules at medium intermolecular distances (1M-3.5 Angstroms).
         
         Args:
-            simulation (Simulations): Simulation configuration containing temperature and unique tag
+            simulation (Simulation): Simulation configuration containing temperature and unique tag
             
         Returns:
             str: Filename of the generated second-stage input script

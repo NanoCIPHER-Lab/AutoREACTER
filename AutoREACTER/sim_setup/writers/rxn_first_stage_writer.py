@@ -4,7 +4,7 @@ from pathlib import Path
 from datetime import datetime
 from AutoREACTER.reaction_preparation.ff_wrapper.REACTER_files_builder import REACTERFiles
 from AutoREACTER.sim_setup.writers.lammps_settings import LammpsSettings
-from AutoREACTER.input_parser import Simulations
+from AutoREACTER.input_parser import Simulation
 
 now = datetime.now().strftime("%Y-%m-%d")
 
@@ -37,7 +37,7 @@ class RxnFirstStageWriter:
         out_dir: Path,
         settings: LammpsSettings,
         reacter_files: REACTERFiles,
-        simulation: Simulations,
+        simulation: Simulation,
         sim_name: str,
     ):
         self.settings = settings
@@ -48,7 +48,7 @@ class RxnFirstStageWriter:
 
 
     #  Public API
-    def write_first_stage_reaction_files(self, simulation: Simulations) -> str:
+    def write_first_stage_reaction_files(self, simulation: Simulation) -> str:
         """Build and write the first-stage LAMMPS reaction input file.
 
         The generated input file follows this general structure:
@@ -72,7 +72,7 @@ class RxnFirstStageWriter:
 
         Parameters
         ----------
-        simulation : Simulations
+        simulation : Simulation
             Simulation object containing the temperature and tag for this stage.
 
         Returns

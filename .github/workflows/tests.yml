@@ -39,7 +39,7 @@ jobs:
 
       - name: Check Python syntax
         run: |
-          python -m compileall AutoREACTER AutoREACTER.py
+          python -m compileall AutoREACTER
 
       - name: Smoke import package
         run: |

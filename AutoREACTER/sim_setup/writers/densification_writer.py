@@ -4,7 +4,7 @@ from pathlib import Path
 from datetime import datetime
 from AutoREACTER.reaction_preparation.ff_wrapper.REACTER_files_builder import REACTERFiles
 from AutoREACTER.sim_setup.writers.lammps_settings import LammpsSettings
-from AutoREACTER.input_parser import Simulations
+from AutoREACTER.input_parser import Simulation
 
 # Global timestamp used in generated LAMMPS file headers for traceability
 now = datetime.now().strftime("%Y-%m-%d")
@@ -25,7 +25,7 @@ class DensificationWriter:
         out_dir: Path,
         settings: LammpsSettings,
         reacter_files: REACTERFiles,
-        simulation: Simulations,
+        simulation: Simulation,
         sim_name: str,
     ):
         """
@@ -48,7 +48,7 @@ class DensificationWriter:
         # Generate the LAMMPS input file and return its filename
         self.in_dense_file_name = self.write_lammps_densification_file(simulation=simulation)
 
-    def _write_empty_box_data(self, simulation: Simulations, output_dir: Path) -> None:
+    def _write_empty_box_data(self, simulation: Simulation, output_dir: Path) -> None:
         """
         Creates an empty LAMMPS data file with a cubic simulation box at the
         initial (low-density) dimensions. This serves as the starting point
@@ -83,7 +83,7 @@ class DensificationWriter:
         with open(output_dir / "empty_box.data", 'w') as f:
             f.write("\n".join(lines))
 
-    def write_lammps_densification_file(self, simulation: Simulations) -> str:
+    def write_lammps_densification_file(self, simulation: Simulation) -> str:
         """
         Main method that generates the complete LAMMPS input script for densification.
 
