@@ -6,7 +6,7 @@ recursive-include AutoREACTER/frc_files *.frc
 
 recursive-include examples *.json *.md *.ipynb
 recursive-include docs/source *.md *.rst *.py *.png
-
+recursive-include AutoREACTER/reaction_preparation/ff_wrapper/FF_files *.frc *.xml
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
 recursive-exclude docs/build *

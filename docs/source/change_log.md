@@ -21,6 +21,46 @@ This serves two purposes:
     People can see what changes they might expect in upcoming releases
     At release time, you can move the Unreleased section changes into a new release version section.
  -->
+## [0.2.2] - 2026-06-09
+
+### Added
+
+* Added a new PyPI-ready version of **AutoREACTER**.
+* Added new reactions to the **reaction library**.
+* Added the `ARXSession` module for centralized session-based input/output handling.
+* Added unit tests for the LUNAR API wrapper.
+* Added `MANIFEST.in` to support packaging of required non-Python files.
+* Added outputs save direction same as the input file directory. 
+
+### Changed
+
+* Refactored cache and staging logic to use temporary/session-based directories instead of manually managed `base_dir` paths.
+* Updated `.frc` file handling to use package-included force field files.
+* Moved `frc_files` inside the AutoREACTER package for more reliable access after installation.
+* Improved PCFF `.frc` directory discovery to be more robust against repository layout changes.
+* Updated `prepare_reactions.py`, `molecule_3d_preparation.py`, `REACTER_files_builder.py`, and `lunar_api_wrapper.py` to use session-based inputs.
+* Updated documentation, examples, CI configuration, and getting-started instructions.
+
+### Deprecated
+
+* Deprecated direct `base_dir`-style path handling in favor of `ARXSession`-based workflow management.
+
+### Removed
+
+* Removed older manual cache directory resolution logic.
+* Removed temporary/editor backup files from the repository.
+* Removed outdated path-resolution behavior that depended on repository-relative assumptions.
+* Removed the old dated folder output method.
+
+### Fixed
+
+* Fixed `.frc` file path resolution issues when running AutoREACTER from different locations.
+* Improved error messages for missing or unresolved `.frc` files.
+
+### Security
+
+* No security-related changes in this release.
+
 ---
 ## [0.2.1] - 2026-05-04
 

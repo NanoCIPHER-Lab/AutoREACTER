@@ -4,7 +4,7 @@ from pathlib import Path
 from datetime import datetime
 from AutoREACTER.reaction_preparation.ff_wrapper.REACTER_files_builder import REACTERFiles
 from AutoREACTER.sim_setup.writers.lammps_settings import LammpsSettings
-from AutoREACTER.input_parser import Replica
+from AutoREACTER.input_parser import Simulation
 
 # Global timestamp used in generated LAMMPS file headers for traceability
 now = datetime.now().strftime("%Y-%m-%d")
@@ -25,7 +25,7 @@ class DensificationWriter:
         out_dir: Path,
         settings: LammpsSettings,
         reacter_files: REACTERFiles,
-        replica: Replica,
+        simulation: Simulation,
         sim_name: str,
     ):
         """
@@ -35,7 +35,7 @@ class DensificationWriter:
             out_dir: Base output directory for all simulation files
             settings: LAMMPS settings configuration (units, styles, etc.)
             reacter_files: Collection of force field and molecule template files
-            replica: Contains replica-specific parameters (density, temperature, monomer counts)
+            simulation: Contains simulation-specific parameters (density, temperature, monomer counts)
             sim_name: Name prefix used for output files
         """
         self.settings = settings
@@ -46,19 +46,19 @@ class DensificationWriter:
         self.sim_name = sim_name
 
         # Generate the LAMMPS input file and return its filename
-        self.in_dense_file_name = self.write_lammps_densification_file(replica=replica)
+        self.in_dense_file_name = self.write_lammps_densification_file(simulation=simulation)
 
-    def _write_empty_box_data(self, replica: Replica, output_dir: Path) -> None:
+    def _write_empty_box_data(self, simulation: Simulation, output_dir: Path) -> None:
         """
         Creates an empty LAMMPS data file with a cubic simulation box at the
         initial (low-density) dimensions. This serves as the starting point
         before molecule insertion.
 
         Args:
-            replica: Contains the initial_box_length calculated from target density
+            simulation: Contains the initial_box_length calculated from target density
             output_dir: Directory where the empty_box.data file will be written
         """
-        half_len = replica.initial_box_length / 2.0
+        half_len = simulation.initial_box_length / 2.0
         lo, hi = -half_len, half_len
 
         lines = [
@@ -83,7 +83,7 @@ class DensificationWriter:
         with open(output_dir / "empty_box.data", 'w') as f:
             f.write("\n".join(lines))
 
-    def write_lammps_densification_file(self, replica: Replica) -> str:
+    def write_lammps_densification_file(self, simulation: Simulation) -> str:
         """
         Main method that generates the complete LAMMPS input script for densification.
 
@@ -97,12 +97,12 @@ class DensificationWriter:
         Returns:
             str: The filename of the generated LAMMPS input file
         """
-        tag = f"{self.sim_name}_{replica.tag}"
+        tag = f"{self.sim_name}_{simulation.tag}"
         dens_dir = self.out_dir / "1_densification"
         dens_dir.mkdir(parents=True, exist_ok=True)
 
         # Create the initial empty box at low density (25% of target)
-        self._write_empty_box_data(replica=replica, output_dir=dens_dir)
+        self._write_empty_box_data(simulation=simulation, output_dir=dens_dir)
         
         types = self._get_force_field_types()
         s = self.settings
@@ -168,7 +168,7 @@ class DensificationWriter:
             lines.append(f"{'molecule':<16} {m_id} {mol.molecule_files.lmp_molecule_file.name}")
 
         lines.append("\n#------------Randomly Insert Molecules------------")
-        for m_name, count in replica.monomer_counts.items():
+        for m_name, count in simulation.monomer_counts.items():
             if m_name in mol_ids:
                 seed = random.randint(10000, 99999)
                 cmd = f"random {count} {seed} NULL overlap 2.0 maxtry 100 mol {mol_ids[m_name]} {seed}"
@@ -181,17 +181,17 @@ class DensificationWriter:
             "",
             f"{'minimize':<16} 0.0 1.0e-8 1000 100000",
             f"{'reset_timestep':<16} 0",
-            f"{'velocity':<16} all create {replica.temperature} {random.randint(10000, 99999)} dist gaussian",
+            f"{'velocity':<16} all create {simulation.temperature} {random.randint(10000, 99999)} dist gaussian",
             f"{'timestep':<16} {self.timestep}",
             f"{'thermo_style':<16} custom step temp pe etotal press vol density\n",
             "#------------Densification Run------------",
             f"{'dump':<16} dump_1 all xyz 1000 {tag}_shrink.xyz",
             f"{'dump_modify':<16} dump_1 types labels",
             f"{'restart':<16} 100 {tag}_shrink_backup1.restart {tag}_shrink_backup2.restart",
-            f"{'fix':<16} nvt_1 all nvt temp {replica.temperature} {replica.temperature} 100.0",
+            f"{'fix':<16} nvt_1 all nvt temp {simulation.temperature} {simulation.temperature} 100.0",
             f"{'fix':<16} fix_shrink all deform 1 x erate {self.erate} y erate {self.erate} z erate {self.erate}",
             f"{'variable':<16} my_den equal density",
-            f"{'fix':<16} fix_halt all halt 1 v_my_den > {replica.density} error continue",
+            f"{'fix':<16} fix_halt all halt 1 v_my_den > {simulation.density} error continue",
             f"{'thermo':<16} {thermo_interval}",
             f"{'run':<16} {total_steps}",
             "",

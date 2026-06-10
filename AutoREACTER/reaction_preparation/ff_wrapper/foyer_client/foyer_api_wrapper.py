@@ -286,6 +286,7 @@ class FoyerAPIWrapper:
                 all2lmp_data_file=all_2_lmp_file
             ))
 
+        return all2lmp_results
     @staticmethod
     def _move_merge_outputs(src: Path, dest: Path):
         """Helper to migrate files from all2lmp to bond_react_merge directory if needed."""
