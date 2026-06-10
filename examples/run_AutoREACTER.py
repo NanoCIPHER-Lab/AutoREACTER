@@ -218,13 +218,15 @@ def AutoREACTER(input_file: str) -> None:
 
 if __name__ == "__main__":
     args = sys.argv[1:]
+    inpput_strs = ["-i", "--input", "-in"]
 
     if not args:
         help_message()
         sys.exit(1)
 
-    if "-i" in args or "--input" in args:
-        idx = args.index("-i") if "-i" in args else args.index("--input")
+
+    if any(opt in args for opt in inpput_strs):
+        idx = next(idx for idx, arg in enumerate(args) if arg in inpput_strs)
         if idx + 1 >= len(args):
             print("Error: Missing input file.")
             sys.exit(1)
