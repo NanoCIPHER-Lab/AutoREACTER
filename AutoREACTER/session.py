@@ -44,7 +44,7 @@ def _clear_directory(path: Path):
         if item.is_file() or item.is_symlink():
             item.unlink()
         elif item.is_dir():
-            shutil.rmtree(item)  # <--- Added this so it actually deletes old subfolders like 'images/'
+            shutil.rmtree(item) 
 
 def read_input(input_file_path: str, clear_staging: bool = True) -> ARXSession:
     """
@@ -87,7 +87,7 @@ def read_input(input_file_path: str, clear_staging: bool = True) -> ARXSession:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Now create the images folder safely inside the simulation folder
-    images_dir = output_dir / "images"
+    images_dir = Path((output_dir) / "images")
     images_dir.mkdir(parents=True, exist_ok=True)
 
     # 6. Return the State Object
