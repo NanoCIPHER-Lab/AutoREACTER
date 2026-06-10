@@ -50,6 +50,15 @@ You can either run by downloading [run_AutoREACTER.py](https://github.com/NanoCI
 ```bash
 python run_AutoREACTER.py -i example_1_inputs_count_mode.json
 ```
+
 **Note:** Replace `example_1_inputs_count_mode.json` with the actual relative path of a JSON file in your computer.
 
+
+
 or you can run [example_1.ipynb](https://github.com/NanoCIPHER-Lab/AutoREACTER/blob/main/examples/example_1.ipynb) with the input file.
+
+To save the full AutoREACTER terminal output while running an example, use:
+
+```bash
+python -u examples/run_AutoREACTER.py -i examples/example_1_inputs_count_mode.json | tee arx.log
+```
