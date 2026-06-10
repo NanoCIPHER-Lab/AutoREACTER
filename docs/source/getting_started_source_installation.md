@@ -55,29 +55,52 @@ AutoREACTER provides two different ways to build your LAMMPS reaction files:
 - An interactive, visual Jupyter Notebook. 
 - A fast, Command-Line Interface (CLI)
 
-#### Option A: The Interactive Notebook.
+
+#### Option A: The Interactive Notebook
 
 If you want to see exactly how AutoREACTER detects functional groups, maps templates, and handles non-reactive monomers, the Jupyter Notebook is the best place to start.
 
-*Install the project in editable mode*
+*Install the project in editable mode:*
 
 ```bash
 python -m pip install -e .
+````
+
+*Install Jupyter support:*
+
+```bash
+python -m pip install jupyter ipykernel
 ```
 
-*Register the Jupyter Kernel*
+*Register the Jupyter kernel:*
 
 ```bash
 python -m ipykernel install --user --name arx_env --display-name "Python (arx_env)"
 ```
 
-*Open the project in VS Code*
+**Note:** If you used a different Conda environment name, replace `arx_env` with your actual environment name.
+
+*Open the project in VS Code:*
 
 ```bash
 code .
 ```
 
+Open:
+
+```text
+examples/example_1.ipynb
+```
+
+In VS Code, select the kernel:
+
+```text
+Python (arx_env)
+```
+
 Run the cells sequentially. The notebook will guide you step-by-step.
+
+**Interactive prompt note:** The notebook may ask what to do with monomers that do not participate in any detected reaction. For example:
 
 #### Option B: The Automated CLI
 
@@ -104,3 +127,6 @@ python run_AutoREACTER.py -i example_1_inputs_count_mode.json
 **Note:** Replace `example_1_inputs_count_mode.json` with the actual relative path of a JSON file in your computer.
 
 or you can run [example_1.ipynb](https://github.com/NanoCIPHER-Lab/AutoREACTER/blob/main/examples/example_1.ipynb) with the input file.
+
+
+

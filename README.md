@@ -4,11 +4,10 @@
 
 <h1 align="center">AutoREACTER</h1>
 
-<p align="center">
-Automated generation of LAMMPS/REACTER-ready reaction-template workflows.
-</p>
+<p align="center"><b>Automated generation of LAMMPS/REACTER-ready reaction-template workflows.*</b></p>
 
 > **Status:** AutoREACTER is currently in **v0.2-beta** and under active development. APIs, configuration schemas, reaction libraries, and core functionality may change without notice.
+> Please refer to the [changelog](https://autoreacter.org/change_log.html) for the latest updates.
 
 ## Documentation
 
@@ -18,74 +17,44 @@ Full documentation is available at:
 
 The documentation includes installation instructions, input configuration, supported reactions, supported force fields, cleanup utilities, and developer API references.
 
-## Current reaction support
-
-AutoREACTER currently supports beta-stage step-growth **polycondensation** workflows for:
-
-### Polyesterification
-
-- Hydroxy-carboxylic acid polycondensation
-- Hydroxy acid halide polycondensation
-- Diol + di-acid halide polycondensation
-- Diol + di-carboxylic acid polycondensation
-
-### Polyamidation
-
-- Amino acid polycondensation
-- Diamine + di-carboxylic acid polycondensation
-- Diamine + di-carboxylic acid halide polycondensation
-
-For the detailed functional-group mapping and reaction rules, see the [supported reactions documentation](https://autoreacter.org/supported-reactions.html).
+For detailed functional-group mapping and reaction rules, see the [supported reactions documentation](https://autoreacter.org/supported-reactions.html).
 
 ## Installation
 
-Clone the repository:
+AutoREACTER can be installed directly from PyPI:
+
+```bash
+python -m pip install AutoREACTER
+```
+
+For users who want to modify the source code or run the latest development version, AutoREACTER can also be installed from source:
 
 ```bash
 git clone https://github.com/NanoCIPHER-Lab/AutoREACTER.git
 cd AutoREACTER
-````
-
-Create and activate the recommended Conda environment:
-
-```bash
-conda create -n autoRX -y -c conda-forge python=3.13 numpy pandas rdkit ipykernel networkx
-conda activate autoRX
-```
-
-Install AutoREACTER in editable mode:
-
-```bash
-python -m pip install -U pip
 python -m pip install -e .
 ```
 
-AutoREACTER also requires **LUNAR** for atom typing. See the [getting started documentation](https://autoreacter.org/getting-started.html) for setup details.
+AutoREACTER also requires **LUNAR** for atom typing. See the [getting started documentation](https://autoreacter.org/getting-started.html) for the full setup guide.
 
 ## Quick start
 
 Run AutoREACTER with a JSON input file:
 
 ```bash
-python AutoREACTER.py -i path/to/input.json
+python examples/run_AutoREACTER.py -i examples/example_1_inputs_count_mode.json
 ```
 
 or:
 
 ```bash
-python AutoREACTER.py --input path/to/input.json
-```
-
-Example:
-
-```bash
-python AutoREACTER.py -i examples/example_1_inputs_ratio_mode.json
+python examples/run_AutoREACTER.py --input examples/example_1_inputs_count_mode.json
 ```
 
 View available commands and options:
 
 ```bash
-python AutoREACTER.py --help
+python examples/run_AutoREACTER.py --help
 ```
 
 ## Interactive notebook workflow
@@ -94,28 +63,7 @@ AutoREACTER can also be used through Jupyter notebooks for an interactive, visua
 
 See the examples directory for notebooks and usage notes:
 
-**[examples/README.md](https://github.com/NanoCIPHER-Lab/AutoREACTER/blob/main/examples/README.md)**
-
-## Cleanup utility
-
-Delete cached runs older than a given number of days:
-
-```bash
-python AutoREACTER.py --cleanup 30
-```
-
-Delete all cached runs:
-
-```bash
-python AutoREACTER.py --cleanup all
-```
-
-Short flags are also available:
-
-```bash
-python AutoREACTER.py -c 30
-python AutoREACTER.py -c all
-```
+**[examples/README.md](https://autoreacter.org/getting_started_source_installation.html)**
 
 ## Help and support
 
