@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/source/_static/logo.png" width="650">
+  <img src="https://raw.githubusercontent.com/NanoCIPHER-Lab/AutoREACTER/main/docs/source/_static/logo.png" alt="AutoREACTER logo" width="220">
 </p>
 
 <h1 align="center">AutoREACTER</h1>

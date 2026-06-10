@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from AutoREACTER.reaction_preparation.lunar_client.lunar_api_wrapper import (
+from AutoREACTER.reaction_preparation.ff_wrapper.lunar_client.lunar_api_wrapper import (
     All2LMPResult,
     LunarAPIWrapper,
 )

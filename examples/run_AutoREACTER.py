@@ -2,6 +2,10 @@ import sys
 import os
 import time
 from PIL import Image
+# from AutoREACTER._compat import apply_legacy_patches
+# apply_legacy_patches()
+# this will be need when foyer integration is added back in, but for now it causes issues with the current foyer version.
+#  We can re-add it when we add foyer back in, and it should be compatible with the current version of foyer at that time.
 
 from AutoREACTER.session import read_input
 from AutoREACTER.cache import RunDirectoryManager
@@ -9,9 +13,9 @@ from AutoREACTER.detectors.functional_groups_detector import FunctionalGroupsDet
 from AutoREACTER.detectors.reaction_detector import ReactionDetector
 from AutoREACTER.detectors.non_monomer_detector import NonReactantsDetector
 from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import PrepareReactions
-from AutoREACTER.reaction_preparation.lunar_client.molecule_3d_preparation import Molecule3DPreparation
-from AutoREACTER.reaction_preparation.lunar_client.lunar_api_wrapper import LunarAPIWrapper
-from AutoREACTER.reaction_preparation.lunar_client.REACTER_files_builder import REACTERFilesBuilder
+from AutoREACTER.reaction_preparation.ff_wrapper.molecule_3d_preparation import Molecule3DPreparation
+from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper import FFWrapper
+from AutoREACTER.reaction_preparation.ff_wrapper.REACTER_files_builder import REACTERFilesBuilder
 from AutoREACTER.sim_setup.simulation_setup import SimulationSetupManager
 
 
@@ -171,11 +175,11 @@ def AutoREACTER(input_file: str) -> None:
     )
 
     # === 7. Lunar API Processing ===
-    lunar_api = LunarAPIWrapper(session)
-    lunar_results = lunar_api.lunar_workflow(
-        updated_inputs_3d, prepared_reactions_3d
+    ff_wrapper = FFWrapper(session)
+    ff_wrapper_results = ff_wrapper.generate_force_field_files(
+        updated_inputs=updated_inputs_3d, 
+        prepared_reactions=prepared_reactions_3d
     )
-
     print("\n")
     loading_message("Lunar API workflow completed. Proceeding to build REACTER files")
     time.sleep(1.5)
@@ -188,7 +192,7 @@ def AutoREACTER(input_file: str) -> None:
     )
 
     reacter_files = builder.molecule_template_preparation(
-        lunar_files=lunar_results,
+        ff_files=ff_wrapper_results,
         prepared_reactions_with_3d_mols=prepared_reactions_3d
     )
 
@@ -214,13 +218,15 @@ def AutoREACTER(input_file: str) -> None:
 
 if __name__ == "__main__":
     args = sys.argv[1:]
+    inpput_strs = ["-i", "--input", "-in"]
 
     if not args:
         help_message()
         sys.exit(1)
 
-    if "-i" in args or "--input" in args:
-        idx = args.index("-i") if "-i" in args else args.index("--input")
+
+    if any(opt in args for opt in inpput_strs):
+        idx = next(idx for idx, arg in enumerate(args) if arg in inpput_strs)
         if idx + 1 >= len(args):
             print("Error: Missing input file.")
             sys.exit(1)

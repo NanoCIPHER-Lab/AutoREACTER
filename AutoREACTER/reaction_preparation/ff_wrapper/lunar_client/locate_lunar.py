@@ -26,6 +26,7 @@ try:
     from . import config
 except ImportError:
     import config
+
 # Global flag to determine whether to use GUI for input prompts. Defaults to False (CLI mode).
 USE_GUI = False
 
@@ -76,8 +77,10 @@ def _ask_gui():
     root.withdraw()  # Hide the root window.
     folder = filedialog.askdirectory(title="Select LUNAR root folder")
     root.destroy()
+    
     if not folder:
         return None
+        
     return _normalize_path(folder)
 
 
@@ -92,6 +95,7 @@ def _ask_cli():
     if not folder:
         return None
     return _normalize_path(folder)
+
 
 def _is_valid_dir(p):
     """
@@ -156,8 +160,10 @@ def set_LUNAR_loc(folder_path):
     folder_path = _normalize_path(folder_path)
     if not _is_valid_dir(folder_path):
         raise ValueError(f"Not a valid directory: {folder_path}")
+        
     config.LUNAR_ROOT_DIR = folder_path
     _write_config_py(folder_path)
+    
     return folder_path
 
 
@@ -178,7 +184,6 @@ def get_LUNAR_loc(force_prompt=False, use_gui=None):
     Get the LUNAR root directory path. If a valid path is already saved in config,
     return it. Otherwise, prompt the user to select or enter a path.
     """
-
     if use_gui is None:
         use_gui = USE_GUI
 
@@ -193,7 +198,7 @@ def get_LUNAR_loc(force_prompt=False, use_gui=None):
                 return str(parent)
 
     # Use saved config path
-    if not force_prompt and config.LUNAR_ROOT_DIR and _is_valid_dir(config.LUNAR_ROOT_DIR):
+    if not force_prompt and getattr(config, "LUNAR_ROOT_DIR", None) and _is_valid_dir(config.LUNAR_ROOT_DIR):
         print("Using saved LUNAR root directory:", config.LUNAR_ROOT_DIR)
         return config.LUNAR_ROOT_DIR
 
@@ -220,8 +225,9 @@ def get_LUNAR_loc(force_prompt=False, use_gui=None):
         else:
             print(f"Invalid LUNAR directory: {new_path}")
             print("Expected files: LUNAR.py, atom_typing.py, all2lmp.py, bond_react_merge.py")
-            print("Expected directory: src/")
+            print("Expected directory: src/, frc_files/")
             print("Press Enter to cancel or try again.")
+
 
 if __name__ == "__main__":
     # Entry point: Prompt for LUNAR location if run as a script.

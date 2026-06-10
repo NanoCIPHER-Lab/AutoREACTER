@@ -16,12 +16,17 @@ requires-python = ">=3.12"
 dependencies = [
     "numpy",
     "pandas",
-    "lammps",
     "networkx",
     "rdkit",
-    "pillow"
+    "pillow",
+    "setuptools",
+    "matplotlib",
+    "scipy",
 ]
 
 [tool.setuptools.packages.find]
 [tool.setuptools.package-data]
-AutoREACTER = ["frc_files/*.frc"]
+AutoREACTER = [
+    "reaction_preparation/ff_wrapper/FF_files/*.frc",
+    "reaction_preparation/ff_wrapper/FF_files/*.xml"
+]

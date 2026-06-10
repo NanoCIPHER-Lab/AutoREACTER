@@ -2,7 +2,7 @@ from pathlib import Path
 import shutil
 import tempfile
 import uuid
-from AutoREACTER.reaction_preparation.lunar_client.REACTER_files_builder import REACTERFiles
+from AutoREACTER.reaction_preparation.ff_wrapper.REACTER_files_builder import REACTERFiles
 
 
 class GetCacheDir:
@@ -17,7 +17,8 @@ class GetCacheDir:
         """
         # Generate a unique staging directory for this run to prevent concurrent conflicts
         run_id = uuid.uuid4().hex[:8]
-        self.staging_dir = Path(tempfile.gettempdir()) / f"AutoREACTER_staging_{run_id}"
+        # self.staging_dir = Path(tempfile.gettempdir()) / f"AutoREACTER_staging_{run_id}"
+        self.staging_dir = Path(tempfile.gettempdir()) / f"AutoREACTER_staging"
         self.staging_dir.mkdir(parents=True, exist_ok=True)
         self.clear_staging_dir()
 
