@@ -7,7 +7,8 @@ from dataclasses import dataclass
 from AutoREACTER.initialization import Initialization
 from AutoREACTER.input_parser import InputParser
 from AutoREACTER.cache import GetCacheDir
-from AutoREACTER.detectors.functional_groups_detector import MonomerRole, FunctionalGroupVisualization
+from AutoREACTER.detectors.functional_groups_detector import MonomerRole
+from AutoREACTER.detectors.reaction_detector import ReactionInstance
 
 @dataclass
 class Session:
@@ -20,6 +21,7 @@ class Session:
     output_dir: Path
     images_dir: Path
     monomer_roles: list[MonomerRole] = None
+    reaction_instances: list[ReactionInstance] = None
 
 def _resolve_input_path(input_file_path: str) -> Path:
     """

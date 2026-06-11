@@ -275,7 +275,7 @@ class FunctionalGroupsDetector:
 
     def functional_groups_detector(
         self, session: Session
-    ) -> Session:
+    ) -> None:
         """
         Detect functional groups across a list of monomers and categorize them into roles.
 
@@ -286,9 +286,7 @@ class FunctionalGroupsDetector:
             session (Session): Validated Session object containing monomers.
 
         Returns:
-            tuple[list[MonomerRole], list[FunctionalGroupVisualization]]:
-                - List of monomers with detected functionalities.
-                - List of visualization data for monomers with detected functionalities.
+            None (results stored in session.monomer_roles for downstream use).
 
         Notes:
             - Matches criteria: 'vinyl'/'mono' (>=1 primary), 'di_identical' (>=2 primary),
@@ -356,7 +354,7 @@ class FunctionalGroupsDetector:
                 
         # Store results in session for potential downstream use.
         session.monomer_roles = monomer_roles
-        return session
+        return None  # Return session with updated monomer_roles; visualization handled separately.
 
 
     def _functional_groups_detector_for_visualization( 
