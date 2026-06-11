@@ -7,9 +7,10 @@ from dataclasses import dataclass
 from AutoREACTER.initialization import Initialization
 from AutoREACTER.input_parser import InputParser
 from AutoREACTER.cache import GetCacheDir
+from AutoREACTER.detectors.functional_groups_detector import MonomerRole, FunctionalGroupVisualization
 
 @dataclass
-class ARXSession:
+class Session:
     """
     Holds the validated inputs and directory paths for a single AutoREACTER run.
     This acts as the 'state object' passed through the pipeline.
@@ -18,6 +19,7 @@ class ARXSession:
     staging_dir: Path
     output_dir: Path
     images_dir: Path
+    monomer_roles: list[MonomerRole] = None
 
 def _resolve_input_path(input_file_path: str) -> Path:
     """
@@ -46,7 +48,7 @@ def _clear_directory(path: Path):
         elif item.is_dir():
             shutil.rmtree(item) 
 
-def read_input(input_file_path: str, clear_staging: bool = True) -> ARXSession:
+def read_input(input_file_path: str, clear_staging: bool = True) -> Session:
     """
     Standard read function to initialize the AutoREACTER environment.
     
@@ -97,7 +99,7 @@ def read_input(input_file_path: str, clear_staging: bool = True) -> ARXSession:
     print(f"[INFO] Temporary Staging: {staging_dir}")
     print(f"[INFO] Final Outputs will save to: {output_dir}")
 
-    return ARXSession(
+    return Session(
         inputs=validated_inputs,
         staging_dir=staging_dir,
         output_dir=output_dir,
