@@ -22,6 +22,7 @@ class Session:
     images_dir: Path
     monomer_roles: list[MonomerRole] = None
     reaction_instances: list[ReactionInstance] = None
+    non_reactants: list[MonomerRole] = None
 
 def _resolve_input_path(input_file_path: str) -> Path:
     """
