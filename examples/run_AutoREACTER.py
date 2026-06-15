@@ -96,6 +96,8 @@ def AutoREACTER(input_file: str) -> None:
     try:
         input_parser = InputParser()
         img = input_parser.initial_molecules_image_grid(session.inputs)
+        # monomers = session.inputs.monomers # debug print to verify monomers are being processed
+        # print(monomers)
         save_image(img, os.path.join(session.images_dir, "monomers.png"), "Monomers Grid")
     except Exception:
         print("[WARN] Failed to generate initial molecules image grid")

@@ -1,18 +1,18 @@
+from __future__ import annotations  # 1. Must be the first line
+from typing import TYPE_CHECKING
 import json
 import shutil
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Optional
 
 # Import internal modules
 from AutoREACTER.initialization import Initialization
 from AutoREACTER.input_parser import InputParser
-from AutoREACTER.cache import GetCacheDir
-from AutoREACTER.detectors.functional_groups_detector import MonomerRole
 from AutoREACTER.detectors.reaction_detector import ReactionInstance
 from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import ReactionMetadata
 from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper import FFFiles
-
+if TYPE_CHECKING:
+    from AutoREACTER.detectors.functional_groups_detector import MonomerRole
 
 @dataclass
 class Session:
@@ -24,9 +24,9 @@ class Session:
     staging_dir: Path
     output_dir: Path
     images_dir: Path
-    monomer_roles: list[MonomerRole] = None
+    monomer_roles: list["MonomerRole"] = None
     reaction_instances: list[ReactionInstance] = None
-    non_reactants: list[MonomerRole] = None
+    non_reactants: list["MonomerRole"] = None
     reaction_metadata: list[ReactionMetadata] = None  # Placeholder for actual ReactionMetadata type
     ff_files: list[FFFiles] = None  # Placeholder for the actual FFFiles dataclass
 
@@ -66,6 +66,7 @@ def read_input(input_file_path: str, clear_staging: bool = True) -> Session:
     3. Validates the JSON inputs.
     4. Creates a permanent output directory named after the simulation.
     """
+    from AutoREACTER.cache import GetCacheDir # Import here to avoid circular imports with Session
     # 1. Resolve paths
     input_path = _resolve_input_path(input_file_path)
 

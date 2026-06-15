@@ -99,7 +99,6 @@ later to determine how many reactions are possible and how to build reaction
 templates safely.
 """
 
-from __future__ import annotations # Enable postponed evaluation of annotations for forward references.
 from dataclasses import dataclass
 from rdkit import Chem
 from rdkit.Chem import Draw
@@ -292,8 +291,9 @@ class FunctionalGroupsDetector:
             - Matches criteria: 'vinyl'/'mono' (>=1 primary), 'di_identical' (>=2 primary),
             'di_different' (>=1 each pattern).
         """
-
+        
         monomers = session.inputs.monomers
+        print(monomers)
         monomer_roles = []
 
         for monomer in monomers:

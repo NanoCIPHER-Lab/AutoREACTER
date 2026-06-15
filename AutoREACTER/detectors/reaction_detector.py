@@ -1,3 +1,4 @@
+from __future__ import annotations  # Enable postponed evaluation of annotations for forward references.
 """
 Polymerization Reaction Detector and Visualizer.
 
@@ -30,12 +31,14 @@ TODO: Missing Polymerization Mechanisms
 
 import pathlib
 import os
-from typing import Dict, Any, Tuple, Optional, List, Set
+from typing import Tuple, Optional, List, Set
 from dataclasses import dataclass
 from PIL import Image, ImageDraw, ImageFont
 from rdkit import Chem
 from rdkit.Chem import Draw, rdChemReactions
-from AutoREACTER.session import Session
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from AutoREACTER.session import Session
 
 # Attempt to import internal library components
 try:
@@ -131,7 +134,7 @@ class ReactionDetector:
 
         return (reaction_name, ordered)
 
-    def reaction_detector(self, session: Session) -> None:
+    def reaction_detector(self, session: "Session") -> None:
         """
         Scans a list of monomers to find all possible polymerization reactions.
         
