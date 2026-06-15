@@ -105,16 +105,17 @@ from rdkit.Chem import Draw
 from rdkit.Chem import Descriptors, rdchem
 import logging
 import json
-from typing import Dict, Tuple, Optional
+from typing import Tuple, Optional
 import pathlib, os
 from PIL.Image import Image
-from AutoREACTER.session import Session  
 from AutoREACTER.input_parser import MonomerEntry
 
 # Conditional import for FunctionalGroupsLibrary to support both installed and local usage.
 from .functional_groups_library import FunctionalGroupsLibrary
 
 logger = logging.getLogger(__name__)  # Module-level logger for future diagnostics.
+if TYPE_CHECKING:
+    from AutoREACTER.session import Session
 
 
 @dataclass(slots=True)
@@ -273,7 +274,7 @@ class FunctionalGroupsDetector:
         return 0, 0, None, ()  # No matches found
 
     def functional_groups_detector(
-        self, session: Session
+        self, session: "Session"
     ) -> None:
         """
         Detect functional groups across a list of monomers and categorize them into roles.
