@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from typing import Optional, TYPE_CHECKING
 from AutoREACTER.input_parser import SimulationSetup
 from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import ReactionMetadata
-from AutoREACTER.session import Session
 
 if TYPE_CHECKING:
     from AutoREACTER.session import Session
@@ -49,7 +48,7 @@ class FFWrapper:
 
     def generate_force_field_files(
         self,
-        session: Session) -> None:
+        session: "Session") -> None:
         """Generates force field files by routing to the appropriate engine based on user input.
         Args:
             session: The current Session containing validated inputs and reaction metadata.

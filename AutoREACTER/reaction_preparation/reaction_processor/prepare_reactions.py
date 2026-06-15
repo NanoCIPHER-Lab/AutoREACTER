@@ -28,9 +28,6 @@ from AutoREACTER.reaction_preparation.reaction_processor.utils import (
 )
 from AutoREACTER.reaction_preparation.reaction_processor.walker import reaction_atom_walker
 from typing import TYPE_CHECKING
-
-from AutoREACTER.session import Session
-
 if TYPE_CHECKING:
     from AutoREACTER.session import Session
 
@@ -104,9 +101,10 @@ class PrepareReactions:
         self.cache = self.staging_dir
         self.csv_cache = prepare_paths(self.cache, "csv_cache")
 
+
     # --- PUBLIC ---
 
-    def prepare_reactions(self, session: Session) -> None:
+    def prepare_reactions(self) -> None:
         """
         Main pipeline: processes reaction instances, detects duplicates, and enriches metadata with template mappings.
         
@@ -116,6 +114,7 @@ class PrepareReactions:
         Returns:
             List of processed ReactionMetadata objects with template mappings and edge atoms
         """
+        session = self.session
         reaction_instances = session.reaction_instances
         reactions_metadata = self._process_reaction_instances(reaction_instances)
         reactions_metadata = self._detect_duplicates(reactions_metadata)
@@ -242,7 +241,6 @@ class PrepareReactions:
                                    csv_cache: Path, 
                                    reaction_tuple: list, 
                                    delete_atoms: bool = True,
-                                   session: Session = None
                                    ) -> list[ReactionMetadata]:
         """
         Runs reactions on reactant pairs and builds metadata for each product set.
@@ -257,6 +255,7 @@ class PrepareReactions:
         Returns:
             Updated list of ReactionMetadata objects
         """
+        session = self.session
         reaction_metadata = session.reaction_metadata if session and session.reaction_metadata is not None else []
         if reaction_metadata is None:
             reaction_metadata = []
@@ -642,7 +641,7 @@ class PrepareReactions:
     
     def reaction_templates_highlighted_image_grid(
         self,
-        session: Session,
+        session: "Session",
         highlight_type: str = "template",
     ) -> Image:
         """

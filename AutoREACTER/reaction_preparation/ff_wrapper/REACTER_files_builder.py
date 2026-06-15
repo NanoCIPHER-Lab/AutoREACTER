@@ -26,11 +26,7 @@ from dataclasses import dataclass
 from typing import Optional
 import datetime
 import re
-from AutoREACTER import session
-from AutoREACTER.input_parser import SimulationSetup
 from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper import FFFiles
-from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import ReactionMetadata 
-from AutoREACTER.input_parser import SimulationSetup
 from AutoREACTER.reaction_preparation.ff_wrapper.modifiers_molecule_files import (
     modify_types, modify_charges, modify_coords,
     modify_bonds, modify_angles, modify_dihedrals, modify_impropers,
@@ -694,14 +690,14 @@ Types
         return ff_dest, in_dest, molecule_files
 
 
-    def molecule_template_preparation(self, session: Session) -> REACTERFiles:
+    def molecule_template_preparation(self, session: "Session") -> REACTERFiles:
         """
         Top-level orchestrator that loops over reactions and prepares template
         files and mappings for each reaction.
 
         Parameters
         ----------
-        session : Session
+        session : "Session"
         The current Session containing validated inputs and reaction metadata.
         prepared_reactions_with_3d_mols : list[ReactionMetadata]
         List of ReactionMetadata objects, each containing information about a reaction,
