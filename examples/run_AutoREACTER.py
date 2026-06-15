@@ -135,7 +135,7 @@ def AutoREACTER(input_file: str) -> None:
 
     # === 5. Reaction Template Preparation ===
     prepare_reactions = PrepareReactions(session)
-    prepare_reactions.prepare_reactions(session)
+    prepare_reactions.prepare_reactions()
 
     try:
         for highlight_type, filename in [

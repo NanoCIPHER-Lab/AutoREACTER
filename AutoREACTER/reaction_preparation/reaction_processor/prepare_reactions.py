@@ -1,4 +1,3 @@
-
 """
 Module for preparing chemical reactions for analysis, including atom mapping between reactants and products,
 reaction metadata extraction, and visualization utilities using RDKit.
@@ -8,26 +7,25 @@ initiators, byproducts), and generates metadata and visualizations for downstrea
 consistency and completeness.
 """
 
-
 # WARNING:
 # When modifying this file for dataframe or any other indexing variables use idx and idxs, do not use index or indices or similar.
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, TYPE_CHECKING
 
 from rdkit import Chem
 from rdkit.Chem import AllChem, Draw, rdmolops
 from PIL.Image import Image
 import pandas as pd
 
-from AutoREACTER import session
 from AutoREACTER.detectors.reaction_detector import ReactionInstance
 from AutoREACTER.reaction_preparation.reaction_processor.utils import (
     add_dict_as_new_columns, add_column_safe, compare_set, prepare_paths
 )
 from AutoREACTER.reaction_preparation.reaction_processor.walker import reaction_atom_walker
-from typing import TYPE_CHECKING
+
+# Use TYPE_CHECKING to prevent circular imports with session.py
 if TYPE_CHECKING:
     from AutoREACTER.session import Session
 
@@ -101,29 +99,28 @@ class PrepareReactions:
         self.cache = self.staging_dir
         self.csv_cache = prepare_paths(self.cache, "csv_cache")
 
-
     # --- PUBLIC ---
 
-    def prepare_reactions(self) -> None:
+    def prepare_reactions(self, session: "Session") -> list[ReactionMetadata]:
         """
         Main pipeline: processes reaction instances, detects duplicates, and enriches metadata with template mappings.
         
         Args:
-            session: The AutoREACTER session containing reaction instances to process
+            session: The main Session object containing reaction instances to process
             
         Returns:
             List of processed ReactionMetadata objects with template mappings and edge atoms
         """
-        session = self.session
         reaction_instances = session.reaction_instances
-        reactions_metadata = self._process_reaction_instances(reaction_instances)
-        reactions_metadata = self._detect_duplicates(reactions_metadata)
-        session.reaction_metadata = reactions_metadata
         
-        for reaction in reactions_metadata:
+        # Process and filter reactions
+        reactions_metadata = self._process_reaction_instances(reaction_instances)
+        unique_reaction_metadata = self._detect_duplicates(reactions_metadata)
+        
+        for reaction in unique_reaction_metadata:
             # Skip reactions marked as duplicates
             if not reaction.activity_stats:
-                continue  # Skip reactions marked as duplicates
+                continue
             
             combined_reactant_molecule_object = reaction.reactant_combined_RDmol
             reaction_dataframe = reaction.reaction_dataframe
@@ -163,7 +160,9 @@ class PrepareReactions:
             # Store the template mapping in the metadata for later use
             reaction.template_reactant_to_product_mapping = template_mapped_dict
 
-        return None
+        # Store the finalized metadata inside the session
+        session.reaction_metadata = unique_reaction_metadata
+        return unique_reaction_metadata
     
     # --- PIPELINE STEPS (PRIVATE) ---
     
@@ -241,6 +240,7 @@ class PrepareReactions:
                                    csv_cache: Path, 
                                    reaction_tuple: list, 
                                    delete_atoms: bool = True,
+                                   reaction_metadata: Optional[list[ReactionMetadata]] = None
                                    ) -> list[ReactionMetadata]:
         """
         Runs reactions on reactant pairs and builds metadata for each product set.
@@ -250,13 +250,11 @@ class PrepareReactions:
             csv_cache: Path to cache directory for saving CSVs
             reaction_tuple: List of reactant pairs to process
             delete_atoms: Whether to detect and track byproducts
-            session: Session object to store reaction metadata
+            reaction_metadata: Accumulator list for metadata objects
             
         Returns:
             Updated list of ReactionMetadata objects
         """
-        session = self.session
-        reaction_metadata = session.reaction_metadata if session and session.reaction_metadata is not None else []
         if reaction_metadata is None:
             reaction_metadata = []
         
@@ -337,8 +335,8 @@ class PrepareReactions:
                         activity_stats=True
                     )
                 )
-        session.reaction_metadata = reaction_metadata
-        return None
+
+        return reaction_metadata
     
     # --- CORE REACTION LOGIC ---
     
@@ -489,7 +487,7 @@ class PrepareReactions:
             idx = 2001 + atom.GetIdx()
             atom.SetAtomMapNum(idx)
             atom.SetIsotope(idx) # Isotope survives the reaction
-			
+            
     def _reassign_atom_map_numbers_by_isotope(self, mol: Chem.Mol) -> None:
         """
         Restores atom map numbers from isotope values after reaction.
@@ -648,13 +646,16 @@ class PrepareReactions:
         Generates grid image of reactions with highlighted atoms based on type.
         
         Args:
-            session: The AutoREACTER session containing reaction metadata to visualize
+            session: The Session object containing reaction metadata to visualize
             highlight_type: Type of atoms to highlight - "template", "edge", "initiators", or "delete"
             
         Returns:
             PIL Image containing 2-column grid of reactant-product pairs with highlighted atoms
         """
         metadata_list = session.reaction_metadata
+        if not metadata_list:
+            return None
+
         mols = []
         highlight_lists = []
         highlight_colors = []
