@@ -32,7 +32,7 @@ from typing import TYPE_CHECKING
 from AutoREACTER.session import Session
 
 if TYPE_CHECKING:
-    from AutoREACTER.session import ARXSession
+    from AutoREACTER.session import Session
 
 
 class MappingError(Exception):
@@ -94,7 +94,7 @@ class ReactionMetadata:
 class PrepareReactions:
     """Processes chemical reactions: builds atom mappings, identifies reaction centers, and detects byproducts."""
 
-    def __init__(self, session: "ARXSession"):
+    def __init__(self, session: "Session"):
         """Initialize using the shared AutoREACTER session object."""
         self.session = session
         self.inputs = session.inputs

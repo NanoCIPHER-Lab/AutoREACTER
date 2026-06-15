@@ -2,12 +2,14 @@ import sys
 import os
 import time
 from PIL import Image
+
 # from AutoREACTER._compat import apply_legacy_patches
 # apply_legacy_patches()
 # this will be need when foyer integration is added back in, but for now it causes issues with the current foyer version.
 #  We can re-add it when we add foyer back in, and it should be compatible with the current version of foyer at that time.
 
 from AutoREACTER.session import read_input
+from AutoREACTER.input_parser import InputParser
 from AutoREACTER.cache import RunDirectoryManager
 from AutoREACTER.detectors.functional_groups_detector import FunctionalGroupsDetector
 from AutoREACTER.detectors.reaction_detector import ReactionDetector
@@ -17,8 +19,6 @@ from AutoREACTER.reaction_preparation.ff_wrapper.molecule_3d_preparation import 
 from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper import FFWrapper
 from AutoREACTER.reaction_preparation.ff_wrapper.REACTER_files_builder import REACTERFilesBuilder
 from AutoREACTER.sim_setup.simulation_setup import SimulationSetupManager
-
-
 
 
 def loading_message(message: str, duration: float = 3.0, interval: float = 0.5) -> None:
@@ -38,7 +38,6 @@ def loading_message(message: str, duration: float = 3.0, interval: float = 0.5) 
         time.sleep(interval)
 
     print()  # newline
-
 
 
 def save_image(img: Image.Image, path: str, label: str = "Image") -> None:
@@ -95,52 +94,46 @@ def AutoREACTER(input_file: str) -> None:
 
     # Generate initial visualization
     try:
-        from AutoREACTER.input_parser import InputParser # Imported here just for the image generator
-        img = InputParser().initial_molecules_image_grid(session.inputs)
+        input_parser = InputParser()
+        img = input_parser.initial_molecules_image_grid(session.inputs)
         save_image(img, os.path.join(session.images_dir, "monomers.png"), "Monomers Grid")
     except Exception:
         print("[WARN] Failed to generate initial molecules image grid")
 
     # === 2. Functional Group Detection ===
-    fg_detector = FunctionalGroupsDetector()
-    functional_groups, functional_groups_imgs = fg_detector.functional_groups_detector(
-        session.inputs.monomers
-    )
+    functional_groups_detector = FunctionalGroupsDetector()
+    functional_groups_detector.functional_groups_detector(session)
     try:
-        img = fg_detector.functional_group_highlighted_molecules_image_grid(functional_groups_imgs)
+        img = functional_groups_detector.functional_group_highlighted_molecules_image_grid(session)
         save_image(img, os.path.join(session.images_dir, "functional_groups.png"), "Functional Groups")
     except Exception:
         pass  
 
     # === 3. Reaction Discovery and Selection ===
     reaction_detector = ReactionDetector()
-    reaction_instances = reaction_detector.reaction_detector(functional_groups)
+    reaction_detector.reaction_detector(session)
     try:
-        img = reaction_detector.available_reaction_image_grid(reaction_instances)
+        img = reaction_detector.available_reaction_image_grid(session)
         save_image(img, os.path.join(session.images_dir, "reactions.png"), "Available Reactions")
     except Exception:
         pass
 
-    selected_reactions = reaction_detector.reaction_selection(reaction_instances)
+    reaction_detector.reaction_selection(session)
 
     # === 4. Non-monomer (Additive) Detection ===
     non_monomer_detector = NonReactantsDetector()
-    non_reactants = non_monomer_detector.non_monomer_detector(
-        session.inputs, selected_reactions
-    )
+    non_monomer_detector.non_monomer_detector(session)
     try:
-        img = non_monomer_detector.non_reactants_to_visualization(non_reactants)
-        save_image(img, os.path.join(session.images_dir, "non_reactants.png"), "Non-Reactants")
+        img_non_reactants = non_monomer_detector.non_reactants_to_visualization(session)
+        save_image(img_non_reactants, os.path.join(session.images_dir, "non_reactants.png"), "Non-Reactants")
     except Exception:
         pass
 
-    updated_inputs = non_monomer_detector.non_reactant_selection(
-        session.inputs, non_reactants
-    )
+    non_monomer_detector.non_reactant_selection(session)
 
     # === 5. Reaction Template Preparation ===
     prepare_reactions = PrepareReactions(session)
-    prepared_reactions = prepare_reactions.prepare_reactions(selected_reactions)
+    prepare_reactions.prepare_reactions(session)
 
     try:
         for highlight_type, filename in [
@@ -150,7 +143,7 @@ def AutoREACTER(input_file: str) -> None:
             ("delete", "templates_delete.png")
         ]:
             img = prepare_reactions.reaction_templates_highlighted_image_grid(
-                prepared_reactions, highlight_type=highlight_type
+                session, highlight_type=highlight_type
             )
             save_image(img, os.path.join(session.images_dir, filename))
     except Exception:
@@ -169,17 +162,13 @@ def AutoREACTER(input_file: str) -> None:
         sys.exit(0)
 
     # === 6. 3D Geometry Preparation ===
-    molecule_3d = Molecule3DPreparation(session)
-    updated_inputs_3d, prepared_reactions_3d = molecule_3d.prepare_molecule_3d_geometry(
-        updated_inputs, prepared_reactions
-    )
+    molecule3dpreparation = Molecule3DPreparation(session)
+    updated_inputs_with_3d_mols = molecule3dpreparation.prepare_molecule_3d_geometry(session)
 
     # === 7. Lunar API Processing ===
     ff_wrapper = FFWrapper(session)
-    ff_wrapper_results = ff_wrapper.generate_force_field_files(
-        updated_inputs=updated_inputs_3d, 
-        prepared_reactions=prepared_reactions_3d
-    )
+    ff_wrapper.generate_force_field_files(session)
+    
     print("\n")
     loading_message("Lunar API workflow completed. Proceeding to build REACTER files")
     time.sleep(1.5)
@@ -188,12 +177,10 @@ def AutoREACTER(input_file: str) -> None:
     # === 8. Build REACTER Input Files ===
     builder = REACTERFilesBuilder(
         session=session,
-        updated_inputs_with_3d_mols=updated_inputs_3d
     )
 
     reacter_files = builder.molecule_template_preparation(
-        ff_files=ff_wrapper_results,
-        prepared_reactions_with_3d_mols=prepared_reactions_3d
+        session=session,
     )
 
     # Move generated files to final output directory using RunDirectoryManager
@@ -203,17 +190,19 @@ def AutoREACTER(input_file: str) -> None:
         staging_dir=session.staging_dir,
         final_dir=session.output_dir
     )
+    
+    print(f"[OK] REACTER files successfully moved to {session.output_dir}")
 
     # === 9. Final simulation setup and output ===
     Simulation_setup_manager = SimulationSetupManager()
     updated_inputs_3d = Simulation_setup_manager.setup_and_write_simulation(
-        setup=updated_inputs_3d,
+        setup=updated_inputs_with_3d_mols,
         reacter_files=reacter_files,
         run_dir=session.output_dir
     )
 
     print("\n[INFO] AutoREACTER workflow completed successfully.\n")
-    print(f"Final REACTER files are located in: {session.output_dir}")
+    print(f"Final REACTER and LAMMPS files are located in: {session.output_dir}")
 
 
 if __name__ == "__main__":
@@ -223,7 +212,6 @@ if __name__ == "__main__":
     if not args:
         help_message()
         sys.exit(1)
-
 
     if any(opt in args for opt in inpput_strs):
         idx = next(idx for idx, arg in enumerate(args) if arg in inpput_strs)
@@ -239,4 +227,3 @@ if __name__ == "__main__":
         AutoREACTER(input_file)
     else:
         help_message()
-

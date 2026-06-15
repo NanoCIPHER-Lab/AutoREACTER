@@ -2,6 +2,7 @@ import json
 import shutil
 from pathlib import Path
 from dataclasses import dataclass
+from typing import Optional
 
 # Import internal modules
 from AutoREACTER.initialization import Initialization
@@ -9,6 +10,9 @@ from AutoREACTER.input_parser import InputParser
 from AutoREACTER.cache import GetCacheDir
 from AutoREACTER.detectors.functional_groups_detector import MonomerRole
 from AutoREACTER.detectors.reaction_detector import ReactionInstance
+from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import ReactionMetadata
+from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper import FFFiles
+
 
 @dataclass
 class Session:
@@ -23,7 +27,8 @@ class Session:
     monomer_roles: list[MonomerRole] = None
     reaction_instances: list[ReactionInstance] = None
     non_reactants: list[MonomerRole] = None
-    reaction_metadata: list[object] = None  # Placeholder for actual ReactionMetadata type
+    reaction_metadata: list[ReactionMetadata] = None  # Placeholder for actual ReactionMetadata type
+    ff_files: list[FFFiles] = None  # Placeholder for the actual FFFiles dataclass
 
 def _resolve_input_path(input_file_path: str) -> Path:
     """

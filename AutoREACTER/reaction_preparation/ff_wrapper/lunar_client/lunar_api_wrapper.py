@@ -24,12 +24,12 @@ from AutoREACTER.reaction_preparation.ff_wrapper.lunar_client.merge_builder impo
 from AutoREACTER.reaction_preparation.ff_wrapper.lunar_client.lunar_utils import loading_screen
 
 if TYPE_CHECKING:
-    from AutoREACTER.session import ARXSession
+    from AutoREACTER.session import Session
 
 class LunarAPIWrapper:
     """Orchestrates the multi-step LUNAR preparation workflow."""
 
-    def __init__(self, ARX: "ARXSession"):
+    def __init__(self, ARX: "Session"):
         self.session = ARX
         self.inputs = ARX.inputs
 

@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING
 from AutoREACTER.session import Session
 
 if TYPE_CHECKING:
-    from AutoREACTER.session import ARXSession
+    from AutoREACTER.session import Session
 
 
 class Molecule3DPreparationError(Exception):
@@ -58,7 +58,7 @@ class Molecule3DPreparation:
         full_templates_path: Directory for combined reactant/product complexes.
     """
 
-    def __init__(self, session: "ARXSession"):
+    def __init__(self, session: "Session"):
         """Initialize the 3D preparation utility using the shared AutoREACTER session.
 
         In AutoREACTER, session.staging_dir is the working/cache directory.
@@ -96,8 +96,7 @@ class Molecule3DPreparation:
         to the respective data objects.
 
         Args:
-            updated_inputs: Simulation setup containing monomer information.
-            prepared_reactions: List of reaction metadata objects.
+            session: The current Session containing validated inputs and reaction metadata.
 
         Returns:
             Updated simulation inputs and reaction metadata with 3D information added.
@@ -163,7 +162,7 @@ class Molecule3DPreparation:
                         f"Error optimizing product complex for reaction {reaction.reaction_id}: {str(e)}"
                     ) from e
 
-        return updated_inputs, prepared_reactions
+        return None
 
     def _separate_fragments_3d(
         self, mol: Mol,
