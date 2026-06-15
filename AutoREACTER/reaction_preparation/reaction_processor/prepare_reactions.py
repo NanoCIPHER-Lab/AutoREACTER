@@ -21,12 +21,15 @@ from rdkit.Chem import AllChem, Draw, rdmolops
 from PIL.Image import Image
 import pandas as pd
 
+from AutoREACTER import session
 from AutoREACTER.detectors.reaction_detector import ReactionInstance
 from AutoREACTER.reaction_preparation.reaction_processor.utils import (
     add_dict_as_new_columns, add_column_safe, compare_set, prepare_paths
 )
 from AutoREACTER.reaction_preparation.reaction_processor.walker import reaction_atom_walker
 from typing import TYPE_CHECKING
+
+from AutoREACTER.session import Session
 
 if TYPE_CHECKING:
     from AutoREACTER.session import ARXSession
@@ -103,18 +106,20 @@ class PrepareReactions:
 
     # --- PUBLIC ---
 
-    def prepare_reactions(self, reaction_instances: list[ReactionInstance]) -> list[ReactionMetadata]:
+    def prepare_reactions(self, session: Session) -> None:
         """
         Main pipeline: processes reaction instances, detects duplicates, and enriches metadata with template mappings.
         
         Args:
-            reaction_instances: List of detected reaction instances to process
+            session: The AutoREACTER session containing reaction instances to process
             
         Returns:
             List of processed ReactionMetadata objects with template mappings and edge atoms
         """
+        reaction_instances = session.reaction_instances
         reactions_metadata = self._process_reaction_instances(reaction_instances)
-        reaction_metadata = self._detect_duplicates(reactions_metadata)
+        reactions_metadata = self._detect_duplicates(reactions_metadata)
+        session.reaction_metadata = reactions_metadata
         
         for reaction in reactions_metadata:
             # Skip reactions marked as duplicates
@@ -159,7 +164,7 @@ class PrepareReactions:
             # Store the template mapping in the metadata for later use
             reaction.template_reactant_to_product_mapping = template_mapped_dict
 
-        return reaction_metadata
+        return None
     
     # --- PIPELINE STEPS (PRIVATE) ---
     
@@ -237,7 +242,7 @@ class PrepareReactions:
                                    csv_cache: Path, 
                                    reaction_tuple: list, 
                                    delete_atoms: bool = True,
-                                   reaction_metadata: Optional[list[ReactionMetadata]] = None
+                                   session: Session = None
                                    ) -> list[ReactionMetadata]:
         """
         Runs reactions on reactant pairs and builds metadata for each product set.
@@ -247,11 +252,12 @@ class PrepareReactions:
             csv_cache: Path to cache directory for saving CSVs
             reaction_tuple: List of reactant pairs to process
             delete_atoms: Whether to detect and track byproducts
-            reaction_metadata: Accumulator list for metadata objects
+            session: Session object to store reaction metadata
             
         Returns:
             Updated list of ReactionMetadata objects
         """
+        reaction_metadata = session.reaction_metadata if session and session.reaction_metadata is not None else []
         if reaction_metadata is None:
             reaction_metadata = []
         
@@ -332,8 +338,8 @@ class PrepareReactions:
                         activity_stats=True
                     )
                 )
-
-        return reaction_metadata
+        session.reaction_metadata = reaction_metadata
+        return None
     
     # --- CORE REACTION LOGIC ---
     
@@ -636,19 +642,20 @@ class PrepareReactions:
     
     def reaction_templates_highlighted_image_grid(
         self,
-        metadata_list: List[ReactionMetadata],
+        session: Session,
         highlight_type: str = "template",
     ) -> Image:
         """
         Generates grid image of reactions with highlighted atoms based on type.
         
         Args:
-            metadata_list: List of reaction metadata to visualize
+            session: The AutoREACTER session containing reaction metadata to visualize
             highlight_type: Type of atoms to highlight - "template", "edge", "initiators", or "delete"
             
         Returns:
             PIL Image containing 2-column grid of reactant-product pairs with highlighted atoms
         """
+        metadata_list = session.reaction_metadata
         mols = []
         highlight_lists = []
         highlight_colors = []

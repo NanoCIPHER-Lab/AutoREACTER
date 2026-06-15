@@ -23,6 +23,7 @@ class Session:
     monomer_roles: list[MonomerRole] = None
     reaction_instances: list[ReactionInstance] = None
     non_reactants: list[MonomerRole] = None
+    reaction_metadata: list[object] = None  # Placeholder for actual ReactionMetadata type
 
 def _resolve_input_path(input_file_path: str) -> Path:
     """

@@ -27,6 +27,8 @@ from AutoREACTER.input_parser import SimulationSetup
 from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import ReactionMetadata
 from typing import TYPE_CHECKING
 
+from AutoREACTER.session import Session
+
 if TYPE_CHECKING:
     from AutoREACTER.session import ARXSession
 
@@ -84,8 +86,7 @@ class Molecule3DPreparation:
 
     def prepare_molecule_3d_geometry(
         self,
-        updated_inputs: SimulationSetup,
-        prepared_reactions: list[ReactionMetadata],
+        session: Session,
     ) -> tuple[SimulationSetup, list[ReactionMetadata]]:
         """Prepare 3D geometries for all monomers and reaction complexes.
 
@@ -106,6 +107,7 @@ class Molecule3DPreparation:
             Molecule3DPreparationError: If RDKit Mol object is missing for a monomer.
         """
         # Process individual monomer molecules
+        updated_inputs, prepared_reactions = session.inputs, session.reaction_metadata
         monomer_entries = updated_inputs.monomers
         for entry in monomer_entries:
             if not entry.status:
