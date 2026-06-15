@@ -10,7 +10,6 @@ from PIL import Image
 
 from AutoREACTER.session import read_input
 from AutoREACTER.input_parser import InputParser
-from AutoREACTER.cache import RunDirectoryManager
 from AutoREACTER.detectors.functional_groups_detector import FunctionalGroupsDetector
 from AutoREACTER.detectors.reaction_detector import ReactionDetector
 from AutoREACTER.detectors.non_monomer_detector import NonReactantsDetector
@@ -135,7 +134,7 @@ def AutoREACTER(input_file: str) -> None:
 
     # === 5. Reaction Template Preparation ===
     prepare_reactions = PrepareReactions(session)
-    prepare_reactions.prepare_reactions()
+    prepare_reactions.prepare_reactions(session)
 
     try:
         for highlight_type, filename in [
@@ -177,30 +176,15 @@ def AutoREACTER(input_file: str) -> None:
     print("\n")
 
     # === 8. Build REACTER Input Files ===
-    builder = REACTERFilesBuilder(
-        session=session,
-    )
-
-    reacter_files = builder.molecule_template_preparation(
-        session=session,
-    )
-
-    # Move generated files to final output directory using RunDirectoryManager
-    run_manager = RunDirectoryManager(session.output_dir.parent)
-    reacter_files = run_manager.move_reacter_files(
-        reacter_files,
-        staging_dir=session.staging_dir,
-        final_dir=session.output_dir
-    )
+    builder = REACTERFilesBuilder(session=session)
+    builder.molecule_template_preparation(session=session)
     
     print(f"[OK] REACTER files successfully moved to {session.output_dir}")
 
     # === 9. Final simulation setup and output ===
     Simulation_setup_manager = SimulationSetupManager()
-    updated_inputs_3d = Simulation_setup_manager.setup_and_write_simulation(
-        setup=updated_inputs_with_3d_mols,
-        reacter_files=reacter_files,
-        run_dir=session.output_dir
+    Simulation_setup_manager.setup_and_write_simulation(
+        session=session
     )
 
     print("\n[INFO] AutoREACTER workflow completed successfully.\n")

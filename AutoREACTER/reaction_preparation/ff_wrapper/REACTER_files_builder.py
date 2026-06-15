@@ -262,7 +262,7 @@ class REACTERFilesBuilder:
             Formatted string containing angle information.
         dihedral_section : str
             Formatted string containing dihedral information.
-        improper_section : str
+        impropers_section : str
             Formatted string containing improper dihedral information.
         
         Returns:
@@ -690,7 +690,7 @@ Types
         return ff_dest, in_dest, molecule_files
 
 
-    def molecule_template_preparation(self, session: "Session") -> REACTERFiles:
+    def molecule_template_preparation(self, session: "Session") -> None:
         """
         Top-level orchestrator that loops over reactions and prepares template
         files and mappings for each reaction.
@@ -705,11 +705,10 @@ Types
 
         Returns
         -------
-        REACTERFiles
-        A complete collection of output files generated from the preparation process,
+        None
         """
         ff_files = session.ff_files
-        prepared_reactions_with_3d_mols = session.inputs
+        prepared_reactions_with_3d_mols = session.reaction_metadata # <--- CHANGED FROM session.inputs
         template_files = []
         pre_and_post_files = ff_files.template_files
         force_field_data, in_file, molecule_files = self._copy_lunar_files_to_cache(ff_files)
@@ -765,11 +764,23 @@ Types
                     lmp_molecule_file = Path(post_out)
                 )
             ))
-
-        return REACTERFiles(
+        
+        reacter_files = REACTERFiles(
             force_field_data=force_field_data,
             in_file=in_file,
             molecule_files=molecule_files,
             template_files=template_files
         )
+        from AutoREACTER.cache import RunDirectoryManager # Import here to avoid circular dependency issues, since RunDirectoryManager also imports REACTERFilesBuilder
+        # Move generated files to final output directory using RunDirectoryManager
+        run_manager = RunDirectoryManager(session.output_dir.parent)
+        reacter_files = run_manager.move_reacter_files(
+            reacter_files,
+            staging_dir=session.staging_dir,
+            final_dir=session.output_dir
+        )
 
+        session.reacter_files = reacter_files
+
+
+        return None

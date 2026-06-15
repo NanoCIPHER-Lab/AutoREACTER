@@ -7,10 +7,11 @@ from dataclasses import dataclass
 
 # Import internal modules
 from AutoREACTER.initialization import Initialization
-from AutoREACTER.input_parser import InputParser
+from AutoREACTER.input_parser import InputParser, SimulationSetup
 from AutoREACTER.detectors.reaction_detector import ReactionInstance
 from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import ReactionMetadata
 from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper import FFFiles
+from AutoREACTER.reaction_preparation.ff_wrapper.REACTER_files_builder import REACTERFiles
 if TYPE_CHECKING:
     from AutoREACTER.detectors.functional_groups_detector import MonomerRole
 
@@ -20,7 +21,7 @@ class Session:
     Holds the validated inputs and directory paths for a single AutoREACTER run.
     This acts as the 'state object' passed through the pipeline.
     """
-    inputs: object
+    inputs: SimulationSetup
     staging_dir: Path
     output_dir: Path
     images_dir: Path
@@ -29,6 +30,7 @@ class Session:
     non_reactants: list["MonomerRole"] = None
     reaction_metadata: list[ReactionMetadata] = None  # Placeholder for actual ReactionMetadata type
     ff_files: list[FFFiles] = None  # Placeholder for the actual FFFiles dataclass
+    reacter_files: REACTERFiles = None  # Placeholder for the actual REACTERFiles dataclass
 
 def _resolve_input_path(input_file_path: str) -> Path:
     """
