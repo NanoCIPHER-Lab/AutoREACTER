@@ -1,10 +1,10 @@
 """
 AutoREACTER
 
-A Python package for automated generation of REACTER-ready LAMMPS inputs
-for selected step-growth polymerization reactions.
+AutoREACTER is a tool for automated reaction-based molecular system generation.
 """
 from importlib.metadata import version, PackageNotFoundError
+from pathlib import Path
 
 try:
     __version__ = version("AutoREACTER")
@@ -16,6 +16,7 @@ __author__ = "Janitha Mahanthe, Jacob Gissinger"
 
 __package__ = "AutoREACTER"
 __release__ = __version__
+__license__ = "MIT"
 
 __authors__ = [
     "Janitha Mahanthe",
@@ -98,27 +99,29 @@ def _ensure_workflow() -> ARXCLI:
 # PUBLIC API
 # ===================================================================
 
-
-def load(input_file: str) -> None:
+def load(input_file):
     """
-    Create (or replace) the global ARX workflow session.
-
-    Reads the JSON/YAML input file, initialises internal state, performs
-    functional-group detection, and sets up the working directories.  Once
-    this returns successfully the other ``arx.*`` functions are ready to use.
+    Create or replace the active AutoREACTER workflow session.
 
     Parameters
     ----------
-    input_file : str
-        Path to the input configuration file (JSON or YAML).
+    input_file : str or pathlib.Path
+        Path to the AutoREACTER input JSON file.
 
     Returns
     -------
-    None
-        Sets the module-level ``_active_workflow`` as a side-effect.
+    ARXCLI
+        Active AutoREACTER workflow object.
     """
     global _active_workflow
+
+    input_file = Path(input_file).expanduser().resolve()
+
+    if not input_file.exists():
+        raise FileNotFoundError(f"Input file not found: {input_file}")
+
     _active_workflow = ARXCLI(input_file)
+    return _active_workflow
 
 
 def show_molecules() -> Image:
@@ -243,7 +246,7 @@ __all__ = [
     "__version__",
     "__release__",
     "__authors__",
-    "__author__",
+    "__license__",
     "load",
     "show_molecules",
     "show_functional_groups",

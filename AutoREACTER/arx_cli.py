@@ -112,6 +112,8 @@ class ARXCLI:
     # Public visualisation / inspection helpers
     # ------------------------------------------------------------------
 
+    
+
     def show_molecules(self) -> Image:
         """
         Return a PIL/rdkit image grid of the initial molecules (monomers).
@@ -318,15 +320,50 @@ class ARXCLI:
             self.img_dir / "non_reactants.png",
         )
 
-    def _save_rdkit_img(self, img, path: Path):
+    def _save_rdkit_img(self, img: Image, path: Path):
         """
-        Save a PIL/rdkit image to the given file path.
+        Save an RDKit/PIL/IPython image to disk.
 
         Parameters
         ----------
-        img : Image
-            The image object (must have a ``save`` method).
-        path : Path
+        img : PIL.Image.Image
+            Image returned by RDKit or IPython display.
+        path : pathlib.Path
             Destination file path.
         """
-        img.save(path)
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        if img is None:
+            raise ValueError("No image was generated. Cannot save molecule image.")
+
+        # Case 1: PIL image
+        if hasattr(img, "save"):
+            img.save(path)
+            return
+
+        # Case 2: raw PNG/SVG bytes
+        if isinstance(img, (bytes, bytearray)):
+            path.write_bytes(img)
+            return
+
+        # Case 3: IPython.display.Image usually stores image bytes in .data
+        data = getattr(img, "data", None)
+
+        if isinstance(data, (bytes, bytearray)):
+            path.write_bytes(data)
+            return
+
+        if isinstance(data, str):
+            path.write_text(data, encoding="utf-8")
+            return
+
+        # Case 4: SVG string
+        if isinstance(img, str):
+            path.write_text(img, encoding="utf-8")
+            return
+
+        raise TypeError(
+            f"Unsupported image type: {type(img)}. "
+            "Expected PIL image, bytes, SVG string, or IPython display image."
+        )
