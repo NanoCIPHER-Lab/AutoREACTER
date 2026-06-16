@@ -94,7 +94,7 @@ def AutoREACTER(input_file: str) -> None:
     # Generate initial visualization
     try:
         input_parser = InputParser()
-        img = input_parser.initial_molecules_image_grid(session.inputs)
+        img = input_parser.initial_molecules_image_grid(session)
         # monomers = session.inputs.monomers # debug print to verify monomers are being processed
         # print(monomers)
         save_image(img, os.path.join(session.images_dir, "monomers.png"), "Monomers Grid")
