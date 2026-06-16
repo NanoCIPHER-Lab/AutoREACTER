@@ -1,4 +1,31 @@
 """
+AutoREACTER
+
+A Python package for automated generation of REACTER-ready LAMMPS inputs
+for selected step-growth polymerization reactions.
+"""
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("AutoREACTER")
+except PackageNotFoundError:
+    __version__ = "0.2.3"
+
+__title__ = "AutoREACTER"
+__author__ = "Janitha Mahanthe, Jacob Gissinger"
+
+__package__ = "AutoREACTER"
+__release__ = __version__
+
+__authors__ = [
+    "Janitha Mahanthe",
+    "Jacob Gissinger",
+]
+
+__author__ = ", ".join(__authors__)
+
+
+"""
 Public API for the AutoREACTER (ARX) pipeline.
 
 This module exposes a **global-session** interface: call :func:`load` once to
@@ -212,6 +239,11 @@ def process() -> None:
 
 # Expose only these commands to the user
 __all__ = [
+    "__title__",
+    "__version__",
+    "__release__",
+    "__authors__",
+    "__author__",
     "load",
     "show_molecules",
     "show_functional_groups",

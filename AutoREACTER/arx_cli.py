@@ -12,6 +12,7 @@ Classes:
 """
 
 from pathlib import Path
+from PIL import Image
 
 from AutoREACTER.session import read_input
 from AutoREACTER.input_parser import InputParser
@@ -79,7 +80,7 @@ class ARXCLI:
     # Shared error-handler instance across all ARXCLI objects
     EH = ErrorHandler()
 
-    def __init__(self, input: Path):
+    def __init__(self, input: Path) -> None:
         # Initialise the waterfall tracker (all stages False)
         self.error_handler = self.EH.waterfall_order()
 
@@ -111,7 +112,7 @@ class ARXCLI:
     # Public visualisation / inspection helpers
     # ------------------------------------------------------------------
 
-    def show_molecules(self):
+    def show_molecules(self) -> Image:
         """
         Return a PIL/rdkit image grid of the initial molecules (monomers).
 
@@ -122,7 +123,7 @@ class ARXCLI:
         """
         return InputParser().initial_molecules_image_grid(self.session)
 
-    def show_functional_groups(self):
+    def show_functional_groups(self) -> Image:
         """
         Return an image grid with functional groups highlighted on each molecule.
 
@@ -133,10 +134,11 @@ class ARXCLI:
         Image
             Grid image with functional groups annotated.
         """
-        self._ensure_fg_detected()
+        if not self._fg_detected:
+            self._ensure_fg_detected()
         return FunctionalGroupsDetector().functional_group_highlighted_molecules_image_grid(self.session)
 
-    def show_reactions(self):
+    def show_reactions(self) -> Image:
         """
         Return an image grid showing the detected reactions.
 
@@ -147,14 +149,15 @@ class ARXCLI:
         Image
             Grid image of available reactions.
         """
-        self._ensure_reactions_detected()
+        if not self._reactions_detected:
+            self._ensure_reactions_detected()
         return ReactionDetector().available_reaction_image_grid(self.session)
 
     # ------------------------------------------------------------------
     # Selection steps
     # ------------------------------------------------------------------
 
-    def select_reactions(self):
+    def select_reactions(self) -> None:
         """
         Interactively (or automatically) select which reactions to proceed with.
 
@@ -162,7 +165,8 @@ class ARXCLI:
         selection is performed automatically.  Marks the 'select_reactions'
         waterfall stage as complete.
         """
-        self._ensure_reactions_detected()
+        if not self._reactions_detected:
+            self._ensure_reactions_detected()
 
         if not self._reactions_selected:
             # Prompt only when there is genuine ambiguity
@@ -174,7 +178,7 @@ class ARXCLI:
             self._reactions_selected = True
             self.error_handler["select_reactions"] = True
 
-    def show_non_reactants(self):
+    def show_non_reactants(self) -> Image:
         """
         Return an image visualising detected non-reactant species.
 
@@ -186,11 +190,12 @@ class ARXCLI:
         Image
             Visualisation of non-reactant molecules.
         """
-        self._ensure_non_reactants_detected()
+        if not self._non_reactants_detected:
+            self._ensure_non_reactants_detected()
         self.error_handler["select_non_reactants"] = True
         return NonReactantsDetector().non_reactants_to_visualization(self.session)
 
-    def select_non_reactants(self):
+    def select_non_reactants(self) -> None:
         """
         Interactively (or automatically) select non-reactant species.
 
@@ -245,7 +250,7 @@ class ARXCLI:
         Molecule3DPreparation(self.session).prepare_molecule_3d_geometry(self.session)
 
         FFWrapper(self.session).generate_force_field_files(self.session)
-        
+
         REACTERFilesBuilder(self.session).molecule_template_preparation(self.session)
 
         SimulationSetupManager().setup_and_write_simulation(self.session)
