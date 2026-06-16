@@ -34,6 +34,7 @@ All public symbols are listed in :data:`__all__`.
 """
 
 from .arx_cli import ARXCLI
+from PIL import Image
 
 # ---------------------------------------------------------------------------
 # Global session handle – holds the *single* active workflow instance.
@@ -93,7 +94,7 @@ def load(input_file: str) -> None:
     _active_workflow = ARXCLI(input_file)
 
 
-def show_molecules() -> None:
+def show_molecules() -> Image:
     """
     Display the 2D structures of all molecules in the current session.
 
@@ -102,13 +103,13 @@ def show_molecules() -> None:
 
     Returns
     -------
-    None
-        Images are saved to the session's output directory.
+    Image
+        Visualisation of all molecules, saved to the session's output directory.
     """
     return _ensure_workflow().show_molecules()
 
 
-def show_functional_groups() -> None:
+def show_functional_groups() -> Image:
     """
     Display the detected functional groups for each molecule.
 
@@ -118,13 +119,13 @@ def show_functional_groups() -> None:
 
     Returns
     -------
-    None
-        Images are saved to the session's output directory.
+    Image
+        Visualisation of functional groups, saved to the session's output directory.
     """
     return _ensure_workflow().show_functional_groups()
 
 
-def show_reactions() -> None:
+def show_reactions() -> Image:
     """
     Display the chemical reactions identified by the pipeline.
 
@@ -133,8 +134,8 @@ def show_reactions() -> None:
 
     Returns
     -------
-    None
-        Reaction diagrams are saved to the session's output directory.
+    Image
+        Visualisation of reactions, saved to the session's output directory.
     """
     return _ensure_workflow().show_reactions()
 
@@ -156,7 +157,7 @@ def select_reactions() -> None:
     _ensure_workflow().select_reactions()
 
 
-def show_non_reactants() -> None:
+def show_non_reactants() -> Image:
     """
     Display the non-reactant species detected in the simulation box.
 
@@ -165,8 +166,8 @@ def show_non_reactants() -> None:
 
     Returns
     -------
-    None
-        Visualisations are saved to the session's output directory.
+    Image
+        Visualisation of non-reactant species, saved to the session's output directory.
     """
     return _ensure_workflow().show_non_reactants()
 
