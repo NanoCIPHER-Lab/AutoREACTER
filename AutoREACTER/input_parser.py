@@ -35,6 +35,8 @@ class SmilesValidationError(InputError):
 class DuplicateMonomerError(InputError):
     """Raised when duplicate monomer definitions are detected."""
 
+class CompatibilityError(InputError):
+    """Raised when input combinations are incompatible with the current workflow."""
 
 # Type aliases for clarity and validation.
 CompositionMethodType = Literal["counts", "ratio"]
@@ -46,8 +48,10 @@ ForceFieldType = Literal[
     "CVFF",
     "Clay-FF",
     "DRIEDING",
-    "OPLS-AA",
+    "OPLSAA",
 ]
+
+
 
 
 @dataclass(slots=True)
@@ -87,20 +91,14 @@ class MonomerEntry:
 
 
 @dataclass(slots=True)
-class Replica:
+class Simulation:
     """
-    Structured representation of one simulation case.
-
-    This class was originally introduced when the input schema used the
-    top-level JSON key "replicas". The public input schema now uses
-    "simulations", but this internal class is still kept as Replica because it
-    represents one validated simulation condition/case used throughout the
-    workflow.
+    Container for individual simulation replica/system definitions.
 
     Attributes:
-        tag: Unique identifier for the simulation case.
-        temperature: Target temperature in Kelvin.
-        density: Target density in g/cm^3.
+        tag: Unique identifier for the replica.
+        temperature: Replica temperature in Kelvin.
+        density: Replica density in g/cm^3.
         monomer_counts: Mapping of monomer names to counts in counts mode.
         monomer_ratios: Mapping of monomer names to ratios in ratio mode.
         total_atoms: Total target atom count, required for ratio mode.
@@ -134,7 +132,7 @@ class SimulationSetup:
         density: List of density values in g/cm^3.
         force_field: Force field name. Defaults to "PCFF" if not provided.
         monomers: List of MonomerEntry objects representing the system composition.
-        replicas: List of validated Replica objects.
+        simulations: List of validated Simulation objects.
         composition_method: Composition method, either "counts" or "ratio".
         composition: Normalized composition dictionary from the input simulations.
         ratio: Optional mapping of monomer IDs to ratios.
@@ -147,7 +145,7 @@ class SimulationSetup:
     density: list[float]
     force_field: str | None
     monomers: list[MonomerEntry]
-    replicas: list[Replica] | None = None
+    simulations: list[Simulation] | None = None
     composition_method: CompositionMethodType | None = None
     composition: dict[str, Any] | None = None
     ratio: dict[int, float] | None = None
@@ -177,24 +175,24 @@ class InputParser:
         self.validate_basic_format(inputs)
 
         simulation_name = inputs["simulation_name"]
-        simulations_list = inputs["simulations"]
+        simulations_list = inputs["simulations"] 
         composition_method = self._get_inputs_mode(simulations_list)
 
-        validated_replicas = self._validate_replicas(
+        validated_simulations = self._validate_simulations(
             simulations_list,
             composition_method,
         )
 
         self._validate_system_monomer_keys(
             inputs,
-            validated_replicas["systems"],
+            validated_simulations["systems"],
             composition_method,
         )
 
         monomers = self._validate_monomer_entry(
             inputs,
             composition_method,
-            validated_replicas["systems"],
+            validated_simulations["systems"],
         )
 
         force_field = self._validate_force_field(
@@ -203,12 +201,12 @@ class InputParser:
 
         return SimulationSetup(
             simulation_name=simulation_name,
-            temperature=validated_replicas["temperatures"],
-            density=validated_replicas["density"],
+            temperature=validated_simulations["temperatures"],
+            density=validated_simulations["density"],
             monomers=monomers,
-            replicas=validated_replicas["replicas"],
+            simulations=validated_simulations["simulations"],
             composition_method=composition_method,
-            composition=validated_replicas,
+            composition=validated_simulations,
             force_field=force_field,
         )
 
@@ -272,17 +270,13 @@ class InputParser:
                 f"Expected input to be a dictionary. Got {type(inputs).__name__} instead."
             )
 
-        if "simulations" not in inputs and "replicas" in inputs:
-            raise InputSchemaError(
-                "Input key 'replicas' has been renamed to 'simulations'. Please update your input schema."
-            )
-
         required_keys = ["simulation_name", "simulations", "monomers"]
         for key in required_keys:
             if key not in inputs:
                 raise InputSchemaError(
                     f"Missing required key: {key!r} in inputs dictionary."
                 )
+            
 
     def _get_inputs_mode(self, simulations_list: list) -> CompositionMethodType:
         """
@@ -296,7 +290,7 @@ class InputParser:
 
         Raises:
             InputSchemaError: If the list is invalid or mode cannot be inferred.
-            InputConflictError: If a replica contains both counts and ratios.
+            InputConflictError: If a simulation contains both counts and ratios.
         """
         if not isinstance(simulations_list, list) or len(simulations_list) == 0:
             raise InputSchemaError(
@@ -305,18 +299,18 @@ class InputParser:
 
         detected_modes: set[CompositionMethodType] = set()
 
-        for replica in simulations_list:
-            if not isinstance(replica, dict):
+        for simulation in simulations_list:
+            if not isinstance(simulation, dict):
                 raise InputSchemaError(
-                    f"Each replica must be a dictionary. Got {type(replica).__name__} instead."
+                    f"Each simulation must be a dictionary. Got {type(simulation).__name__} instead."
                 )
 
-            has_counts = "monomer_counts" in replica
-            has_ratios = "monomer_ratios" in replica
+            has_counts = "monomer_counts" in simulation
+            has_ratios = "monomer_ratios" in simulation
 
             if has_counts and has_ratios:
                 raise InputConflictError(
-                    "Each replica must contain either 'monomer_counts' or 'monomer_ratios', not both."
+                    "Each simulation must contain either 'monomer_counts' or 'monomer_ratios', not both."
                 )
 
             if has_counts:
@@ -325,7 +319,7 @@ class InputParser:
                 detected_modes.add("ratio")
             else:
                 raise InputSchemaError(
-                    "Could not infer composition method. Replicas must contain either "
+                    "Could not infer composition method. Simulation must contain either "
                     "'monomer_counts' or 'monomer_ratios'."
                 )
 
@@ -385,31 +379,28 @@ class InputParser:
             )
 
         return density_value
+    
+    _FF_ALIASES: dict[str, ForceFieldType] = {
+        "pcff-iff": "PCFF-IFF",
+        "pcff": "PCFF",
+        "compass": "Compass",
+        "cvff-iff": "CVFF-IFF",
+        "cvff": "CVFF",
+        "clay-ff": "Clay-FF",
+        "clayff": "Clay-FF",     # common variation
+        "dreiding": "DRIEDING",  # correct spelling
+        "drieding": "DRIEDING",  # catching the typo
+        "oplsaa": "OPLSAA",
+        "opls": "OPLSAA",        # mapped to OPLSAA
+        "opls-aa": "OPLSAA",     # mapped to OPLSAA
+        "gaff": "GAFF",
+    }
 
-    def _validate_force_field(self, force_field: Any) -> str:
+    
+    def _validate_force_field(self, force_field: Any) -> ForceFieldType:
         """
-        Validates the force field input.
-
-        Args:
-            force_field: Force field name as a string.
-
-        Returns:
-            Validated force field name.
-
-        Raises:
-            InputSchemaError: If force field is unsupported.
+        Validates and normalizes the force field input.
         """
-        allowed: set[ForceFieldType] = {
-            "PCFF-IFF",
-            "PCFF",
-            "Compass",
-            "CVFF-IFF",
-            "CVFF",
-            "Clay-FF",
-            "DRIEDING",
-            "OPLS-AA",
-        }
-
         if force_field is None:
             return "PCFF"
 
@@ -418,10 +409,20 @@ class InputParser:
                 f"'force_field' must be a non-empty string. Got: {force_field!r}"
             )
 
-        if force_field not in allowed:
+        normalized_input = force_field.strip().lower()
+
+        if normalized_input not in self._FF_ALIASES:
             raise InputSchemaError(f"Unsupported force field: {force_field!r}")
 
-        return force_field
+        canonical_force_field = self._FF_ALIASES[normalized_input]
+
+        if canonical_force_field in ["OPLSAA", "GAFF"]:
+            raise CompatibilityError(
+                f"Force field '{canonical_force_field}' is currently not supported in the LUNAR workflow. "
+                "Please use a supported force field."
+            )
+
+        return canonical_force_field
 
     def _validate_composition(
         self,
@@ -747,72 +748,72 @@ class InputParser:
         seen_monomer_list.append(current_monomer)
         return seen_monomer_list
 
-    def _validate_single_replica(
+    def _validate_single_simulation(
         self,
-        replica: Replica,
+        simulation: Simulation,
         method: CompositionMethodType,
     ) -> None:
         """
-        Validates one Replica object after initial construction.
+        Validates one Simulation object after initial construction.
         """
-        if not isinstance(replica.tag, str) or not replica.tag.strip():
+        if not isinstance(simulation.tag, str) or not simulation.tag.strip():
             raise InputSchemaError(
                 "Each system must include a non-empty 'tag'."
             )
 
-        if isinstance(replica.temperature, bool) or not isinstance(replica.temperature, (int, float)) or replica.temperature <= 0:
+        if isinstance(simulation.temperature, bool) or not isinstance(simulation.temperature, (int, float)) or simulation.temperature <= 0:
             raise NumericFieldError(
-                f"Replica '{replica.tag}' has invalid temperature."
+                f"Simulation '{simulation.tag}' has invalid temperature."
             )
 
-        if isinstance(replica.density, bool) or not isinstance(replica.density, (int, float)) or replica.density <= 0:
+        if isinstance(simulation.density, bool) or not isinstance(simulation.density, (int, float)) or simulation.density <= 0:
             raise NumericFieldError(
-                f"Replica '{replica.tag}' has invalid density."
+                f"Simulation '{simulation.tag}' has invalid density."
             )
 
         if method == "counts":
-            if not isinstance(replica.monomer_counts, dict) or not replica.monomer_counts:
+            if not isinstance(simulation.monomer_counts, dict) or not simulation.monomer_counts:
                 raise InputSchemaError(
                     "'monomer_counts' must be provided in counts mode."
                 )
 
-            for monomer, value in replica.monomer_counts.items():
+            for monomer, value in simulation.monomer_counts.items():
                 if isinstance(value, bool) or not isinstance(value, int) or value < 0:
                     raise NumericFieldError(
                         f"Invalid count for monomer {monomer!r}: {value!r}"
                     )
 
         elif method == "ratio":
-            if isinstance(replica.total_atoms, bool) or not isinstance(replica.total_atoms, int) or replica.total_atoms <= 0:
+            if isinstance(simulation.total_atoms, bool) or not isinstance(simulation.total_atoms, int) or simulation.total_atoms <= 0:
                 raise NumericFieldError(
                     "'total_atoms' must be a positive integer in ratio mode."
                 )
 
-            if not isinstance(replica.monomer_ratios, dict) or not replica.monomer_ratios:
+            if not isinstance(simulation.monomer_ratios, dict) or not simulation.monomer_ratios:
                 raise InputSchemaError(
                     "'monomer_ratios' must be provided in ratio mode."
                 )
 
-            for monomer, value in replica.monomer_ratios.items():
+            for monomer, value in simulation.monomer_ratios.items():
                 if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
                     raise NumericFieldError(
                         f"Invalid ratio value for monomer {monomer!r}: {value!r}"
                     )
 
-    def _validate_replicas(
+    def _validate_simulations(
         self,
         systems: list[dict],
         method: CompositionMethodType,
     ) -> dict:
         """
-        Validates the 'simulations' section of the input.
+        Validates the 'simulation' section of the input.
 
         Args:
             systems: List of simulation dictionaries.
             method: Composition method, either "counts" or "ratio".
 
         Returns:
-            Normalized simulations dictionary.
+            Normalized simulation dictionary.
         """
         if not isinstance(systems, list) or not systems:
             raise InputSchemaError(
@@ -822,7 +823,7 @@ class InputParser:
         seen_tags: set[str] = set()
         temperatures: list[float] = []
         density: list[float] = []
-        replicas: list[Replica] = []
+        simulations: list[Simulation] = []
         reference_ratios: dict | None = None
 
         for system in systems:
@@ -883,7 +884,7 @@ class InputParser:
                         "All systems must use identical 'monomer_ratios'."
                     )
 
-                replica = Replica(
+                simulation = Simulation(
                     tag=system["tag"],
                     temperature=system["temperature"],
                     density=system["density"],
@@ -892,8 +893,8 @@ class InputParser:
                     total_atoms=total_atoms,
                 )
 
-                self._validate_single_replica(replica, method)
-                replicas.append(replica)
+                self._validate_single_simulation(simulation, method)
+                simulations.append(simulation)
 
             elif method == "counts":
                 counts = system.get("monomer_counts")
@@ -914,7 +915,7 @@ class InputParser:
                         "'total_atoms' should not appear in counts mode."
                     )
 
-                replica = Replica(
+                simulation = Simulation(
                     tag=system["tag"],
                     temperature=system["temperature"],
                     density=system["density"],
@@ -923,15 +924,15 @@ class InputParser:
                     total_atoms=None,
                 )
 
-                self._validate_single_replica(replica, method)
-                replicas.append(replica)
+                self._validate_single_simulation(simulation, method)
+                simulations.append(simulation)
 
         return {
             "method": method,
             "temperatures": temperatures,
             "density": density,
             "systems": systems,
-            "replicas": replicas,
+            "simulations": simulations,
         }
 
 
