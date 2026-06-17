@@ -12,8 +12,10 @@ Classes:
 """
 
 from contextlib import contextmanager
+import os
 from pathlib import Path
 import sys
+import threading
 from PIL import Image
 
 from AutoREACTER.session import read_input
@@ -93,8 +95,8 @@ class ARXCLI:
         # Parse the input file and create the session
         self.session = read_input(abs_path)
         self.img_dir = self.session.images_dir
-        with open(self.session.output_dir / "AutoREACTER.log", 'w') as f:
-            f.write("--- Starting AutoREACTER Session ---\n")
+        # with open(self.session.output_dir / "AutoREACTER.log", 'w') as f:
+        #     f.write("--- Starting AutoREACTER Session ---\n")
 
         # Save an initial grid image of all monomers
         self._save_rdkit_img(
@@ -417,15 +419,75 @@ class ARXCLI:
     @contextmanager
     def _writer(self, filename="AutoREACTER.log"):
         """
-        Helper function to temporarily redirect standard output to a text file.
-        Uses append mode ('a') so multiple steps combine into one file.
+        Helper function to tee standard output to both the terminal AND a text file.
+        Catches Python prints AND system-level subprocess output.
         """
         self.session.output_dir.mkdir(parents=True, exist_ok=True)
-        # Note the 'a' here instead of 'w'
-        with open(self.session.output_dir / filename, 'a') as f:
-            original_stdout = sys.stdout
-            sys.stdout = f
-            try:
-                yield
-            finally:
-                sys.stdout = original_stdout
+        log_path = self.session.output_dir / filename
+
+        # 1. Save the original OS-level terminal output
+        original_stdout_fd = os.dup(1)
+
+        # 2. Create an OS-level pipe (a temporary tunnel for our data)
+        pipe_read_fd, pipe_write_fd = os.pipe()
+
+        def tee_thread():
+            """Background worker that reads the pipe and writes to both destinations."""
+            with open(log_path, 'a') as log_file:
+                while True:
+                    # Read incoming data from the pipe
+                    data = os.read(pipe_read_fd, 1024)
+                    
+                    # If the pipe is closed, stop the thread
+                    if not data:
+                        break
+                        
+                    # Write to the actual terminal
+                    os.write(original_stdout_fd, data)
+                    
+                    # Write to the log file
+                    log_file.write(data.decode('utf-8', errors='replace'))
+                    log_file.flush()
+
+        # 3. Start the background thread
+        thread = threading.Thread(target=tee_thread)
+        thread.start()
+
+        # Flush Python's buffers before we switch the tracks
+        sys.stdout.flush()
+
+        try:
+            # 4. Redirect all OS-level output to the write-end of our pipe
+            os.dup2(pipe_write_fd, 1)
+            yield
+            
+        finally:
+            # Flush Python buffers one last time
+            sys.stdout.flush()
+            
+            # 5. Restore the original terminal output
+            os.dup2(original_stdout_fd, 1)
+            
+            # 6. Close the write end of the pipe (this tells the thread to stop)
+            os.close(pipe_write_fd)
+            
+            # 7. Wait for the thread to finish processing the last bits of data
+            thread.join()
+            
+            # 8. Clean up remaining file descriptors
+            os.close(pipe_read_fd)
+            os.close(original_stdout_fd)
+
+    # ------------------------------------------------------------------
+    # Magic Methods
+    # ------------------------------------------------------------------
+
+    def __repr__(self) -> str:
+        """
+        Provides a clean string representation for interactive environments (like Jupyter).
+        Prevents the default '<...ARXCLI object at 0x...>' memory address from printing.
+        """
+        # Safely grab the filename if it exists
+        if hasattr(self, 'input'):
+            return ""
+        return ""
