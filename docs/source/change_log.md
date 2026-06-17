@@ -20,14 +20,6 @@ You can keep Unreleased changes here until you are ready to label a new version.
 This serves two purposes:
     People can see what changes they might expect in upcoming releases
     At release time, you can move the Unreleased section changes into a new release version section.
-
-Draft format: (use this for future releases, and remove the comments when you are ready to publish a new version)
-## [X.Y.Z] - YYYY-MM-DD
-### Added
-### Changed
-### Deprecated
-### Removed
-### Fixed
  -->
 
 ## [0.2.3] - [Unreleased]
