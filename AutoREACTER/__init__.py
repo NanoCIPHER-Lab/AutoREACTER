@@ -3,14 +3,7 @@ AutoREACTER
 
 AutoREACTER is a tool for automated reaction-based molecular system generation.
 """
-from importlib.metadata import version, PackageNotFoundError
-from pathlib import Path
-from typing import Optional
-
-try:
-    __version__ = version("AutoREACTER")
-except PackageNotFoundError:
-    __version__ = "0.2.3"
+__version__ = "0.2.3"
 
 __title__ = "AutoREACTER"
 __author__ = "Janitha Mahanthe, Jacob Gissinger"
@@ -25,6 +18,13 @@ __authors__ = [
 ]
 
 __author__ = ", ".join(__authors__)
+
+# Import all public API symbols
+from importlib.metadata import version, PackageNotFoundError
+from pathlib import Path
+from typing import Optional
+
+
 
 
 """
