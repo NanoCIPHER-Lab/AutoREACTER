@@ -4,7 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "AutoREACTER"
-version = "0.2.2"
+dynamic = ["version"] 
+[tool.setuptools.dynamic]
+version = {attr = "AutoREACTER.__version__"}
 description = "Automated reaction modeling setup for LAMMPS REACTER simulations"
 authors = [
     {name = "Janitha Mahanthe", email = "jmahanth@stevens.edu"},

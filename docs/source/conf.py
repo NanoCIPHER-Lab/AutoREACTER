@@ -1,6 +1,11 @@
+# docs/source/conf.py
+
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../../'))
+
+# Ensure Sphinx can find your AutoREACTER package folder
+sys.path.insert(0, os.path.abspath('../..'))
+from AutoREACTER import __version__
 # Configuration file for the Sphinx documentation builder.
 #
 # For the full list of built-in configuration values, see the documentation:
@@ -10,9 +15,10 @@ sys.path.insert(0, os.path.abspath('../../'))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'AutoREACTER'
+version = __version__
+release = __version__
 copyright = '2026, Janitha Mahanthe, Jacob Gissinger'
 author = 'Janitha Mahanthe, Jacob Gissinger'
-release = '0.2-beta.0'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
