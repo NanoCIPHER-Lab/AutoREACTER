@@ -11,7 +11,9 @@ Classes:
     ARXCLI: The main CLI controller that ties together all pipeline components.
 """
 
+from contextlib import contextmanager
 from pathlib import Path
+import sys
 from PIL import Image
 
 from AutoREACTER.session import read_input
@@ -91,6 +93,8 @@ class ARXCLI:
         # Parse the input file and create the session
         self.session = read_input(abs_path)
         self.img_dir = self.session.images_dir
+        with open(self.session.output_dir / "AutoREACTER.log", 'w') as f:
+            f.write("--- Starting AutoREACTER Session ---\n")
 
         # Save an initial grid image of all monomers
         self._save_rdkit_img(
@@ -171,14 +175,13 @@ class ARXCLI:
             self._ensure_reactions_detected()
 
         if not self._reactions_selected:
-            # Prompt only when there is genuine ambiguity
-            if self.session.reaction_instances and len(self.session.reaction_instances) > 1:
-                ReactionDetector().reaction_selection(self.session)
+            if self.session.reaction_instances and len(self.session.reaction_instances) == 0:
+                raise RuntimeError("No reactions detected. Cannot proceed.")
             else:
-                print("[INFO] 1 or 0 reactions found. Auto-selecting...")
-
-            self._reactions_selected = True
-            self.error_handler["select_reactions"] = True
+                selector = ReactionDetector()
+                selector.reaction_selection(self.session)
+                self._reactions_selected = True
+                self.error_handler["select_reactions"] = True
 
     def show_non_reactants(self) -> Image:
         """
@@ -215,6 +218,47 @@ class ARXCLI:
             self._non_reactants_selected = True
             self.error_handler["select_non_reactants"] = True
 
+
+    def prepare_reactions(self) -> None:
+        """
+        Run the reaction template preparation stage.
+
+        This includes template generation, edge/initiator detection, and
+        template modification.  Saves visualisation images of the templates
+        to disk.  Marks the 'process' waterfall stage as complete.
+        """
+        PrepareReactions(self.session).prepare_reactions(self.session)
+        self.error_handler["process"] = True
+        highlight_types = ["template", "edge", "initiators", "delete"]
+        for highlight_type in highlight_types:
+            img = PrepareReactions(self.session).reaction_templates_highlighted_image_grid(
+                self.session, highlight_type=highlight_type
+            )
+            self._save_rdkit_img(
+                img, self.img_dir / f"templates_{highlight_type}.png"
+            )
+        return None
+
+    def show_reaction_templates(self, highlight_type: str = "template") -> Image:
+        """
+        Return an image grid visualising the reaction templates.
+
+        Parameters
+        ----------
+        highlight_type : str
+            The type of template highlighting to show. Options include:
+            'template' (full template), 'edge' (reaction edge), 'initiators',
+            and 'delete' (atoms to delete).
+
+        Returns
+        -------
+        Image
+            Grid image of reaction templates with specified highlights.
+        """
+        return PrepareReactions(self.session).reaction_templates_highlighted_image_grid(
+            self.session, highlight_type=highlight_type
+        )
+
     # ------------------------------------------------------------------
     # Full pipeline processing
     # ------------------------------------------------------------------
@@ -236,26 +280,24 @@ class ARXCLI:
         # --- Guard: enforce waterfall ordering ---
         if not self.error_handler["select_reactions"]:
             raise RuntimeError("Reactions have not been selected.")
-        self.error_handler["select_reactions"] = True
 
         if not self.error_handler["select_non_reactants"]:
             raise RuntimeError("Non-reactants have not been selected.")
-        self.error_handler["select_non_reactants"] = True
+
 
         if not self.error_handler["process"]:
-            raise RuntimeError("Processing has not been completed.")
-        self.error_handler["process"] = True
+            raise RuntimeError("Processing has not been completed. Because not all selections were made.")
+        
+        # Run the entire processing pipeline, redirecting all print output to a log file in the output directory.
+        with self._writer():
+            # --- Run each stage in sequence ---
+            Molecule3DPreparation(self.session).prepare_molecule_3d_geometry(self.session)
 
-        # --- Run each stage in sequence ---
-        PrepareReactions(self.session).prepare_reactions(self.session)
+            FFWrapper(self.session).generate_force_field_files(self.session)
 
-        Molecule3DPreparation(self.session).prepare_molecule_3d_geometry(self.session)
+            REACTERFilesBuilder(self.session).molecule_template_preparation(self.session)
 
-        FFWrapper(self.session).generate_force_field_files(self.session)
-
-        REACTERFilesBuilder(self.session).molecule_template_preparation(self.session)
-
-        SimulationSetupManager().setup_and_write_simulation(self.session)
+            SimulationSetupManager().setup_and_write_simulation(self.session)
 
     # ------------------------------------------------------------------
     # Internal helpers – lazy detection & image saving
@@ -292,7 +334,7 @@ class ARXCLI:
             ReactionDetector().reaction_detector(self.session)
             # Save the reaction visualisation
             self._save_rdkit_img(
-                ReactionDetector().reaction_highlighted_molecules_image_grid(self.session),
+                ReactionDetector().available_reaction_image_grid(self.session),
                 self.img_dir / "reactions.png",
             )
             self._reactions_detected = True
@@ -367,3 +409,23 @@ class ARXCLI:
             f"Unsupported image type: {type(img)}. "
             "Expected PIL image, bytes, SVG string, or IPython display image."
         )
+    
+    # ------------------------------------------------------------------
+    # Output management helpers
+    # ------------------------------------------------------------------
+
+    @contextmanager
+    def _writer(self, filename="AutoREACTER.log"):
+        """
+        Helper function to temporarily redirect standard output to a text file.
+        Uses append mode ('a') so multiple steps combine into one file.
+        """
+        self.session.output_dir.mkdir(parents=True, exist_ok=True)
+        # Note the 'a' here instead of 'w'
+        with open(self.session.output_dir / filename, 'a') as f:
+            original_stdout = sys.stdout
+            sys.stdout = f
+            try:
+                yield
+            finally:
+                sys.stdout = original_stdout

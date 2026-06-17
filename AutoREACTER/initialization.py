@@ -1,8 +1,3 @@
-"""
-Author: "Janitha Mahanthe"
-Version: v0.1-beta.0
-"""
-version = "v0.2-beta.0"
 import importlib
 
 
@@ -42,6 +37,8 @@ o88o     o8888o  `V88V"V8P'   "888" `Y8bod8P'      o888o  o888o o888ooooood8 o88
     
     @classmethod
     def print_version(cls):
+        import AutoREACTER
+        version = AutoREACTER.__version__
         print(f"AutoREACTER version: {version}")
 
 if __name__ == "__main__":

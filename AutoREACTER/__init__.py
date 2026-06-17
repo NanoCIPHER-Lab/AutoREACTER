@@ -5,6 +5,7 @@ AutoREACTER is a tool for automated reaction-based molecular system generation.
 """
 from importlib.metadata import version, PackageNotFoundError
 from pathlib import Path
+from typing import Optional
 
 try:
     __version__ = version("AutoREACTER")
@@ -216,6 +217,47 @@ def select_non_reactants() -> None:
     """
     _ensure_workflow().select_non_reactants()
 
+def prepare_reactions() -> None:
+    """
+    Prepare the reaction templates for simulation.
+
+    This is an intermediate step that performs reaction-template preparation
+    without running the full pipeline.  It is not intended for end-users but
+    may be useful for debugging or development.
+
+    Returns
+    -------
+    None
+        Writes prepared reaction templates to the session's output directory.
+        Updates the internal :class:`ErrorHandler` state machine.
+    """
+    _ensure_workflow().prepare_reactions()
+
+
+def show_reaction_templates(highlight_type: Optional[str] = "template") -> Image:
+    """
+    Visualise the prepared reaction templates.
+
+    This is an intermediate step that visualises the reaction templates after
+    preparation.  It is not intended for end-users but may be useful for
+    debugging or development.
+
+    Returns
+    -------
+    Image
+        Visualisation of prepared reaction templates, saved to the session's output directory.
+    """
+    highlight_type = highlight_type.lower() if highlight_type else "template"
+    highlight_types = [
+        "template",    # Highlight the reaction template itself (i.e. the changed bonds).
+        "edge",        # Highlight the edge atoms (dihedral distance away from the reaction center).
+        "initiators",  # Highlight the initiator atoms/bonds that trigger the reaction.
+        "delete"       # Highlight the atoms/bonds that are deleted in the reaction.
+        ]
+    if highlight_type not in highlight_types:
+        raise ValueError(f"Invalid highlight_type: {highlight_type}. Must be one of {highlight_types}.")
+    return _ensure_workflow().show_reaction_templates(highlight_type=highlight_type)
+
 
 def process() -> None:
     """
@@ -223,11 +265,10 @@ def process() -> None:
 
     This is the final step.  It performs, in order:
 
-    1. Reaction-template preparation
-    2. 3D geometry generation
-    3. Force-field assignment (via :class:`FFWrapper`)
-    4. REACTER file creation
-    5. LAMMPS input generation
+    1. 3D geometry generation
+    2. Force-field assignment (via :class:`FFWrapper`)
+    3. REACTER file creation
+    4. LAMMPS input generation
 
     All preceding steps (reaction selection, non-reactant selection) must have
     completed first; otherwise a :class:`RuntimeError` is raised.
@@ -254,5 +295,7 @@ __all__ = [
     "select_reactions",
     "show_non_reactants",
     "select_non_reactants",
+    "prepare_reactions",
+    "show_reaction_templates",
     "process",
 ]

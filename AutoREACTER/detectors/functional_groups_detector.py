@@ -294,7 +294,6 @@ class FunctionalGroupsDetector:
         """
         
         monomers = session.inputs.monomers
-        print(monomers)
         monomer_roles = []
 
         for monomer in monomers:
