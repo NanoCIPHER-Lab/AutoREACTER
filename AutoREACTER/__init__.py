@@ -23,6 +23,7 @@ __author__ = ", ".join(__authors__)
 from importlib.metadata import version, PackageNotFoundError
 from pathlib import Path
 from typing import Optional
+from .session import Session
 
 
 
@@ -95,6 +96,20 @@ def _ensure_workflow() -> ARXCLI:
         )
     return _active_workflow
 
+
+# ===================================================================
+# UTILITY FUNCTIONS
+# ===================================================================
+
+def session() -> Session:
+    """
+    Get the active :class:`Session` object from the current workflow.
+    Returns
+    -------
+    Session
+        The active session object containing all workflow state and data.
+    """
+    return _ensure_workflow().session
 
 # ===================================================================
 # PUBLIC API
