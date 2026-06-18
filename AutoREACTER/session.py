@@ -59,6 +59,30 @@ def _clear_directory(path: Path):
         elif item.is_dir():
             shutil.rmtree(item) 
 
+def _normalize_output_dir(raw_output_dir: str, input_path: Path) -> Path:
+    """
+    Normalize output_dir from JSON.
+
+    Supports:
+    - Linux/WSL absolute paths: /mnt/c/...
+    - Windows paths: C:/Users/...
+    - Relative paths: AutoREACTER_outputs/run_name
+    """
+    raw_output_dir = str(raw_output_dir).strip()
+
+    # Handle Windows-style path when running in WSL/Linux.
+    if len(raw_output_dir) >= 3 and raw_output_dir[1] == ":" and raw_output_dir[2] in {"/", "\\"}:
+        drive = raw_output_dir[0].lower()
+        rest = raw_output_dir[3:].replace("\\", "/")
+        return Path(f"/mnt/{drive}/{rest}").resolve()
+
+    output_dir = Path(raw_output_dir).expanduser()
+
+    if not output_dir.is_absolute():
+        output_dir = input_path.parent / output_dir
+
+    return output_dir.resolve()
+
 def read_input(input_file_path: str, clear_staging: bool = True) -> Session:
     """
     Standard read function to initialize the AutoREACTER environment.
@@ -86,15 +110,28 @@ def read_input(input_file_path: str, clear_staging: bool = True) -> Session:
     
     validated_inputs = input_parser.validate_inputs(input_data)
 
-    # 5. Setup Output Directories based on Simulation Name
-    base_output_dir = input_path.parent / "AutoREACTER_outputs"
-    base_output_dir.mkdir(parents=True, exist_ok=True)
-
-    # Create the specific folder for THIS simulation (sanitize to avoid path traversal)
+    # 5. Setup Output Directory
     sim_name = str(validated_inputs.simulation_name)
+
     if Path(sim_name).name != sim_name or sim_name in {".", ".."}:
         raise ValueError(f"Invalid simulation_name for output directory: {sim_name!r}")
-    output_dir = base_output_dir / sim_name
+
+    raw_output_dir = input_data.get("output_dir", None)
+
+    if raw_output_dir is not None:
+        output_dir = _normalize_output_dir(raw_output_dir, input_path)
+
+    else:
+        # Backward-compatible default behavior.
+        output_dir = input_path.parent / "AutoREACTER_outputs" / sim_name
+
+    if output_dir.exists():
+        _clear_directory(output_dir)
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    images_dir = output_dir / "images"
+    images_dir.mkdir(parents=True, exist_ok=True)
 
     if output_dir.exists():
         _clear_directory(output_dir)  # Only clear this specific run's old files
@@ -117,3 +154,4 @@ def read_input(input_file_path: str, clear_staging: bool = True) -> Session:
         output_dir=output_dir,
         images_dir=images_dir
     )
+
