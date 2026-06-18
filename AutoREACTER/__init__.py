@@ -30,7 +30,7 @@ from typing import Optional
 """
 Public API for the AutoREACTER (ARX) pipeline.
 
-This module exposes a **global-session** interface: call :func:`load` once to
+This module exposes a **global-session** interface: call :func:`run` once to
 bootstrap a workflow from an input file, then use the remaining functions to
 inspect molecules, select reactions and non-reactants, and finally run the
 full simulation pipeline.  Each function delegates to the currently active
@@ -40,7 +40,7 @@ Usage (e.g. in a Jupyter notebook)::
 
     import arx
 
-    arx.load("input.json")
+    arx.run("input.json")
     arx.show_molecules()
     arx.show_functional_groups()
     arx.show_reactions()
@@ -52,7 +52,7 @@ Usage (e.g. in a Jupyter notebook)::
 All public symbols are listed in :data:`__all__`.
 
 :data:`__all__` includes:
-    - ``load``
+    - ``run``
     - ``show_molecules``
     - ``show_functional_groups``
     - ``show_reactions``
@@ -67,7 +67,7 @@ from PIL import Image
 
 # ---------------------------------------------------------------------------
 # Global session handle – holds the *single* active workflow instance.
-# The `load()` function is the only way to create (or replace) it.
+# The `run()` function is the only way to create (or replace) it.
 # ---------------------------------------------------------------------------
 _active_workflow = None  # type: ARXCLI | None
 
@@ -77,7 +77,7 @@ def _ensure_workflow() -> ARXCLI:
     Return the active :class:`ARXCLI` instance, raising if none exists.
 
     This is the single choke-point used by every public function before
-    delegating.  It guarantees that the user called :func:`load` first.
+    delegating.  It guarantees that the user called :func:`run` first.
 
     Returns
     -------
@@ -87,11 +87,11 @@ def _ensure_workflow() -> ARXCLI:
     Raises
     ------
     RuntimeError
-        If :func:`load` has not been called yet (i.e. no session is active).
+        If :func:`run` has not been called yet (i.e. no session is active).
     """
     if _active_workflow is None:
         raise RuntimeError(
-            "No active session. Please run `arx.load('your_file.json')` first."
+            "No active session. Please run `arx.run('your_file.json')` first."
         )
     return _active_workflow
 
@@ -100,7 +100,7 @@ def _ensure_workflow() -> ARXCLI:
 # PUBLIC API
 # ===================================================================
 
-def load(input_file):
+def run(input_file):
     """
     Create or replace the active AutoREACTER workflow session.
 
@@ -288,7 +288,7 @@ __all__ = [
     "__release__",
     "__authors__",
     "__license__",
-    "load",
+    "run",
     "show_molecules",
     "show_functional_groups",
     "show_reactions",
