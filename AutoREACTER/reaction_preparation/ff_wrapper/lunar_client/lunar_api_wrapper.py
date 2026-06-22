@@ -64,7 +64,8 @@ class LunarAPIWrapper:
             force_field=force_field_name, 
             lunar_location=self.LUNAR_LOCATION
         )
-
+        # debug print
+        # print(f"[OK] Located LUNAR force field file for {force_field_name}: {ff_file_path}")
         # Stage 1: Assign atom types 
         atom_typing_results = self.executor.run_atom_typing(
             updated_inputs=updated_inputs_with_3d_mols,

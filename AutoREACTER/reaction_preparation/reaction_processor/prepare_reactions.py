@@ -11,6 +11,7 @@ consistency and completeness.
 # When modifying this file for dataframe or any other indexing variables use idx and idxs, do not use index or indices or similar.
 
 from dataclasses import dataclass
+from functools import reduce
 from pathlib import Path
 from typing import Dict, List, Optional, TYPE_CHECKING
 
@@ -276,7 +277,10 @@ class PrepareReactions:
 
                 # Combine molecules for mapping
                 reactant_combined = Chem.CombineMols(r1, r2)
-                product_combined = Chem.CombineMols(*product_set)
+                if len(product_set) == 1:
+                    product_combined = product_set[0]
+                else:
+                    product_combined = reduce(Chem.CombineMols, product_set)
 
                 # Restore atom map numbers from isotopes (which survive the reaction)
                 self._reassign_atom_map_numbers_by_isotope(product_combined)
