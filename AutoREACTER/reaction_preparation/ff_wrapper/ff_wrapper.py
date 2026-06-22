@@ -70,7 +70,7 @@ class FFWrapper:
         # Define engine routing based on strict canonical names from the parser
         foyer_supported = {"OPLSAA", "GAFF"}
         lunar_supported = {
-            "PCFF", "PCFF-IFF", "Compass", 
+            "PCFF", "PCFF-IFF", "compass", 
             "CVFF", "CVFF-IFF", "DRIEDING", "Clay-FF"
         }
 

@@ -56,6 +56,8 @@ class LunarAPIWrapper:
         loading_screen("LUNAR Workflow")
         
         force_field_name = updated_inputs_with_3d_mols.force_field
+        # debug print
+        # print(f"[INFO] Starting LUNAR workflow with force field: {force_field_name}")
 
         # Stage 0: Locate Force Field Parameters
         ff_file_path = get_force_field_file(

@@ -388,7 +388,7 @@ class InputParser:
     _FF_ALIASES: dict[str, ForceFieldType] = {
         "pcff-iff": "PCFF-IFF",
         "pcff": "PCFF",
-        "compass": "Compass",
+        "compass": "compass",
         "cvff-iff": "CVFF-IFF",
         "cvff": "CVFF",
         "clay-ff": "Clay-FF",
