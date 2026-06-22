@@ -1,0 +1,17 @@
+{
+    "simulation_name": "Polyamidation_Ratio",
+    "force_field": "PCFF",
+    "simulations": [
+        {
+            "tag": "poly_amide_500",
+            "temperature": 300,
+            "density": 1.0,
+            "total_atoms": 500,
+            "monomer_ratios": { "mpd": 1.0, "tmc": 1.0 }
+        }
+    ],
+    "monomers": [
+        { "name": "mpd", "smiles": "C1=CC(=CC(=C1)N)N" },
+        { "name": "tmc", "smiles": "ClC(=O)c1cc(cc(c1)C(Cl)=O)C(Cl)=O" }
+    ]
+}

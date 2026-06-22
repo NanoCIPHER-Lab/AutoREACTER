@@ -17,6 +17,7 @@ from pathlib import Path
 import sys
 import threading
 from PIL import Image
+from typing import Optional
 
 from AutoREACTER.session import read_input
 from AutoREACTER.input_parser import InputParser
@@ -160,6 +161,7 @@ class ARXCLI:
         if not self._reactions_detected:
             self._ensure_reactions_detected()
         return ReactionDetector().available_reaction_image_grid(self.session)
+    
 
     # ------------------------------------------------------------------
     # Selection steps
@@ -185,22 +187,21 @@ class ARXCLI:
                 self._reactions_selected = True
                 self.error_handler["select_reactions"] = True
 
-    def show_non_reactants(self) -> Image:
+    def show_non_reactants(self) ->  Optional['Image']:
         """
         Return an image visualising detected non-reactant species.
-
-        Marks the non-reactant *detection* waterfall stage as complete and
-        triggers detection if needed.
-
-        Returns
-        -------
-        Image
-            Visualisation of non-reactant molecules.
         """
         if not self._non_reactants_detected:
             self._ensure_non_reactants_detected()
-        self.error_handler["select_non_reactants"] = True
-        return NonReactantsDetector().non_reactants_to_visualization(self.session)
+
+        detector = NonReactantsDetector()
+        img = detector.non_reactants_to_visualization(self.session)
+
+        if img is None:
+            print("[INFO] No non-reactants detected. Skipping visualization...")
+            return None
+
+        return img
 
     def select_non_reactants(self) -> None:
         """
@@ -345,11 +346,9 @@ class ARXCLI:
         """
         Ensure non-reactant species have been detected.
 
-        Automatically triggers reaction selection first (if not already done),
-        then runs the non-monomer detector.  Saves a visualisation image
-        of the non-reactants to disk.
+        Automatically triggers reaction selection first, then runs the
+        non-monomer detector. Saves a visualisation image if one exists.
         """
-        # Non-reactant detection depends on knowing which reactions are active
         if not self._reactions_selected:
             self.select_reactions()
 
@@ -358,27 +357,35 @@ class ARXCLI:
             NonReactantsDetector().non_monomer_detector(self.session)
             self._non_reactants_detected = True
 
-        # Persist the non-reactant visualisation
+        detector = NonReactantsDetector()
+        img = detector.non_reactants_to_visualization(self.session)
+
         self._save_rdkit_img(
-            NonReactantsDetector().non_reactants_to_visualization(self.session),
+            img,
             self.img_dir / "non_reactants.png",
+            is_non_reactant=True,
         )
 
-    def _save_rdkit_img(self, img: Image, path: Path):
+    def _save_rdkit_img(self, img, path: Path, is_non_reactant: bool = False):
         """
         Save an RDKit/PIL/IPython image to disk.
 
         Parameters
         ----------
-        img : PIL.Image.Image
+        img
             Image returned by RDKit or IPython display.
         path : pathlib.Path
             Destination file path.
+        is_non_reactant : bool
+            If True, allow None images because no non-reactants may exist.
         """
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
 
         if img is None:
+            if is_non_reactant:
+                print("[INFO] No non-reactant image was generated. Skipping save.")
+                return
             raise ValueError("No image was generated. Cannot save molecule image.")
 
         # Case 1: PIL image
@@ -411,7 +418,7 @@ class ARXCLI:
             f"Unsupported image type: {type(img)}. "
             "Expected PIL image, bytes, SVG string, or IPython display image."
         )
-    
+        
     # ------------------------------------------------------------------
     # Output management helpers
     # ------------------------------------------------------------------

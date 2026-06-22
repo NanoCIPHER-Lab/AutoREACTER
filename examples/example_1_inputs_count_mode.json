@@ -1,6 +1,5 @@
 {
     "simulation_name": "Example_Count_Mode",
-    "output_dir": "C:/Users/Janitha/project/AutoREACTER_outputs/Example_Count_Mode",
     "simulations": [
         {
             "tag": "10k",
