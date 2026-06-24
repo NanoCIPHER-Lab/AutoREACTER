@@ -198,7 +198,6 @@ class ARXCLI:
         img = detector.non_reactants_to_visualization(self.session)
 
         if img is None:
-            print("[INFO] No non-reactants detected. Skipping visualization...")
             return None
 
         return img
@@ -216,7 +215,6 @@ class ARXCLI:
             if self.session.non_reactants and len(self.session.non_reactants) > 0:
                 NonReactantsDetector().non_reactant_selection(self.session)
             else:
-                print("[INFO] No non-reactants found. Skipping selection...")
 
             self._non_reactants_selected = True
             self.error_handler["select_non_reactants"] = True
@@ -353,7 +351,6 @@ class ARXCLI:
             self.select_reactions()
 
         if not self._non_reactants_detected:
-            print("[INFO] Detecting non-reactants...")
             NonReactantsDetector().non_monomer_detector(self.session)
             self._non_reactants_detected = True
 
@@ -384,7 +381,6 @@ class ARXCLI:
 
         if img is None:
             if is_non_reactant:
-                print("[INFO] No non-reactant image was generated. Skipping save.")
                 return
             raise ValueError("No image was generated. Cannot save molecule image.")
 

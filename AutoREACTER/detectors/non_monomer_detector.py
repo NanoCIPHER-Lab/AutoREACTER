@@ -202,7 +202,6 @@ class NonReactantsDetector:
         # Print details of each non-reacting monomer to console
         non_reactants_list = session.non_reactants
         if not non_reactants_list:
-            print("No non-reacting monomers detected.")
             return None  # Or handle as appropriate (e.g., return an empty image)
         
         for monomer in non_reactants_list:
