@@ -51,7 +51,7 @@ ForceFieldType = Literal[
     "CVFF-IFF",
     "CVFF",
     "Clay-FF",
-    "DRIEDING",
+    "DREIDING",
     "OPLSAA",
 ]
 
@@ -393,8 +393,8 @@ class InputParser:
         "cvff": "CVFF",
         "clay-ff": "Clay-FF",
         "clayff": "Clay-FF",     # common variation
-        "dreiding": "DRIEDING",  # correct spelling
-        "drieding": "DRIEDING",  # catching the typo
+        "dreiding": "DREIDING",  # correct spelling
+        "drieding": "DREIDING",  # catching the typo
         "oplsaa": "OPLSAA",
         "opls": "OPLSAA",        # mapped to OPLSAA
         "opls-aa": "OPLSAA",     # mapped to OPLSAA

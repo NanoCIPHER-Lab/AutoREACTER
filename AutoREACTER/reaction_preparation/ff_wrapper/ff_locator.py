@@ -30,7 +30,7 @@ def get_force_field_file(force_field: str, lunar_location: Optional[Path] = None
     """
 
     # 1. LUNAR Force Fields (.frc files)
-    if force_field in {"PCFF", "PCFF-IFF", "compass", "CVFF", "CVFF-IFF", "DRIEDING"}:
+    if force_field in {"PCFF", "PCFF-IFF", "compass", "CVFF", "CVFF-IFF", "DREIDING", }:
         paths = {}
         
         # Load internal PCFF via pkg_resources
@@ -51,7 +51,7 @@ def get_force_field_file(force_field: str, lunar_location: Optional[Path] = None
                 "compass": lunar_base / "compass_published.frc",
                 "CVFF-IFF": lunar_base / "cvff_aug.frc",
                 "CVFF": lunar_base / "cvff.frc",
-                "DRIEDING": lunar_base / "all2lmp_dreiding.frc",
+                "DREIDING": lunar_base / "all2lmp_dreiding.frc",
             })
 
         if force_field not in paths:

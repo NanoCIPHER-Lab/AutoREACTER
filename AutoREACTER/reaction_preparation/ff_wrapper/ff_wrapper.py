@@ -71,7 +71,7 @@ class FFWrapper:
         foyer_supported = {"OPLSAA", "GAFF"}
         lunar_supported = {
             "PCFF", "PCFF-IFF", "compass", 
-            "CVFF", "CVFF-IFF", "DRIEDING", "Clay-FF"
+            "CVFF", "CVFF-IFF", "DREIDING", "Clay-FF"
         }
 
         # Route to FOYER
