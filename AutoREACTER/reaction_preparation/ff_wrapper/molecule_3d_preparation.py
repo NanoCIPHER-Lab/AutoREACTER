@@ -87,7 +87,7 @@ class Molecule3DPreparation:
     def prepare_molecule_3d_geometry(
         self,
         session: Session,
-    ) -> tuple[SimulationSetup, list[ReactionMetadata]]:
+    ) -> None:
         """Prepare 3D geometries for all monomers and reaction complexes.
 
         This method processes individual monomer molecules and the combined
@@ -99,7 +99,7 @@ class Molecule3DPreparation:
             session: The current Session containing validated inputs and reaction metadata.
 
         Returns:
-            Updated simulation inputs and reaction metadata with 3D information added.
+            None. This method updates the session's inputs and reaction metadata in place.
 
         Raises:
             OptimizationError: If any molecule fails to embed or optimize.
