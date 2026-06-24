@@ -23,6 +23,7 @@ This guide covers setup, input configuration, and supported reactions.
 
    overview.md
    getting-started.md
+   api_reference.md
    input-configuration.md
    supported-reactions.md
    supported-force-fields.md

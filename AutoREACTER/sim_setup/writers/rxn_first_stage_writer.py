@@ -168,7 +168,7 @@ class RxnFirstStageWriter:
             "",
             "# Note: If atoms are being deleted during the reaction, ensure you use the correct Map file",
             "#       (e.g., RXN_i_with_delete_ids.map).",
-            "        NPT is recommended for deletion to account for density changes.\n",
+            "#       NPT is recommended for deletion to account for density changes.\n",
             f"{'fix':<16} 1 statted_grp_REACT nvt temp {simulation.temperature} {simulation.temperature} 100.0\n",
             f"#{'fix':<16} 1 statted_grp_REACT npt temp {simulation.temperature} {simulation.temperature} 100.0 iso 0.0 0.0 1000.0",
             "",

@@ -26,11 +26,7 @@ from dataclasses import dataclass
 from typing import Optional
 import datetime
 import re
-from AutoREACTER import session
-from AutoREACTER.input_parser import SimulationSetup
 from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper import FFFiles
-from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import ReactionMetadata 
-from AutoREACTER.input_parser import SimulationSetup
 from AutoREACTER.reaction_preparation.ff_wrapper.modifiers_molecule_files import (
     modify_types, modify_charges, modify_coords,
     modify_bonds, modify_angles, modify_dihedrals, modify_impropers,
@@ -38,7 +34,7 @@ from AutoREACTER.reaction_preparation.ff_wrapper.modifiers_molecule_files import
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from AutoREACTER.session import ARXSession
+    from AutoREACTER.session import Session
 
 now = datetime.datetime.now() 
 import logging
@@ -78,10 +74,10 @@ class REACTERFiles:
 class REACTERFilesBuilder:
     def __init__(
         self,
-        session: "ARXSession",
-        updated_inputs_with_3d_mols: SimulationSetup | None = None,
+        session: "Session",
     ):
         self.session = session
+        updated_inputs_with_3d_mols = session.inputs
 
         # In AutoREACTER, session.staging_dir is the working/cache directory.
         self.cache_dir = Path(session.staging_dir) / "lunar" / "REACTER_files"
@@ -266,7 +262,7 @@ class REACTERFilesBuilder:
             Formatted string containing angle information.
         dihedral_section : str
             Formatted string containing dihedral information.
-        improper_section : str
+        impropers_section : str
             Formatted string containing improper dihedral information.
         
         Returns:
@@ -694,29 +690,29 @@ Types
         return ff_dest, in_dest, molecule_files
 
 
-    def molecule_template_preparation(self, ff_files: FFFiles, prepared_reactions_with_3d_mols: list[ReactionMetadata]) -> REACTERFiles:
+    def molecule_template_preparation(self, session: "Session") -> None:
         """
         Top-level orchestrator that loops over reactions and prepares template
         files and mappings for each reaction.
 
         Parameters
         ----------
-        ff_files : FFFiles
-        Container for all input files and paths needed for the preparation process.
+        session : "Session"
+        The current Session containing validated inputs and reaction metadata.
         prepared_reactions_with_3d_mols : list[ReactionMetadata]
         List of ReactionMetadata objects, each containing information about a reaction,
             including the reaction DataFrame and any relevant flags (e.g., delete_atoms).
-        updated_inputs_with_3d_mols : SimulationSetup
 
         Returns
         -------
-        REACTERFiles
-        A complete collection of output files generated from the preparation process,
+        None
         """
+        ff_files = session.ff_files
+        prepared_reactions_with_3d_mols = session.reaction_metadata # <--- CHANGED FROM session.inputs
         template_files = []
         pre_and_post_files = ff_files.template_files
         force_field_data, in_file, molecule_files = self._copy_lunar_files_to_cache(ff_files)
-        updated_inputs_with_3d_mols= self.updated_inputs_with_3d_mols
+        updated_inputs_with_3d_mols= session.inputs
         # Iterate each reaction entry and build templates for that single reaction only.
         for rxn in pre_and_post_files:
             id = rxn.reaction_id
@@ -768,11 +764,23 @@ Types
                     lmp_molecule_file = Path(post_out)
                 )
             ))
-
-        return REACTERFiles(
+        
+        reacter_files = REACTERFiles(
             force_field_data=force_field_data,
             in_file=in_file,
             molecule_files=molecule_files,
             template_files=template_files
         )
+        from AutoREACTER.cache import RunDirectoryManager # Import here to avoid circular dependency issues, since RunDirectoryManager also imports REACTERFilesBuilder
+        # Move generated files to final output directory using RunDirectoryManager
+        run_manager = RunDirectoryManager(session.output_dir.parent)
+        reacter_files = run_manager.move_reacter_files(
+            reacter_files,
+            staging_dir=session.staging_dir,
+            final_dir=session.output_dir
+        )
 
+        session.reacter_files = reacter_files
+
+
+        return None

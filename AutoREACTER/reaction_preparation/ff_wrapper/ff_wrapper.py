@@ -5,7 +5,7 @@ from AutoREACTER.input_parser import SimulationSetup
 from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import ReactionMetadata
 
 if TYPE_CHECKING:
-    from AutoREACTER.session import ARXSession
+    from AutoREACTER.session import Session
 
 
 # Shared data structures for molecule and template files across both LUNAR and FOYER outputs and future extensions. 
@@ -42,15 +42,21 @@ class FFWrapper:
     Central router that delegates molecule preparation to the correct 
     force field engine (LUNAR or Foyer) based on user input.
     """
-    def __init__(self, ARX: "ARXSession"):
+    def __init__(self, ARX: "Session"):
         self.session = ARX
         self.inputs = ARX.inputs
 
     def generate_force_field_files(
         self,
-        prepared_reactions: list[ReactionMetadata],
-        updated_inputs: Optional[SimulationSetup] = None
-    ) -> FFFiles:
+        session: "Session") -> None:
+        """Generates force field files by routing to the appropriate engine based on user input.
+        Args:
+            session: The current Session containing validated inputs and reaction metadata.
+        Returns:
+            None
+        """
+        updated_inputs = session.inputs
+        prepared_reactions = session.reaction_metadata
         if updated_inputs is None:
             updated_inputs = self.inputs
             
@@ -64,8 +70,8 @@ class FFWrapper:
         # Define engine routing based on strict canonical names from the parser
         foyer_supported = {"OPLSAA", "GAFF"}
         lunar_supported = {
-            "PCFF", "PCFF-IFF", "Compass", 
-            "CVFF", "CVFF-IFF", "DRIEDING", "Clay-FF"
+            "PCFF", "PCFF-IFF", "compass", 
+            "CVFF", "CVFF-IFF", "DREIDING", "Clay-FF"
         }
 
         # Route to FOYER
@@ -73,14 +79,15 @@ class FFWrapper:
             from AutoREACTER.reaction_preparation.ff_wrapper.foyer_client.foyer_api_wrapper import FoyerAPIWrapper
             print(f"Routing to Foyer for force field: {ff_name}")
             foyer_wrapper = FoyerAPIWrapper(ARX=self.session, prepared_reactions_with_3d_mols=prepared_reactions)
-            return foyer_wrapper.final_foyer_files
+            session.ff_files = foyer_wrapper.final_foyer_files
+            return None
 
         # Route to LUNAR
         elif ff_name in lunar_supported:
             from AutoREACTER.reaction_preparation.ff_wrapper.lunar_client.lunar_api_wrapper import LunarAPIWrapper
             print(f"Routing to LUNAR for force field: {ff_name}")
             lunar_wrapper = LunarAPIWrapper(ARX=self.session)
-            return lunar_wrapper.lunar_workflow(updated_inputs, prepared_reactions)
-
+            session.ff_files = lunar_wrapper.lunar_workflow(updated_inputs, prepared_reactions)
+            return None
         else:
             raise ValueError(f"Unsupported or unrecognized force field requested: {ff_name}")

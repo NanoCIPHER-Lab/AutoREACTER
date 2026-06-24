@@ -11,6 +11,10 @@ from rdkit.Chem import Descriptors, Draw
 # Module-level logger for future diagnostics.
 logger = logging.getLogger(__name__)
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .session import Session  # type: ignore
+
 
 class InputError(Exception):
     """Base class for all input-related errors in the parsing pipeline."""
@@ -47,7 +51,7 @@ ForceFieldType = Literal[
     "CVFF-IFF",
     "CVFF",
     "Clay-FF",
-    "DRIEDING",
+    "DREIDING",
     "OPLSAA",
 ]
 
@@ -234,18 +238,19 @@ class InputParser:
         ]
         return initial_molecules, initial_molecules_legends
 
-    def initial_molecules_image_grid(self, simulation_setup: SimulationSetup) -> Image:
+    def initial_molecules_image_grid(self, session: "Session") -> Image:
         """
         Creates a grid image of the initial molecules for visualization.
 
         Args:
-            simulation_setup: Validated SimulationSetup object.
+            session: Validated Session object.
 
         Returns:
             PIL Image object containing the molecule grid.
         """
+        inputs = session.inputs
         initial_molecules, initial_molecules_legends = (
-            self.molecule_representation_of_initial_molecules(simulation_setup)
+            self.molecule_representation_of_initial_molecules(inputs)
         )
 
         return Draw.MolsToGridImage(
@@ -383,13 +388,13 @@ class InputParser:
     _FF_ALIASES: dict[str, ForceFieldType] = {
         "pcff-iff": "PCFF-IFF",
         "pcff": "PCFF",
-        "compass": "Compass",
+        "compass": "compass",
         "cvff-iff": "CVFF-IFF",
         "cvff": "CVFF",
         "clay-ff": "Clay-FF",
         "clayff": "Clay-FF",     # common variation
-        "dreiding": "DRIEDING",  # correct spelling
-        "drieding": "DRIEDING",  # catching the typo
+        "dreiding": "DREIDING",  # correct spelling
+        "drieding": "DREIDING",  # catching the typo
         "oplsaa": "OPLSAA",
         "opls": "OPLSAA",        # mapped to OPLSAA
         "opls-aa": "OPLSAA",     # mapped to OPLSAA

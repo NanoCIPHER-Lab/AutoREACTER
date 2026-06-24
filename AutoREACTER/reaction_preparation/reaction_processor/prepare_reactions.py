@@ -1,4 +1,3 @@
-
 """
 Module for preparing chemical reactions for analysis, including atom mapping between reactants and products,
 reaction metadata extraction, and visualization utilities using RDKit.
@@ -8,13 +7,13 @@ initiators, byproducts), and generates metadata and visualizations for downstrea
 consistency and completeness.
 """
 
-
 # WARNING:
 # When modifying this file for dataframe or any other indexing variables use idx and idxs, do not use index or indices or similar.
 
 from dataclasses import dataclass
+from functools import reduce
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, TYPE_CHECKING
 
 from rdkit import Chem
 from rdkit.Chem import AllChem, Draw, rdmolops
@@ -26,10 +25,10 @@ from AutoREACTER.reaction_preparation.reaction_processor.utils import (
     add_dict_as_new_columns, add_column_safe, compare_set, prepare_paths
 )
 from AutoREACTER.reaction_preparation.reaction_processor.walker import reaction_atom_walker
-from typing import TYPE_CHECKING
 
+# Use TYPE_CHECKING to prevent circular imports with session.py
 if TYPE_CHECKING:
-    from AutoREACTER.session import ARXSession
+    from AutoREACTER.session import Session
 
 
 class MappingError(Exception):
@@ -91,7 +90,7 @@ class ReactionMetadata:
 class PrepareReactions:
     """Processes chemical reactions: builds atom mappings, identifies reaction centers, and detects byproducts."""
 
-    def __init__(self, session: "ARXSession"):
+    def __init__(self, session: "Session"):
         """Initialize using the shared AutoREACTER session object."""
         self.session = session
         self.inputs = session.inputs
@@ -103,23 +102,26 @@ class PrepareReactions:
 
     # --- PUBLIC ---
 
-    def prepare_reactions(self, reaction_instances: list[ReactionInstance]) -> list[ReactionMetadata]:
+    def prepare_reactions(self, session: "Session") -> list[ReactionMetadata]:
         """
         Main pipeline: processes reaction instances, detects duplicates, and enriches metadata with template mappings.
         
         Args:
-            reaction_instances: List of detected reaction instances to process
+            session: The main Session object containing reaction instances to process
             
         Returns:
             List of processed ReactionMetadata objects with template mappings and edge atoms
         """
-        reactions_metadata = self._process_reaction_instances(reaction_instances)
-        reaction_metadata = self._detect_duplicates(reactions_metadata)
+        reaction_instances = session.reaction_instances
         
-        for reaction in reactions_metadata:
+        # Process and filter reactions
+        reactions_metadata = self._process_reaction_instances(reaction_instances)
+        unique_reaction_metadata = self._detect_duplicates(reactions_metadata)
+        
+        for reaction in unique_reaction_metadata:
             # Skip reactions marked as duplicates
             if not reaction.activity_stats:
-                continue  # Skip reactions marked as duplicates
+                continue
             
             combined_reactant_molecule_object = reaction.reactant_combined_RDmol
             reaction_dataframe = reaction.reaction_dataframe
@@ -159,7 +161,9 @@ class PrepareReactions:
             # Store the template mapping in the metadata for later use
             reaction.template_reactant_to_product_mapping = template_mapped_dict
 
-        return reaction_metadata
+        # Store the finalized metadata inside the session
+        session.reaction_metadata = unique_reaction_metadata
+        return unique_reaction_metadata
     
     # --- PIPELINE STEPS (PRIVATE) ---
     
@@ -273,7 +277,10 @@ class PrepareReactions:
 
                 # Combine molecules for mapping
                 reactant_combined = Chem.CombineMols(r1, r2)
-                product_combined = Chem.CombineMols(*product_set)
+                if len(product_set) == 1:
+                    product_combined = product_set[0]
+                else:
+                    product_combined = reduce(Chem.CombineMols, product_set)
 
                 # Restore atom map numbers from isotopes (which survive the reaction)
                 self._reassign_atom_map_numbers_by_isotope(product_combined)
@@ -484,7 +491,7 @@ class PrepareReactions:
             idx = 2001 + atom.GetIdx()
             atom.SetAtomMapNum(idx)
             atom.SetIsotope(idx) # Isotope survives the reaction
-			
+            
     def _reassign_atom_map_numbers_by_isotope(self, mol: Chem.Mol) -> None:
         """
         Restores atom map numbers from isotope values after reaction.
@@ -636,19 +643,23 @@ class PrepareReactions:
     
     def reaction_templates_highlighted_image_grid(
         self,
-        metadata_list: List[ReactionMetadata],
+        session: "Session",
         highlight_type: str = "template",
     ) -> Image:
         """
         Generates grid image of reactions with highlighted atoms based on type.
         
         Args:
-            metadata_list: List of reaction metadata to visualize
+            session: The Session object containing reaction metadata to visualize
             highlight_type: Type of atoms to highlight - "template", "edge", "initiators", or "delete"
             
         Returns:
             PIL Image containing 2-column grid of reactant-product pairs with highlighted atoms
         """
+        metadata_list = session.reaction_metadata
+        if not metadata_list:
+            return None
+
         mols = []
         highlight_lists = []
         highlight_colors = []

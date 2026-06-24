@@ -24,12 +24,12 @@ from AutoREACTER.reaction_preparation.ff_wrapper.lunar_client.merge_builder impo
 from AutoREACTER.reaction_preparation.ff_wrapper.lunar_client.lunar_utils import loading_screen
 
 if TYPE_CHECKING:
-    from AutoREACTER.session import ARXSession
+    from AutoREACTER.session import Session
 
 class LunarAPIWrapper:
     """Orchestrates the multi-step LUNAR preparation workflow."""
 
-    def __init__(self, ARX: "ARXSession"):
+    def __init__(self, ARX: "Session"):
         self.session = ARX
         self.inputs = ARX.inputs
 
@@ -56,13 +56,16 @@ class LunarAPIWrapper:
         loading_screen("LUNAR Workflow")
         
         force_field_name = updated_inputs_with_3d_mols.force_field
+        # debug print
+        # print(f"[INFO] Starting LUNAR workflow with force field: {force_field_name}")
 
         # Stage 0: Locate Force Field Parameters
         ff_file_path = get_force_field_file(
             force_field=force_field_name, 
             lunar_location=self.LUNAR_LOCATION
         )
-
+        # debug print
+        # print(f"[OK] Located LUNAR force field file for {force_field_name}: {ff_file_path}")
         # Stage 1: Assign atom types 
         atom_typing_results = self.executor.run_atom_typing(
             updated_inputs=updated_inputs_with_3d_mols,

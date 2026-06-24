@@ -27,8 +27,10 @@ from AutoREACTER.input_parser import SimulationSetup
 from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import ReactionMetadata
 from typing import TYPE_CHECKING
 
+from AutoREACTER.session import Session
+
 if TYPE_CHECKING:
-    from AutoREACTER.session import ARXSession
+    from AutoREACTER.session import Session
 
 
 class Molecule3DPreparationError(Exception):
@@ -56,7 +58,7 @@ class Molecule3DPreparation:
         full_templates_path: Directory for combined reactant/product complexes.
     """
 
-    def __init__(self, session: "ARXSession"):
+    def __init__(self, session: "Session"):
         """Initialize the 3D preparation utility using the shared AutoREACTER session.
 
         In AutoREACTER, session.staging_dir is the working/cache directory.
@@ -84,9 +86,8 @@ class Molecule3DPreparation:
 
     def prepare_molecule_3d_geometry(
         self,
-        updated_inputs: SimulationSetup,
-        prepared_reactions: list[ReactionMetadata],
-    ) -> tuple[SimulationSetup, list[ReactionMetadata]]:
+        session: Session,
+    ) -> None:
         """Prepare 3D geometries for all monomers and reaction complexes.
 
         This method processes individual monomer molecules and the combined
@@ -95,17 +96,17 @@ class Molecule3DPreparation:
         to the respective data objects.
 
         Args:
-            updated_inputs: Simulation setup containing monomer information.
-            prepared_reactions: List of reaction metadata objects.
+            session: The current Session containing validated inputs and reaction metadata.
 
         Returns:
-            Updated simulation inputs and reaction metadata with 3D information added.
+            None. This method updates the session's inputs and reaction metadata in place.
 
         Raises:
             OptimizationError: If any molecule fails to embed or optimize.
             Molecule3DPreparationError: If RDKit Mol object is missing for a monomer.
         """
         # Process individual monomer molecules
+        updated_inputs, prepared_reactions = session.inputs, session.reaction_metadata
         monomer_entries = updated_inputs.monomers
         for entry in monomer_entries:
             if not entry.status:
@@ -161,7 +162,7 @@ class Molecule3DPreparation:
                         f"Error optimizing product complex for reaction {reaction.reaction_id}: {str(e)}"
                     ) from e
 
-        return updated_inputs, prepared_reactions
+        return None
 
     def _separate_fragments_3d(
         self, mol: Mol,

@@ -1,3 +1,5 @@
+from __future__ import annotations  
+from typing import TYPE_CHECKING
 """
 * Monomer Functionality Detection Module
 --------------------------------------
@@ -97,46 +99,23 @@ later to determine how many reactions are possible and how to build reaction
 templates safely.
 """
 
-from __future__ import annotations # Enable postponed evaluation of annotations for forward references.
 from dataclasses import dataclass
 from rdkit import Chem
 from rdkit.Chem import Draw
 from rdkit.Chem import Descriptors, rdchem
 import logging
 import json
-from typing import Dict, Tuple, Optional
+from typing import Tuple, Optional
 import pathlib, os
 from PIL.Image import Image
-
-try:
-    from AutoREACTER.input_parser import MonomerEntry
-except (ImportError, ModuleNotFoundError):
-    @dataclass(slots=True)
-    class MonomerEntry:
-        id: int
-        data_id: str
-        smiles: str
-        name: Optional[str] = None
-        count: Optional[Dict] = None
-        ratio: Optional[float] = None
-        atom_count: int = 0
-        molar_mass: float = 0.0
-        rdkit_mol: Optional[Chem.Mol] = None
-
+from AutoREACTER.input_parser import MonomerEntry
 
 # Conditional import for FunctionalGroupsLibrary to support both installed and local usage.
-try:
-    from functional_groups_library import FunctionalGroupsLibrary
-except (ImportError, ModuleNotFoundError):
-    from .functional_groups_library import FunctionalGroupsLibrary
+from .functional_groups_library import FunctionalGroupsLibrary
 
 logger = logging.getLogger(__name__)  # Module-level logger for future diagnostics.
-
-# Dictionary defining various types of monomers would typically be loaded here, but is accessed via FunctionalGroupsLibrary.
-# Includes functionality types (e.g., 'vinyl', 'mono', 'di_different', 'di_identical'), SMARTS patterns,
-# and group names. Expandable based on literature (e.g., "J. Chem. Inf. Model. 2023, 63, 5539−5548").
-# TODO: Address monomers with mixed groups like COCl and COOH.
-# TODO: Add more functional groups as needed from literature/user requirements.
+if TYPE_CHECKING:
+    from AutoREACTER.session import Session
 
 
 @dataclass(slots=True)
@@ -294,7 +273,9 @@ class FunctionalGroupsDetector:
                 
         return 0, 0, None, ()  # No matches found
 
-    def functional_groups_detector(self, monomers: list[MonomerEntry]) -> list[MonomerRole]:
+    def functional_groups_detector(
+        self, session: "Session"
+    ) -> None:
         """
         Detect functional groups across a list of monomers and categorize them into roles.
 
@@ -302,56 +283,57 @@ class FunctionalGroupsDetector:
         and collects valid detections. Prints matches for debugging/user feedback.
 
         Args:
-            monomers (list[MonomerEntry]): List of MonomerEntry objects (each with 'smiles' and 'name').
+            session (Session): Validated Session object containing monomers.
 
         Returns:
-            list[MonomerRole]: List of monomers with detected functionalities.
-                Each MonomerRole contains smiles, name, and tuple of FunctionalGroupInfo.
+            None (results stored in session.monomer_roles for downstream use).
 
         Notes:
             - Matches criteria: 'vinyl'/'mono' (>=1 primary), 'di_identical' (>=2 primary),
-              'di_different' (>=1 each pattern).
+            'di_different' (>=1 each pattern).
         """
-
-        # NOTE: Original code notes "from here code is still messed up; need to fix the loops".
-        # Current implementation iterates monomers outer, types inner; consider inverting for multi-match optimization.
-
-        # Collect roles for all monomers with detections.
-        monomer_roles = []
-        monomer_roles_visualization = []  # For potential future visualization output.
         
+        monomers = session.inputs.monomers
+        monomer_roles = []
 
         for monomer in monomers:
             smiles = monomer.smiles
             detected_functionalities = []
             all_matches = []
+            
             # Check against each predefined functional group type.
             for functional_group in self.monomer_types.values():
                 ftype = functional_group["functionality_type"]
                 smarts_1 = functional_group["smarts_1"]
-                smarts_2 = functional_group.get("smarts_2")  # May be None for non-di_different types.
-                functionality_count, count_1, count_2, functional_matches = self.detect_monomer_functionality(
-                    monomer.rdkit_mol, ftype, smarts_1, smarts_2
+                smarts_2 = functional_group.get("smarts_2")
+
+                functionality_count, count_1, count_2, functional_matches = (
+                    self.detect_monomer_functionality(
+                        monomer.rdkit_mol,
+                        ftype,
+                        smarts_1,
+                        smarts_2,
+                    )
                 )
 
                 # Determine if this functionality matches criteria.
                 if functionality_count > 0:
-                    # Add matches to the overall list for visualization.
                     all_matches.extend(functional_matches)
-                    # Log match for user feedback.
+                    
+                    # Log detected functionality for debugging/user feedback.
                     print(f"{smiles} has functionality: {functional_group['group_name']}")
+
                     if functional_group.get("comments"):
                         print(f"Note: {smiles} - {functional_group['comments']}")
-                    
-                    # Store detection details.
+
                     detected_functionalities.append(
                         FunctionalGroupInfo(
                             functionality_type=ftype,
-                            fg_name=functional_group['group_name'],
+                            fg_name=functional_group["group_name"],
                             fg_smarts_1=smarts_1,
                             fg_count_1=count_1,
                             fg_smarts_2=smarts_2,
-                            fg_count_2=count_2
+                            fg_count_2=count_2,
                         )
                     )
                     # Debug print for match details.
@@ -366,50 +348,95 @@ class FunctionalGroupsDetector:
                     MonomerRole(
                         smiles=smiles,
                         name=monomer.name,
-                        functionalities=tuple(detected_functionalities)
+                        functionalities=tuple(detected_functionalities),
                     )
                 )
+                
+        # Store results in session for potential downstream use.
+        if not monomer_roles:
+            raise RuntimeError(
+                "No functional groups were detected in any input monomer. "
+                "Either the input molecules are not valid polymerizable monomers, "
+                "or AutoREACTER does not yet support these monomer types. "
+                "Please open a feature request or issue if you think support should be added: "
+                "https://github.com/NanoCIPHER-Lab/AutoREACTER/issues"
+            )
+        session.monomer_roles = monomer_roles
+        return None  # Return session with updated monomer_roles; visualization handled separately.
+
+
+    def _functional_groups_detector_for_visualization( 
+            self, session: Session 
+            ) -> list[FunctionalGroupVisualization]: 
+        """ 
+        Detect functional groups and prepare visualization data for a list of monomers. 
+            Args: session (Session): The session containing monomer entries to analyze. 
+            
+            Returns: list[FunctionalGroupVisualization]: List of visualization data for monomers with detected functionalities. 
+        """ 
+        monomers = session.inputs.monomers
+        monomer_roles_visualization = []
+        for monomer in monomers:
+            all_matches = []
+            for functional_group in self.monomer_types.values():
+                ftype = functional_group["functionality_type"]
+                smarts_1 = functional_group["smarts_1"]
+                smarts_2 = functional_group.get("smarts_2")
+                functionality_count, count_1, count_2, functional_matches = (
+                    self.detect_monomer_functionality(
+                        monomer.rdkit_mol,
+                        ftype,
+                        smarts_1,
+                        smarts_2,
+                    )
+                )
+                if functionality_count > 0:
+                    all_matches.extend(functional_matches)
+            if all_matches:
                 monomer_roles_visualization.append(
                     FunctionalGroupVisualization(
                         monomer=monomer.rdkit_mol,
                         name=monomer.name,
-                        indexes_to_highlight=tuple(all_matches)
-                    ))
-        return monomer_roles, monomer_roles_visualization
-
-    def functional_group_highlighted_molecules_image_grid(self, monomer_roles_visualization: list[FunctionalGroupVisualization]) -> Image:
-            """Convert monomer roles with detected functionalities into visualizations.
-            Args:
-                monomer_roles_visualization (list[FunctionalGroupVisualization]): List of monomer roles with detected functionalities for visualization.
-            Returns:
-                PIL.Image.Image: A single grid image of the monomers with highlighted functional groups.
-            """
-            molecules = []
-            indextohighlight = []
-            names = []
-            for viz in monomer_roles_visualization:  # <-- use actual objects, not dict version
-                mol = viz.monomer
-                name = viz.name
-                matches = viz.indexes_to_highlight or ()
-
-                # Flatten tuple-of-tuples into unique atom indices
-                highlight_atoms = sorted(
-                    {atom for match in matches for atom in match}
+                        indexes_to_highlight=tuple(all_matches),
+                    )
                 )
+        return monomer_roles_visualization
 
-                molecules.append(mol)
-                indextohighlight.append(highlight_atoms)
-                names.append(name)
+    def functional_group_highlighted_molecules_image_grid(self, session: Session) -> Image:
+        """Convert monomer roles with detected functionalities into visualizations.
+        Args:
+            session (Session): The session containing monomer entries to analyze.
+        Returns:
+            PIL.Image.Image: A single grid image of the monomers with highlighted functional groups.
+        """
 
-            img = Draw.MolsToGridImage(
-                molecules,
-                molsPerRow=3,
-                legends=names,
-                subImgSize=(500, 500),
-                highlightAtomLists=indextohighlight
+        monomer_roles_visualization = self._functional_groups_detector_for_visualization(session)
+        molecules = []
+        index_to_highlight = []
+        names = []
+        for viz in monomer_roles_visualization:  # <-- use actual objects, not dict version
+            mol = viz.monomer
+            name = viz.name
+            matches = viz.indexes_to_highlight or ()
+
+            # Flatten tuple-of-tuples into unique atom indices
+            highlight_atoms = sorted(
+                {atom for match in matches for atom in match}
             )
 
-            return img
+            molecules.append(mol)
+            index_to_highlight.append(highlight_atoms)
+            names.append(name)
+
+        img = Draw.MolsToGridImage(
+            molecules,
+            molsPerRow=3,
+            legends=names,
+            subImgSize=(500, 500),
+            highlightAtomLists=index_to_highlight
+        )
+
+        return img
 
 if __name__ == "__main__":
 
@@ -467,7 +494,7 @@ if __name__ == "__main__":
     visualization_dict = [asdict(viz) for viz in results[1]]
 
     print(json.dumps(results_dict, indent=4))
-    print(visualization_dict)
+    print(json.dumps(visualization_dict, indent=4))
 
     from rdkit.Chem import Draw
     autoreacter_dir = pathlib.Path(__file__).parent.parent.parent.resolve()

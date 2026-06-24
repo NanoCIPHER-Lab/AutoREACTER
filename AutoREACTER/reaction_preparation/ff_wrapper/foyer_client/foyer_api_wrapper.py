@@ -33,7 +33,7 @@ from AutoREACTER.reaction_preparation.ff_wrapper.lunar_client.lunar_executor imp
 
 
 if TYPE_CHECKING:
-    from AutoREACTER.session import ARXSession
+    from AutoREACTER.session import Session
 
 
 @dataclass(slots=True)
@@ -61,7 +61,7 @@ class FoyerAPIWrapper:
     High-level interface for executing LUNAR preparation workflows.
     """
 
-    def __init__(self, ARX: "ARXSession", prepared_reactions_with_3d_mols: List[ReactionMetadata]):
+    def __init__(self, ARX: "Session", prepared_reactions_with_3d_mols: List[ReactionMetadata]):
         """
         Initialize the LUNAR wrapper and set up cache directories.
         """

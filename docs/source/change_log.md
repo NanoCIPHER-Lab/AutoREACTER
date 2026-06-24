@@ -21,6 +21,20 @@ This serves two purposes:
     People can see what changes they might expect in upcoming releases
     At release time, you can move the Unreleased section changes into a new release version section.
  -->
+
+## [0.2.3] - [2026-06-24]
+
+### Added
+* Added a new `Session` class to centralize session-based input/output handling across the entire package.
+* Added a new `ARXCLI` module to provide a streamlined Command-Line Interface for running the AutoREACTER workflow with a single command.
+  - The CLI supports input file parsing, session management, and orchestrating the end-to-end workflow.
+
+
+### Changed
+* Centralized state management across the entire package. The `Session` object is now the single source of truth. All modules and functions have been refactored to use the `Session` for accessing inputs, outputs, and configuration.
+* Centralized the versioning system to dynamically pull from the package's `__version__` attribute.
+* Updated all documentation, examples, and CI configuration to reflect the new API and workflow changes.
+
 ## [0.2.2] - 2026-06-09
 
 ### Added

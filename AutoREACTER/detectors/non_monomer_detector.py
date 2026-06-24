@@ -7,7 +7,7 @@ from dataclasses import replace
 # AutoREACTER internal imports for simulation configuration and reaction detection
 from AutoREACTER.input_parser import SimulationSetup
 from AutoREACTER.input_parser import MonomerEntry
-from AutoREACTER.detectors.reaction_detector import ReactionInstance
+from AutoREACTER.session import Session
 
 
 class NonReactantsDetector:
@@ -128,8 +128,7 @@ class NonReactantsDetector:
         return False
 
     def non_monomer_detector(self, 
-                             simulation_setup: SimulationSetup, 
-                             reaction_instances: List[ReactionInstance]) -> List[MonomerEntry]: 
+                            session: Session) -> None: 
         """
         Detects monomers that do not participate in any of the identified reactions.
         
@@ -139,10 +138,7 @@ class NonReactantsDetector:
         this list to determine non-reactivity.
         
         Args:
-            simulation_setup (SimulationSetup): The simulation setup containing monomers
-                                                and reaction configuration.
-            reaction_instances (List[ReactionInstance]): A list of identified and filtered
-                                                          reactions by the user.
+            session (Session): The session containing the simulation setup and reaction instances.
         
         Returns:
             List[MonomerEntry]: A list of monomer entries that do not participate in any
@@ -155,7 +151,8 @@ class NonReactantsDetector:
             >>> non_reactants = detector.non_monomer_detector(setup, reactions)
             >>> # non_reactants contains monomers not found in any reaction
         """
-
+        simulation_setup = session.inputs
+        reaction_instances = session.reaction_instances
         # Initialize lists to track reactants and non-reactants
         reactants_list = []  # Stores SMILES of all molecules participating in reactions
         non_reactants_list = []  # Stores monomer entries that don't participate in reactions
@@ -179,11 +176,11 @@ class NonReactantsDetector:
             if not is_in_reactions:
                 # Monomer is not found in any reaction - add to non-reactants list
                 non_reactants_list.append(monomer)
+        session.non_reactants = non_reactants_list
+        return
         
-        # Return the list of non-reactant monomers
-        return non_reactants_list
 
-    def non_reactants_to_visualization(self, non_reactants_list: List[MonomerEntry]) -> Image | None:
+    def non_reactants_to_visualization(self, session: Session) -> Image | None:
         """
         Generates a grid image visualization of non-reacting monomers.
         
@@ -192,8 +189,7 @@ class NonReactantsDetector:
         which molecules are not participating in reactions.
         
         Args:
-            non_reactants_list (List[MonomerEntry]): A list of monomer entries that do not
-                                                     participate in any reactions.
+            session (Session): The session containing the non-reacting monomers.
         
         Returns:
             PIL.Image.Image | None: A grid image object containing the molecular
@@ -204,8 +200,8 @@ class NonReactantsDetector:
             them in a grid with 3 molecules per row. Each molecule image is 400x400 pixels.
         """
         # Print details of each non-reacting monomer to console
+        non_reactants_list = session.non_reactants
         if not non_reactants_list:
-            print("No non-reacting monomers detected.")
             return None  # Or handle as appropriate (e.g., return an empty image)
         
         for monomer in non_reactants_list:
@@ -221,7 +217,7 @@ class NonReactantsDetector:
                                    subImgSize=(400,400))
         return img
     
-    def non_reactant_selection(self, simulation_setup: SimulationSetup, non_reactants_list: List[MonomerEntry]) -> SimulationSetup:
+    def non_reactant_selection(self, session: Session) -> None:
         """
         Handles user selection of non-reactant monomers to retain or discard in the simulation.
         
@@ -235,24 +231,23 @@ class NonReactantsDetector:
         for those that should be removed from the simulation.
         
         Args:
-            simulation_setup (SimulationSetup): The simulation setup object whose monomers
-                                                will be potentially modified.
-            non_reactants_list (List[MonomerEntry]): A list of monomer entries identified
-                                                     as non-reacting.
+            session (Session): The session containing the non-reacting monomers.
         
         Returns:
-            SimulationSetup: The updated simulation setup with non-reactant monomers
-                              either retained or marked as discarded based on user input.
+            Session: The updated session with non-reactant monomers either retained or marked as discarded based on user input.
         
         Note:
-            - This method replaces MonomerEntry objects in simulation_setup.monomers with
+            - This method replaces MonomerEntry objects in session.monomers with
               updated copies (via dataclasses.replace) to reflect 'discarded' status.
             - For single non-reactant monomers, only N and A options are presented.
             - The status values follow the StatusType convention: 'active' or 'discarded'.
         """
+        non_reactants_list = session.non_reactants
+        simulation_setup = session.inputs
+
         if not non_reactants_list:
             print("No non-reacting monomers to select from.")
-            return simulation_setup  # No changes needed if there are no non-reactants
+            return  # No changes needed if there are no non-reactants
         
         # Display selection guide for user interaction with non-reactant monomers
         print("""
@@ -349,4 +344,5 @@ Example: If you want to keep monomers with IDs 1 and 3, you would enter: 1,3
                         break
                     
         # Return the modified simulation setup
-        return simulation_setup
+        session.inputs = simulation_setup
+        return

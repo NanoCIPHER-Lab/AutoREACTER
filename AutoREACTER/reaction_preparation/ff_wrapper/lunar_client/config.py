@@ -1,1 +1,1 @@
-LUNAR_ROOT_DIR = '' # This variable will be set to the user-provided LUNAR directory path during the first run of AutoREACTER. It is used to locate the LUNAR package for atom typing and REACTER file preparation.
+LUNAR_ROOT_DIR = None

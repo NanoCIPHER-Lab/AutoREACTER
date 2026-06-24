@@ -3,7 +3,8 @@ from typing import TYPE_CHECKING
 
 # Only import LunarFiles for type checking to avoid circular/runtime import overhead.
 if TYPE_CHECKING:
-    from AutoREACTER.reaction_preparation.lunar_client.lunar_api_wrapper import LunarFiles
+    from AutoREACTER.reaction_preparation.ff_wrapper.REACTER_files_builder import REACTERFiles
+    from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper import FFFiles
 
 
 class ForceFieldValidationError(Exception):
@@ -23,10 +24,10 @@ class FFValidator:
     - no coefficient row is entirely zero.
     """
 
-    def __init__(self, lunar_files: "LunarFiles"):
+    def __init__(self, ff_files: "FFFiles"):
         """Store the file reference and validate the force field immediately."""
-        self.lunar_files = lunar_files
-        self.ff_file = self.lunar_files.force_field_data
+        self.ff_files = ff_files
+        self.ff_file = self.ff_files.force_field_data
         self.validate()
 
     def validate(self) -> bool:

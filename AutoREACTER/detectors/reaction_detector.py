@@ -1,3 +1,4 @@
+from __future__ import annotations  # Enable postponed evaluation of annotations for forward references.
 """
 Polymerization Reaction Detector and Visualizer.
 
@@ -30,11 +31,14 @@ TODO: Missing Polymerization Mechanisms
 
 import pathlib
 import os
-from typing import Dict, Any, Tuple, Optional, List, Set
+from typing import Tuple, Optional, List, Set
 from dataclasses import dataclass
 from PIL import Image, ImageDraw, ImageFont
 from rdkit import Chem
 from rdkit.Chem import Draw, rdChemReactions
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from AutoREACTER.session import Session
 
 # Attempt to import internal library components
 try:
@@ -130,16 +134,17 @@ class ReactionDetector:
 
         return (reaction_name, ordered)
 
-    def reaction_detector(self, monomer_roles: List[MonomerRole]) -> List[ReactionInstance]:
+    def reaction_detector(self, session: "Session") -> None:
         """
         Scans a list of monomers to find all possible polymerization reactions.
         
         Args:
-            monomer_roles: List of monomers with their detected functional groups.
+            session: The session containing monomer entries to analyze.
             
         Returns:
-            A list of ReactionInstance objects representing valid matches.
+            None (results stored in session.reaction_instances for downstream use). 
         """
+        monomer_roles = session.monomer_roles
         reaction_instances = []
         seen_pairs: Set[Tuple] = set()
 
@@ -234,7 +239,7 @@ class ReactionDetector:
                                         functional_group_2=fg_2
                                     )
                                 )
-        return reaction_instances
+        session.reaction_instances = reaction_instances
 
     def create_reaction_image(self, reactant_a_smiles: str, reactant_b_smiles: str, 
                               reaction_smarts: str, reaction_name: str) -> Image.Image:
@@ -282,7 +287,7 @@ class ReactionDetector:
 
         return Draw.ReactionToImage(display_rxn, subImgSize=(400, 400))
 
-    def available_reaction_image_grid(self, selected_reaction_instances: List[ReactionInstance]) -> Optional[Image.Image]:
+    def available_reaction_image_grid(self, session: Session) -> Optional[Image.Image]:
         """
         Creates a vertical grid image containing all selected reaction visualizations.
         
@@ -292,6 +297,7 @@ class ReactionDetector:
         Returns:
             A combined PIL Image or None if no images were generated.
         """
+        selected_reaction_instances = session.reaction_instances
         img_list = []
 
         for rxn in selected_reaction_instances:
@@ -331,22 +337,23 @@ class ReactionDetector:
 
         return new_img
 
-    def reaction_selection(self, reaction_instances: List[ReactionInstance]) -> List[ReactionInstance]:
+    def reaction_selection(self, session: Session) -> None:
         """
         Interactive CLI to allow users to select specific reactions from the detected list.
         
         Args:
-            reaction_instances: List of all detected reactions.
+            session: The session containing reaction instances.
             
         Returns:
-            A list of user-selected ReactionInstance objects.
+            None (results stored in session.reaction_instances for downstream use).
         """
+        reaction_instances = session.reaction_instances
         if not reaction_instances:
             raise EmptyReactionListError("No reaction instances detected. Cannot proceed with selection.")
         
         if len(reaction_instances) == 1:
             print("Only one reaction detected. Automatically selecting it.")
-            return reaction_instances
+            return
 
         print("Detected Reactions:")
         for i, rx in enumerate(reaction_instances, start=1):
@@ -373,8 +380,8 @@ class ReactionDetector:
 
         selected = [reaction_instances[i-1] for i in indices]
         print(f"Selected {len(selected)} reactions.")
-        return selected
-
+        session.reaction_instances = selected
+        return
 
 if __name__ == "__main__":
     # --- Test Setup ---
