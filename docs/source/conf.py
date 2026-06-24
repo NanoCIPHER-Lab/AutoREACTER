@@ -39,8 +39,6 @@ myst_substitutions = {
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'AutoREACTER'
-version = release
-release = release
 copyright = '2026, Janitha Mahanthe, Jacob Gissinger'
 author = 'Janitha Mahanthe, Jacob Gissinger'
 
