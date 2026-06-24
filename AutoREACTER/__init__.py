@@ -39,7 +39,7 @@ full simulation pipeline.  Each function delegates to the currently active
 
 Usage (e.g. in a Jupyter notebook)::
 
-    import arx
+    import AutoREACTER as arx
 
     arx.run("input.json")
     arx.show_molecules()
