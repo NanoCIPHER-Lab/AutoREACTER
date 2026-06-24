@@ -179,7 +179,7 @@ class ARXCLI:
             self._ensure_reactions_detected()
 
         if not self._reactions_selected:
-            if self.session.reaction_instances and len(self.session.reaction_instances) == 0:
+            if not self.session.reaction_instances:
                 raise RuntimeError("No reactions detected. Cannot proceed.")
             else:
                 selector = ReactionDetector()
