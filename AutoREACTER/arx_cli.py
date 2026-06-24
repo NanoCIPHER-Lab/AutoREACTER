@@ -190,15 +190,23 @@ class ARXCLI:
     def show_non_reactants(self) ->  Optional['Image']:
         """
         Return an image visualising detected non-reactant species.
+
+        This is the only place where the non-reactant visualization image is built
+        and saved.
         """
-        if not self._non_reactants_detected:
-            self._ensure_non_reactants_detected()
+        self._ensure_non_reactants_detected()
 
         detector = NonReactantsDetector()
         img = detector.non_reactants_to_visualization(self.session)
 
         if img is None:
             return None
+
+        self._save_rdkit_img(
+            img,
+            self.img_dir / "non_reactants.png",
+            is_non_reactant=True,
+        )
 
         return img
 
@@ -347,8 +355,8 @@ class ARXCLI:
         """
         Ensure non-reactant species have been detected.
 
-        Automatically triggers reaction selection first, then runs the
-        non-monomer detector. Saves a visualisation image if one exists.
+        This should only detect non-reactants. It should not generate or print
+        visualization output, because show_non_reactants() handles that.
         """
         if not self._reactions_selected:
             self.select_reactions()
@@ -356,15 +364,6 @@ class ARXCLI:
         if not self._non_reactants_detected:
             NonReactantsDetector().non_monomer_detector(self.session)
             self._non_reactants_detected = True
-
-        detector = NonReactantsDetector()
-        img = detector.non_reactants_to_visualization(self.session)
-
-        self._save_rdkit_img(
-            img,
-            self.img_dir / "non_reactants.png",
-            is_non_reactant=True,
-        )
 
     def _save_rdkit_img(self, img, path: Path, is_non_reactant: bool = False):
         """

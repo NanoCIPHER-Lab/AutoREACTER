@@ -3,7 +3,7 @@
 # Tells pip and other tools how to build your package from source.
 # ==============================================================================
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=77.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 
@@ -15,7 +15,8 @@ build-backend = "setuptools.build_meta"
 name = "AutoREACTER"
 description = "Automated reaction modeling setup for LAMMPS REACTER simulations"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
+license-files = ["LICENSE.md"]
 requires-python = ">=3.12"
 
 # We tell the build system that the "version" will be fetched dynamically 
