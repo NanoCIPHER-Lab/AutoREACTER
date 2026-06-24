@@ -43,7 +43,6 @@ version = release
 release = release
 copyright = '2026, Janitha Mahanthe, Jacob Gissinger'
 author = 'Janitha Mahanthe, Jacob Gissinger'
-release = '0.2.2b0'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
