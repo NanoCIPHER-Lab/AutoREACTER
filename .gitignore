@@ -38,6 +38,7 @@ AutoREACTER/reaction_preparation/lunar_client/config.py
 
 # Generated AutoREACTER example outputs
 examples/AutoREACTER_outputs/
+examples/AutoREACTER_Test_Suite/
 AutoREACTER/examples/AutoREACTER_outputs/
 
 
