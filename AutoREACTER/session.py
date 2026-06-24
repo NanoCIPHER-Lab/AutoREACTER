@@ -29,7 +29,7 @@ class Session:
     reaction_instances: list[ReactionInstance] = None
     non_reactants: list["MonomerRole"] = None
     reaction_metadata: list[ReactionMetadata] = None  # Placeholder for actual ReactionMetadata type
-    ff_files: list[FFFiles] = None  # Placeholder for the actual FFFiles dataclass
+    ff_files: FFFiles | None = None
     reacter_files: REACTERFiles = None  # Placeholder for the actual REACTERFiles dataclass
 
 def _resolve_input_path(input_file_path: str) -> Path:
