@@ -22,7 +22,7 @@ This serves two purposes:
     At release time, you can move the Unreleased section changes into a new release version section.
  -->
 
-## [0.2.3] - [Unreleased]
+## [0.2.3] - [2026-06-24]
 
 ### Added
 * Added a new `Session` class to centralize session-based input/output handling across the entire package.
