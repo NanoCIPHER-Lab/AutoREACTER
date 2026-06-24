@@ -204,19 +204,23 @@ class ARXCLI:
 
     def select_non_reactants(self) -> None:
         """
-        Interactively (or automatically) select non-reactant species.
+        Interactively or automatically select non-reactant species.
 
-        If non-reactants are found the user is prompted; otherwise the step is
-        skipped.  Marks the 'select_non_reactants' waterfall stage as complete.
+        If non-reactants are found, the user is prompted to keep/discard/select them.
+        If no non-reactants are found, the step is skipped.
+
+        In all successful cases, mark the non-reactant selection stage complete.
         """
         self._ensure_non_reactants_detected()
 
-        if not self._non_reactants_selected:
-            if self.session.non_reactants and len(self.session.non_reactants) > 0:
-                NonReactantsDetector().non_reactant_selection(self.session)
-            else:
-                self._non_reactants_selected = True
-                self.error_handler["select_non_reactants"] = True
+        if self._non_reactants_selected:
+            return
+
+        if self.session.non_reactants and len(self.session.non_reactants) > 0:
+            NonReactantsDetector().non_reactant_selection(self.session)
+
+        self._non_reactants_selected = True
+        self.error_handler["select_non_reactants"] = True
 
 
     def prepare_reactions(self) -> None:
