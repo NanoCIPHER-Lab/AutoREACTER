@@ -492,7 +492,6 @@ class ARXCLI:
         Provides a clean string representation for interactive environments (like Jupyter).
         Prevents the default '<...ARXCLI object at 0x...>' memory address from printing.
         """
-        # Safely grab the filename if it exists
-        if hasattr(self, 'input'):
-            return ""
-        return ""
+        if hasattr(self, "input"):
+            return f"ARXCLI(input={self.input})"
+        return "ARXCLI()"
