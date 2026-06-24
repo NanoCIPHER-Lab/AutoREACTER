@@ -70,7 +70,6 @@
  1.0  1   c1      12.01115      C          4        sp3 carbon with 1 H 3 heavies
  1.0  1   c2      12.01115      C          4        sp3 carbon with 2 H's, 2 Heavy's
  1.0  1   c3      12.01115      C          4        sp3 carbon with 3 hHs 1 heavy
- 1.0  1   c3'     12.01115      C          4        sp3 carbon copied from c3
  1.0  1   c3h     12.01115      C          4        sp3 carbon in 3-membered ring with hydrogens
  1.0  1   c3m     12.01115      C          4        sp3 carbon in 3-membered ring
  1.0  1   c4h     12.01115      C          4        sp3 carbon in 4-membered ring with hydrogens
@@ -213,7 +212,6 @@
  1.0  1   c1     c      c      c      c        c    
  1.0  1   c2     c      c      c      c        c    
  1.0  1   c3     c      c      c      c        c
- 1.0  1   c3'    c      c      c      c        c    
  1.0  1   c3h    c      c      c      c        c    
  1.0  1   c3m    c      c      c      c        c    
  1.0  1   c4h    c      c      c      c        c    
@@ -340,7 +338,6 @@
  2.0  1     c1    c    c      c_    c_         c_        c_        c_           c_       c_   
  2.0  1     c2    c    c      c_    c_         c_        c_        c_           c_       c_   
  2.0  1     c3    c    c      c_    c_         c_        c_        c_           c_       c_
- 2.0  1     c3'   c    c      c_    c_         c_        c_        c_           c_       c_   
  2.0  1     c3h   c    c      c3m_  c3m_       c3m_      c_        c_           c_       c_   
  2.0  1     c3m   c    c      c3m_  c3m_       c3m_      c_        c_           c_       c_   
  2.0  1     c4h   c    c      c4m_  c4m_       c4m_      c_        c_           c_       c_   
@@ -521,7 +518,6 @@
  1.0  2   c     nt       0.3640  -0.3640
  2.1  8   c     o        0.1330  -0.1330
  2.1  8   c3    o2h      0.1330  -0.1330
- 2.1  8   c3'   o2h      0.1330  -0.1330
  2.1  6   c     o_2      0.2250  -0.2250
  2.0  4   c     oz       0.0500  -0.0500
  2.0  2   c     p        0.0110  -0.0110
@@ -1020,7 +1016,6 @@
 !Ver Ref    I     J       R0         K2
 !--- ---  ----- -----  -------    --------
  2.0  1   c3    o2h     1.4200    400.3954
- 2.0  1   c3'   o2h     1.4200    400.3954
  2.0  2   br_   br_     2.2900    175.6329
  2.0  2   br_   c'_     1.8750    228.2808
  2.0  2   br_   c3m_    1.9200    223.6000
@@ -1725,7 +1720,6 @@
  2.1  7   c_2   o_1     1.2063    854.2903  -1922.3407   2101.6824
  2.1  7   c_2   o_2     1.3598    391.3310   -788.5655   1212.3812
  2.1  1   c_2   nn      1.4160    359.1591   -558.4730   1146.3810
- 1.0  1   c3'   o2h     1.4200    400.3954   -835.1951   1313.0142
  3.1 12   cl    p=      2.0378    158.7770   -239.1290    210.0844
  2.1  8   cp    cp      1.4170    470.8361   -627.6179   1327.6345
  2.0  5   cp    cp      1.3823    476.2720   -869.7532   1281.3640
