@@ -215,9 +215,8 @@ class ARXCLI:
             if self.session.non_reactants and len(self.session.non_reactants) > 0:
                 NonReactantsDetector().non_reactant_selection(self.session)
             else:
-
-            self._non_reactants_selected = True
-            self.error_handler["select_non_reactants"] = True
+                self._non_reactants_selected = True
+                self.error_handler["select_non_reactants"] = True
 
 
     def prepare_reactions(self) -> None:
