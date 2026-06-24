@@ -353,6 +353,14 @@ class FunctionalGroupsDetector:
                 )
                 
         # Store results in session for potential downstream use.
+        if not monomer_roles:
+            raise RuntimeError(
+                "No functional groups were detected in any input monomer. "
+                "Either the input molecules are not valid polymerizable monomers, "
+                "or AutoREACTER does not yet support these monomer types. "
+                "Please open a feature request or issue if you think support should be added: "
+                "https://github.com/NanoCIPHER-Lab/AutoREACTER/issues"
+            )
         session.monomer_roles = monomer_roles
         return None  # Return session with updated monomer_roles; visualization handled separately.
 
