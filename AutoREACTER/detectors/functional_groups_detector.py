@@ -364,6 +364,11 @@ class FunctionalGroupsDetector:
         session.monomer_roles = monomer_roles
         return None  # Return session with updated monomer_roles; visualization handled separately.
 
+    def index_based_functional_groups_detector(
+        self, session: "Session", 
+        ) -> None:
+        pass
+
 
     def _functional_groups_detector_for_visualization( 
             self, session: Session 
