@@ -32,6 +32,7 @@ Architectural / Supramolecular Polymers
 Special Polymerization Environments
 - Enzymatic Polymerizations: In Vivo / In Vitro biocatalysis
 - Polymerization in Supercritical Carbon Dioxide
+- Thiophene Polymerizations: Oxidative Polymerization of Thiophenes
 """
 
 
