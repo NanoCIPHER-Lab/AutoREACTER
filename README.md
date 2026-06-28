@@ -4,7 +4,7 @@
 
 <p align="center"><b>Automated generation of LAMMPS/REACTER-ready reaction-template workflows.*</b></p>
 
-> **Status:** AutoREACTER is currently in **v0.2-beta** and under active development. APIs, configuration schemas, reaction libraries, and core functionality may change without notice.
+> **Status:** AutoREACTER is currently in **v0.2.3** and under active development. APIs, configuration schemas, reaction libraries, and core functionality may change without notice.
 > Please refer to the [changelog](https://autoreacter.org/change_log.html) for the latest updates.
 
 ## Documentation
@@ -40,19 +40,19 @@ AutoREACTER also requires **LUNAR** for atom typing. See the [getting started do
 Run AutoREACTER with a JSON input file:
 
 ```bash
-python examples/run_AutoREACTER.py -i examples/example_1_inputs_count_mode.json
+python examples/example_1.py -i examples/example_1_inputs_count_mode.json
 ```
 
 or:
 
 ```bash
-python examples/run_AutoREACTER.py --input examples/example_1_inputs_count_mode.json
+python examples/example_1.py --input examples/example_1_inputs_count_mode.json
 ```
 
 View available commands and options:
 
 ```bash
-python examples/run_AutoREACTER.py --help
+python examples/example_1.py --help
 ```
 
 ## Interactive notebook workflow

@@ -58,12 +58,12 @@ class All2LMPResult:
 
 class FoyerAPIWrapper:
     """
-    High-level interface for executing LUNAR preparation workflows.
+    High-level interface for executing Foyer preparation workflows.
     """
 
     def __init__(self, ARX: "Session", prepared_reactions_with_3d_mols: List[ReactionMetadata]):
         """
-        Initialize the LUNAR wrapper and set up cache directories.
+        Initialize the Foyer wrapper and set up cache directories.
         """
         self.session = ARX
         self.inputs = ARX.inputs
