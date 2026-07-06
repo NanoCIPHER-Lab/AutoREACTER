@@ -120,6 +120,14 @@ class FunctionalGroupsLibrary:
                 "comments": None,
             },
 
+
+            "diepoxy_monomer": {
+                "functionality_type": "di_identical",
+                "smarts_1": "[OX2r3:1]1[#6r3][#6r3]1",
+                "group_name": "di_epoxide",
+                "comments": None,
+            }
+
             # ============================================================
             # Commented functional groups
             # ============================================================

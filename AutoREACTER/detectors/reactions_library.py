@@ -339,6 +339,18 @@ class ReactionLibrary:
                 },
                 "comments": None
             },
+            "Amine Epoxy Addition First Stage": {
+                "same_reactants": False,
+                "reactant_1": "amine",
+                "reactant_2": "epoxide",
+                "product": "beta_hydroxy_secondary_amine",
+                "delete_atom": False,
+                "reaction": "[NX3;H2,H1:1].[OX2r3:2]1[CX4r3:3][CX4r3:4]1>>[NX3:1]-[CX4:3]-[CX4:4]-[OX2H1:2]",
+                "reference": {
+                    "reaction_and_mechanism": []
+                }
+                }
+            }
 
             # ============================================================
             # Commented reactions
@@ -473,4 +485,4 @@ class ReactionLibrary:
             #     "delete_atom": False,
             #     "reaction": "[NX2:3]=[CX2:4]=[OX1,SX1:5].[OX2,SX2;H1;!$([O,S]C=*):6]>>[NX3:3][CX3:4](=[OX1,SX1:5])[OX2,SX2;!$([O,S]C=*):6]"
             # },
-        }
+        #}

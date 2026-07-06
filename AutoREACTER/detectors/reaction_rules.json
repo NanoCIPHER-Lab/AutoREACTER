@@ -1,0 +1,11 @@
+{
+  "multi_step_reactions": [
+    {
+      "name": "epoxy_polymerization",
+      "required_reactions": [
+        "first_step_reaction",
+        "second_step_reaction"
+      ]
+    }
+  ]
+}
