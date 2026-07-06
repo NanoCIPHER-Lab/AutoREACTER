@@ -46,7 +46,7 @@ class TestInputParser(unittest.TestCase) :
         self.assertEqual(result, 0.85)
     
     def test_validate_density_negative_or_zero(self):
-        """Sad Path: Rejects zero or negative density values."""
+        """Bad Ending: Rejects zero or negative density values."""
         with self.assertRaises(NumericFieldError):
             self.parser._validate_density(0)
         with self.assertRaises(NumericFieldError):
