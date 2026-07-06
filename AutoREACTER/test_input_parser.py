@@ -1,6 +1,6 @@
 import unittest
 #this should import the main class from the code
-from input_parser import (
+from AutoREACTER.input_parser import (
     InputParser,
     NumericFieldError,
     InputSchemaError,
