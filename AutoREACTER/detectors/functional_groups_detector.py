@@ -429,6 +429,97 @@ class FunctionalGroupsDetector:
         matching_hits = [m for m in matches if target_indices.intersection(m)]
 
         return bool(matching_hits)
+    
+    def index_based_functional_groups_detector(
+        self, session: "Session"
+    ) -> None:
+        """
+        Detect functional groups across a list of monomers and categorize them into roles.
+
+        Iterates over predefined monomer_types, matches each against the monomer's SMILES,
+        and collects valid detections. Prints matches for debugging/user feedback.
+
+        Args:
+            session (Session): Validated Session object containing monomers.
+
+        Returns:
+            None (results stored in session.monomer_roles for downstream use).
+
+        Notes:
+            - Matches criteria: 'vinyl'/'mono' (>=1 primary), 'di_identical' (>=2 primary),
+            'di_different' (>=1 each pattern).
+        """
+        
+        monomers = session.inputs.monomers
+        monomer_roles = []
+
+        for monomer in monomers:
+            smiles = monomer.smiles
+            detected_functionalities = []
+            all_matches = []
+            
+            # Check against each predefined functional group type.
+            for functional_group in self.monomer_types.values():
+                ftype = functional_group["functionality_type"]
+                smarts_1 = functional_group["smarts_1"]
+                smarts_2 = functional_group.get("smarts_2")
+
+                functionality_count, count_1, count_2, functional_matches = (
+                    self.detect_monomer_functionality(
+                        monomer.rdkit_mol,
+                        ftype,
+                        smarts_1,
+                        smarts_2,
+                    )
+                )
+
+                # Determine if this functionality matches criteria.
+                if functionality_count > 0:
+                    all_matches.extend(functional_matches)
+                    
+                    # Log detected functionality for debugging/user feedback.
+                    print(f"{smiles} has functionality: {functional_group['group_name']}")
+
+                    if functional_group.get("comments"):
+                        print(f"Note: {smiles} - {functional_group['comments']}")
+
+                    detected_functionalities.append(
+                        FunctionalGroupInfo(
+                            functionality_type=ftype,
+                            fg_name=functional_group["group_name"],
+                            fg_smarts_1=smarts_1,
+                            fg_count_1=count_1,
+                            fg_smarts_2=smarts_2,
+                            fg_count_2=count_2,
+                        )
+                    )
+                    # Debug print for match details.
+                    # print(
+                    #     f"Monomer {monomer.name} (SMILES: {smiles}) matches {ftype} "
+                    #     f"with {functional_group['group_name']} (Count 1: {count_1}, Count 2: {count_2})"
+                    # )
+
+            # Add to roles if any functionalities detected.
+            if detected_functionalities:
+                monomer_roles.append(
+                    MonomerRole(
+                        smiles=smiles,
+                        name=monomer.name,
+                        functionalities=tuple(detected_functionalities),
+                    )
+                )
+                
+        # Store results in session for potential downstream use.
+        if not monomer_roles:
+            raise RuntimeError(
+                "No functional groups were detected in any input monomer. "
+                "Either the input molecules are not valid polymerizable monomers, "
+                "or AutoREACTER does not yet support these monomer types. "
+                "Please open a feature request or issue if you think support should be added: "
+                "https://github.com/NanoCIPHER-Lab/AutoREACTER/issues"
+            )
+        session.monomer_roles = monomer_roles
+        return None  # Return session with updated monomer_roles; visualization handled separately.
 
     def functional_group_highlighted_molecules_image_grid(self, session: Session) -> Image:
         """Convert monomer roles with detected functionalities into visualizations.
