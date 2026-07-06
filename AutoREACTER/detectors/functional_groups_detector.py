@@ -1,5 +1,7 @@
 from __future__ import annotations  
 from typing import TYPE_CHECKING
+
+from numpy import indices
 """
 * Monomer Functionality Detection Module
 --------------------------------------
@@ -364,11 +366,6 @@ class FunctionalGroupsDetector:
         session.monomer_roles = monomer_roles
         return None  # Return session with updated monomer_roles; visualization handled separately.
 
-    def index_based_functional_groups_detector(
-        self, session: "Session", 
-        ) -> None:
-        pass
-
 
     def _functional_groups_detector_for_visualization( 
             self, session: Session 
@@ -406,6 +403,32 @@ class FunctionalGroupsDetector:
                     )
                 )
         return monomer_roles_visualization
+    
+    def _detect_functional_groups_by_index(self, mol: Chem.Mol, smarts: str, indices: list[int]) -> bool:
+        """
+        mol: RDKit Mol object
+        smarts: SMARTS pattern string
+        indices: iterable of atom indices you care about
+
+        Returns: bool
+                True if any of the specified indices match the SMARTS pattern, False otherwise
+        """
+        target_indices = set(indices)
+        results = {}
+
+        patt = Chem.MolFromSmarts(smarts)
+        if patt is None:
+            # invalid SMARTS
+            results["present"] = False
+            results["error"] = "invalid SMARTS"
+            return results
+
+        matches = mol.GetSubstructMatches(patt, uniquify=True)  # tuple of tuples of atom idx
+
+        # check if ANY match shares AT LEAST ONE atom with your target indices
+        matching_hits = [m for m in matches if target_indices.intersection(m)]
+
+        return bool(matching_hits)
 
     def functional_group_highlighted_molecules_image_grid(self, session: Session) -> Image:
         """Convert monomer roles with detected functionalities into visualizations.
