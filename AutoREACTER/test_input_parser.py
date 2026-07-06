@@ -80,7 +80,7 @@ class TestInputParser(unittest.TestCase) :
     # Tests for: validate_no_duplicate_smiles
     # ==========================================
 
-    def test_validate_no_duplicate_smiles_happy_path(self):
+    def test_validate_no_duplicate_smiles_good_path(self):
         """Good Ending: Adding a unique SMILES appends it to the tracker list."""
         tracker_list = ["CCO", "C1=CC(=CC(=C1)N)N"]
         new_smiles = "ClC(=O)c1cc(cc(c1)C(Cl)=O)C(Cl)=O"
