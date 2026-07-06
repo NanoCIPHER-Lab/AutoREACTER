@@ -61,8 +61,8 @@ class TestInputParser(unittest.TestCase) :
         result = self.parser._validate_force_field(None)
         self.assertEqual(result, "PCFF")
     
-    def test_validate_force_field_cannonical(self):
-        """Good Ending: Checks for proper capatilization."""
+    def test_validate_force_field_canonical(self):
+        """Good path: Normalizes force-field capitalization and aliases."""
         result = self.parser._validate_force_field("pcff-iff")
         self.assertEqual(result, "PCFF-IFF")
 
