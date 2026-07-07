@@ -83,7 +83,13 @@ class DetectedChemistryFilter:
                     available_functional_groups,
                     functional_group_2.fg_smarts_2,
                 )
-
+        rules = self._add_progessive_chemistries()
+        for reaction in available_reactions:
+            for rule in rules:
+                print(f"yet to implement for reaction: {reaction}, rule: {rule}"
+                      in here we need to add functional groups with meta data 
+                      and then add to the set. 
+                      )
         return DetectedChemistries(
             functional_groups=available_functional_groups,
             reactions=available_reactions,
@@ -92,10 +98,10 @@ class DetectedChemistryFilter:
 
 
 
-    def _add_progessive_chemistries(self):
+    def _add_progessive_chemistries():
         rules_file = files("AutoREACTER.detectors").joinpath("reaction_rules.json")
 
         with rules_file.open("r", encoding="utf-8") as file:
             reaction_rules = json.load(file)
-
-        return reaction_rules
+        rules = reaction_rules["multi_step_reactions"]
+        return rules
