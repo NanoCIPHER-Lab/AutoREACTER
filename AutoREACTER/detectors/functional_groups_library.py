@@ -155,7 +155,7 @@ class FunctionalGroupsLibrary:
             #     secondary amine + epoxide -> tertiary amine
             # ============================================================
 
-            "diepoxy_monomer": {
+            "di_epoxy_monomer": {
                 "functionality_type": "di_identical",
                 "smarts_1": "[OX2r3:1]1[#6r3:2][#6r3:3]1",
                 "group_name": "di_epoxide",

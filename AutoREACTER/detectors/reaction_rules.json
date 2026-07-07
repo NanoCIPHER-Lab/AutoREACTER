@@ -2,11 +2,14 @@
   "multi_step_reactions": [
     {
       "name": "epoxy_polymerization",
-      "required_fgs": [] ,
+      "if_reactions": "Amine Epoxy Addition First Stage",
       "required_reactions": [
-        "first_step_reaction",
-        "second_step_reaction"
+        "Amine Epoxy Addition Second Stage"
       ]
+      ,
+      "fg_additon": {
+        "primary_amine": "secondary_amine"
+      }
     }
   ]
 }

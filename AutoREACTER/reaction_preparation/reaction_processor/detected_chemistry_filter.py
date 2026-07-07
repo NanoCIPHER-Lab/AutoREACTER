@@ -3,7 +3,7 @@ from __future__ import annotations  # 1. Must be the first line
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional
 import json
-from pathlib import Path
+from importlib.resources import files
 
 if TYPE_CHECKING:
     from AutoREACTER.session import Session
@@ -89,9 +89,13 @@ class DetectedChemistryFilter:
             reactions=available_reactions,
         )
     
-def _add_progessive_chemistries():
-    rules_location = "AutoREACTER/detectors"
-    reactions_rules_location = Path(rules_location) / "reaction_rules.json"
-    with open(reactions_rules_location, "r") as file:
-        reaction_rules = json.load(file)
-    
+
+
+
+    def _add_progessive_chemistries(self):
+        rules_file = files("AutoREACTER.detectors").joinpath("reaction_rules.json")
+
+        with rules_file.open("r", encoding="utf-8") as file:
+            reaction_rules = json.load(file)
+
+        return reaction_rules
