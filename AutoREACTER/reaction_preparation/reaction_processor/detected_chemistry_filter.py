@@ -2,6 +2,8 @@ from __future__ import annotations  # 1. Must be the first line
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional
+import json
+from pathlib import Path
 
 if TYPE_CHECKING:
     from AutoREACTER.session import Session
@@ -11,6 +13,7 @@ if TYPE_CHECKING:
 class DetectedChemistries:
     functional_groups: list[str]  # Unique functional group SMARTS detected in available reactions
     reactions: dict[str, str]  # reaction_name -> reaction_smarts
+
 
 
 class DetectedChemistryFilter:
@@ -26,7 +29,7 @@ class DetectedChemistryFilter:
         self.reaction_instances = session.reaction_instances or []
 
     def _add_to_the_list(self, list_to_add: list[str], item: Optional[str]) -> None:
-        """
+        """ 
         Adds an item to the list if it is not None and not already present.
         """
         if item is not None and item not in list_to_add:
@@ -85,3 +88,10 @@ class DetectedChemistryFilter:
             functional_groups=available_functional_groups,
             reactions=available_reactions,
         )
+    
+def _add_progessive_chemistries():
+    rules_location = "AutoREACTER/detectors"
+    reactions_rules_location = Path(rules_location) / "reaction_rules.json"
+    with open(reactions_rules_location, "r") as file:
+        reaction_rules = json.load(file)
+    

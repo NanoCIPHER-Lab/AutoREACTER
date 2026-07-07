@@ -129,16 +129,20 @@ class FunctionalGroupInfo:
         functionality_type (str): Type of functionality (e.g., 'vinyl', 'mono', 'di_identical', 'di_different').
         fg_name (str): Name of the functional group (e.g., 'acrylate').
         fg_smarts_1 (str): Primary SMARTS pattern for matching.
+        fg_1_indexes (Optional[Tuple[int, ...]]): Atom indices for matches of fg_smarts_1.
         fg_count_1 (int): Number of matches for fg_smarts_1.
         fg_smarts_2 (Optional[str]): Secondary SMARTS pattern (for 'di_different' types).
+        fg_2_indexes (Optional[Tuple[int, ...]]): Atom indices for matches of fg_smarts_2.
         fg_count_2 (Optional[int]): Number of matches for fg_smarts_2.
     """
     functionality_type: str
     fg_name: str
     fg_smarts_1: str
     fg_count_1: int
+    fg_1_indexes: Optional[Tuple[int, ...]] = None
     fg_smarts_2: Optional[str] = None
     fg_count_2: Optional[int] = None
+    fg_2_indexes: Optional[Tuple[int, ...]] = None
 
 
 @dataclass(slots=True, frozen=True)
