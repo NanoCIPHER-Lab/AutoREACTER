@@ -29,7 +29,7 @@ from AutoREACTER.reaction_preparation.reaction_processor.walker import reaction_
 # Use TYPE_CHECKING to prevent circular imports with session.py
 if TYPE_CHECKING:
     from AutoREACTER.session import Session
-
+from AutoREACTER.reaction_preparation.reaction_processor.reaction_progression import ReactionProgression
 
 class MappingError(Exception):
     """Custom exception raised when atom mapping between reactants and products fails or is inconsistent."""
@@ -163,6 +163,8 @@ class PrepareReactions:
 
         # Store the finalized metadata inside the session
         session.reaction_metadata = unique_reaction_metadata
+        reaction_progression = ReactionProgression(session)
+        
         return unique_reaction_metadata
     
     # --- PIPELINE STEPS (PRIVATE) ---

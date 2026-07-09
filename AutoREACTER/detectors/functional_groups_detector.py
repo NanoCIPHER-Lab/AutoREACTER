@@ -1,5 +1,5 @@
 from __future__ import annotations  
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 from numpy import indices
 """
@@ -118,6 +118,7 @@ from .functional_groups_library import FunctionalGroupsLibrary
 logger = logging.getLogger(__name__)  # Module-level logger for future diagnostics.
 if TYPE_CHECKING:
     from AutoREACTER.session import Session
+    from AutoREACTER.detectors.functional_groups_detector import MonomerRoleforIndexBasedFGDetection
 
 
 @dataclass(slots=True)
@@ -145,7 +146,7 @@ class FunctionalGroupInfo:
     fg_2_indexes: Optional[Tuple[int, ...]] = None
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True)
 class MonomerRole:
     """
     Immutable dataclass representing a monomer with its detected functional groups.
@@ -158,6 +159,10 @@ class MonomerRole:
     smiles: str
     name: str
     functionalities: Tuple[FunctionalGroupInfo, ...]  # Tuple of detected functionalities for the monomer
+    rdkit_mol: Optional[rdchem.Mol] = None  # Optional RDKit molecule object for the monomer
+    indexes_in_template: List[int] = None  # Optional list of atom indices in the template
+    is_monomer: bool = False  # Flag indicating if the monomer is eligible for polymerization
+    is_looped: bool = False  
 
 @dataclass(slots=True)
 class FunctionalGroupVisualization:
@@ -355,6 +360,7 @@ class FunctionalGroupsDetector:
                         smiles=smiles,
                         name=monomer.name,
                         functionalities=tuple(detected_functionalities),
+                        is_monomer=True
                     )
                 )
                 
@@ -435,57 +441,90 @@ class FunctionalGroupsDetector:
         return bool(matching_hits)
     
     def index_based_functional_groups_detector(
-        self, session: "Session"
+    self, monomer_roles_in: list[MonomerRoleforIndexBasedFGDetection]
     ) -> None:
         """
-        Detect functional groups across a list of monomers and categorize them into roles.
+        Detect functional groups across a list of monomers and categorize them into roles,
+        restricted to a given set of atom indices per monomer.
 
-        Iterates over predefined monomer_types, matches each against the monomer's SMILES,
-        and collects valid detections. Prints matches for debugging/user feedback.
+        Iterates over predefined monomer_types, matches each against the monomer's
+        rdkit_mol, and keeps only matches that overlap with the monomer's
+        `indexes_in_template`. Prints matches for debugging/user feedback.
 
         Args:
-            session (Session): Validated Session object containing monomers.
+            monomer_roles_in (list[MonomerRoleforIndexBasedFGDetection]): List of monomer
+                roles to process, each carrying the atom indices of interest.
 
         Returns:
-            None (results stored in session.monomer_roles for downstream use).
+            list[MonomerRole] | bool: List of MonomerRole objects with index-filtered
+            functionalities, or False if none detected.
 
         Notes:
-            - Matches criteria: 'vinyl'/'mono' (>=1 primary), 'di_identical' (>=2 primary),
-            'di_different' (>=1 each pattern).
+            - Index-based rule: at least ONE match overlapping the given indices is
+            enough to qualify, regardless of functionality_type. This intentionally
+            breaks the whole-molecule 'di_identical' (>=2 matches) rule, since here
+            we only care whether the given index sits inside a valid functional group,
+            not how many total sites exist on the monomer.
         """
-        
-        monomers = session.inputs.monomers
-        monomer_roles = []
 
-        for monomer in monomers:
-            smiles = monomer.smiles
+        monomer_roles_out = []
+
+        for monomer in monomer_roles_in:
+            if monomer.is_looped:
+                continue  # Skip already processed monomers
+
+            mol = monomer.rdkit_mol
+            print(f"Processing monomer: {monomer.name} with SMILES: {monomer.smiles}")
+
+            target_indices = set(monomer.indexes_in_template or [])
             detected_functionalities = []
             all_matches = []
-            
+
             # Check against each predefined functional group type.
             for functional_group in self.monomer_types.values():
                 ftype = functional_group["functionality_type"]
                 smarts_1 = functional_group["smarts_1"]
                 smarts_2 = functional_group.get("smarts_2")
 
-                functionality_count, count_1, count_2, functional_matches = (
-                    self.detect_monomer_functionality(
-                        monomer.rdkit_mol,
-                        ftype,
-                        smarts_1,
-                        smarts_2,
-                    )
-                )
+                patt1 = Chem.MolFromSmarts(smarts_1)
+                if patt1 is None:
+                    logger.warning(f"Invalid primary SMARTS: {smarts_1}")
+                    continue
 
-                # Determine if this functionality matches criteria.
+                matches1 = mol.GetSubstructMatches(patt1, uniquify=True)
+                # Index-based filter: keep only matches touching at least one target index.
+                matches1_hit = [m for m in matches1 if target_indices.intersection(m)]
+                count_1 = len(matches1_hit)
+
+                count_2 = None
+                matches2_hit = []
+
+                if smarts_2:
+                    patt2 = Chem.MolFromSmarts(smarts_2)
+                    if patt2 is None:
+                        logger.warning(f"Invalid secondary SMARTS: {smarts_2}")
+                        continue
+
+                    matches2 = mol.GetSubstructMatches(patt2, uniquify=True)
+                    matches2_hit = [m for m in matches2 if target_indices.intersection(m)]
+                    count_2 = len(matches2_hit)
+
+                    # di_different: still need one overlapping hit on EACH pattern.
+                    functionality_count = 2 if (count_1 >= 1 and count_2 >= 1) else 0
+                else:
+                    # vinyl / mono / di_identical: ONE overlapping match is enough.
+                    # (Breaks the normal di_identical >=2 rule on purpose for index-based detection.)
+                    functionality_count = 1 if count_1 >= 1 else 0
+
                 if functionality_count > 0:
+                    functional_matches = tuple(matches1_hit) + tuple(matches2_hit)
                     all_matches.extend(functional_matches)
-                    
+
                     # Log detected functionality for debugging/user feedback.
-                    print(f"{smiles} has functionality: {functional_group['group_name']}")
+                    print(f"{monomer.smiles} has functionality: {functional_group['group_name']}")
 
                     if functional_group.get("comments"):
-                        print(f"Note: {smiles} - {functional_group['comments']}")
+                        print(f"Note: {monomer.smiles} - {functional_group['comments']}")
 
                     detected_functionalities.append(
                         FunctionalGroupInfo(
@@ -493,37 +532,33 @@ class FunctionalGroupsDetector:
                             fg_name=functional_group["group_name"],
                             fg_smarts_1=smarts_1,
                             fg_count_1=count_1,
+                            fg_1_indexes=tuple(matches1_hit) if matches1_hit else None,
                             fg_smarts_2=smarts_2,
                             fg_count_2=count_2,
+                            fg_2_indexes=tuple(matches2_hit) if matches2_hit else None,
                         )
                     )
-                    # Debug print for match details.
-                    # print(
-                    #     f"Monomer {monomer.name} (SMILES: {smiles}) matches {ftype} "
-                    #     f"with {functional_group['group_name']} (Count 1: {count_1}, Count 2: {count_2})"
-                    # )
 
             # Add to roles if any functionalities detected.
             if detected_functionalities:
-                monomer_roles.append(
+                monomer_roles_out.append(
                     MonomerRole(
-                        smiles=smiles,
+                        smiles=monomer.smiles,
                         name=monomer.name,
+                        rdkit_mol=monomer.rdkit_mol,
                         functionalities=tuple(detected_functionalities),
+                        is_monomer=False,  # This is a product, not an input monomer
+                        is_looped=False,   # Yet to be processed in the loop
+                        indexes_in_template=monomer.indexes_in_template,
                     )
                 )
-                
-        # Store results in session for potential downstream use.
-        if not monomer_roles:
-            raise RuntimeError(
-                "No functional groups were detected in any input monomer. "
-                "Either the input molecules are not valid polymerizable monomers, "
-                "or AutoREACTER does not yet support these monomer types. "
-                "Please open a feature request or issue if you think support should be added: "
-                "https://github.com/NanoCIPHER-Lab/AutoREACTER/issues"
-            )
-        session.monomer_roles = monomer_roles
-        return None  # Return session with updated monomer_roles; visualization handled separately.
+
+        # Store results for potential downstream use.
+        if not monomer_roles_out:
+            return False  # No functional groups detected; handle as needed
+        # first break condition: if no monomer roles are detected, return False to indicate no further processing is needed.
+
+        return monomer_roles_out  # Return list of MonomerRole; visualization not considered here.
 
     def functional_group_highlighted_molecules_image_grid(self, session: Session) -> Image:
         """Convert monomer roles with detected functionalities into visualizations.

@@ -157,21 +157,21 @@ class FunctionalGroupsLibrary:
 
             "di_epoxy_monomer": {
                 "functionality_type": "di_identical",
-                "smarts_1": "[OX2r3:1]1[#6r3:2][#6r3:3]1",
+                "smarts_1": "[CX4;R1]1[OX2;R1][CX4;R1]1",
                 "group_name": "di_epoxide",
                 "comments": "Difunctional epoxide monomer. Required on the epoxy side for epoxy-amine polymerization.",
             },
 
             "primary_amine_monomer": {
                 "functionality_type": "mono",
-                "smarts_1": "[NX3;H2;!$([N][C,S]=*):1]",
+                "smarts_1": "[NX3H2;!$(NC=O);!$(NC=[N,O,S])]",
                 "group_name": "primary_amine",
                 "comments": "Mono primary amine. One -NH2 group has two active hydrogens and can react with two epoxide groups.",
             },
 
             "secondary_amine_monomer": {
                 "functionality_type": "mono",
-                "smarts_1": "[NX3;H1;!$([N][C,S]=*):1]",
+                "smarts_1": "[NX3H1;!$(NC=O);!$(NC=[N,O,S])]",
                 "group_name": "secondary_amine",
                 "comments": "Mono secondary amine. Represents the second-stage reactive amine after primary amine reacts once with epoxide. By itself, a mono secondary amine reacts only once with epoxide and is not a true polymer-forming monomer.",
             },

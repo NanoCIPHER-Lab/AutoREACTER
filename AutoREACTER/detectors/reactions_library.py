@@ -339,28 +339,32 @@ class ReactionLibrary:
                 },
                 "comments": None
             },
-            "Amine Epoxy Addition First Stage": {
+            "Primary Amine and Epoxide Polyaddition (Epoxy-Amine, First Addition)": {
                 "same_reactants": False,
                 "reactant_1": "primary_amine",
-                "reactant_2": "epoxide",
-                "product": "beta_hydroxy_secondary_amine",
+                "reactant_2": "di_epoxide",
+                "product": "secondary_amine_hydroxyl_product",
                 "delete_atom": False,
-                "reaction": "[NX3;H2:1].[OX2r3:2]1[CX4r3:3][CX4r3:4]1>>[NX3;H1:1]-[CX4:3]-[CX4:4]-[OX2H1:2]",
+                "reaction": "[NX3H2:1]-[H:6].[CX4:2]1[OX2:5][CX4:3]1>>[NX3:1][C:2][C:3][OX2:5][H:6]",
                 "reference": {
-                    "reaction_and_mechanism": []
-                }
+                    "smarts": None,
+                    "reaction_and_mechanism": None
+                },
+                "comments": "Primary amine (-NH2) opens one epoxide ring. One N-H is consumed and transferred to the epoxide oxygen as -OH; nitrogen becomes a secondary amine with one remaining N-H, still reactive toward a second epoxide."
             },
 
-            "Amine Epoxy Addition Second Stage": {
+            "Secondary Amine and Epoxide Polyaddition (Epoxy-Amine, Second Addition / Crosslink)": {
                 "same_reactants": False,
-                "reactant_1": "secondary_amine",
-                "reactant_2": "epoxide",
-                "product": "beta_hydroxy_tertiary_amine",
+                "reactant_1": "secondary_amine_monomer",
+                "reactant_2": "di_epoxy_monomer",
+                "product": "tertiary_amine_crosslink_product",
                 "delete_atom": False,
-                "reaction": "[NX3;H1:1].[OX2r3:2]1[CX4r3:3][CX4r3:4]1>>[NX3;H0:1]-[CX4:3]-[CX4:4]-[OX2H1:2]",
+                "reaction": "[NX3H1:1]-[H:6].[CX4:2]1[OX2:5][CX4:3]1>>[NX3:1][C:2][C:3][OX2:5][H:6]",
                 "reference": {
-                    "reaction_and_mechanism": []
-                }
+                    "smarts": None,
+                    "reaction_and_mechanism": None
+                },
+                "comments": "Secondary amine's remaining N-H opens a second epoxide ring. Nitrogen becomes a fully substituted tertiary amine (network crosslink point); no reactive N-H remains on this nitrogen."
             },
 
             # ============================================================
