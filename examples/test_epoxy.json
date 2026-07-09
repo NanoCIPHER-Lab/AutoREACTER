@@ -1,0 +1,24 @@
+{
+    "simulation_name": "Epoxy_Test_Primary_Diamine_Diepoxy",
+    "simulations": [
+        {
+            "tag": "epoxy_test",
+            "temperature": 300,
+            "density": 1.0,
+            "monomer_counts": {
+                "di_epoxy": 200,
+                "primary_diamine": 100
+            }
+        }
+    ],
+    "monomers": [
+        {
+            "name": "di_epoxy",
+            "smiles": "C1OC1COCCOCC1CO1"
+        },
+        {
+            "name": "primary_diamine",
+            "smiles": "NCCN"
+        }
+    ]
+}
