@@ -52,11 +52,11 @@ class ReactionProgression:
             max_loop (int): Maximum number of iterations for the reaction progression loop.
         """
         iteration = 0
+        monomer_roles_in_loop = self.session.monomer_roles.copy()  # Create a copy to avoid modifying the original list during iteration
 
         while iteration < max_loop:
             iteration += 1
-            self.session.reaction_progression_session.iteration = iteration
-
+            
             if iteration == 1:
                 self._populate_monomer_roles()
 
@@ -73,8 +73,8 @@ class ReactionProgression:
             fg_detection_results = self.fg_detector.index_based_functional_groups_detector(
                 monomer_roles_for_idx_based_fg_detection
                 )
-            # self.fg_detector._detect_functional_groups_by_index(self.session)
-
+            monomer_roles_in_loop.extend(fg_detection_results)
+            print(monomer_roles_in_loop)  # Debug print
             if self._loop_break_condition(size_of_pool):
                 break
 
@@ -114,16 +114,23 @@ class ReactionProgression:
         Returns:
             Chem.Mol | None: The sanitized RDKit molecule object, or None if sanitization fails.
         """
+        self._clean_product(mol)  # Clean the product before sanitization
         try:
             Chem.SanitizeMol(mol)
             return mol
         except Exception:
             return None
+        
+    def _clean_product(self, products: Chem.Mol) -> Chem.Mol | None:
+        for atom in products.GetAtoms():
+            atom.SetAtomMapNum(0)
+            atom.SetIsotope(0)
 
     def _get_product_smiles(self, mol: Chem.Mol) -> str:
         """
         Converts an RDKit molecule object to its corresponding SMILES string.
         """
+        self._clean_product(mol)  # Clean the product before converting to SMILES
         try:
             return Chem.MolToSmiles(mol)
         except Exception:
