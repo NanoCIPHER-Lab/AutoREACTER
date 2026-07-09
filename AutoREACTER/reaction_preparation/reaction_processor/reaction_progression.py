@@ -1,11 +1,12 @@
 MAX_LOOP = 5  # Maximum number of iterations for the reaction progression loop.
 
-from typing import TYPE_CHECKING
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from rdkit import Chem
 
 from AutoREACTER.detectors.functional_groups_detector import FunctionalGroupsDetector
+from AutoREACTER.detectors.reaction_detector import ReactionDetector
 
 if TYPE_CHECKING:
     from AutoREACTER.session import Session
@@ -20,7 +21,7 @@ class MonomerRoleforIndexBasedFGDetection:
     """
     smiles: str
     name: str
-    indexes_in_template: list[int] 
+    indexes_in_template: list[int]
     is_monomer: bool = False
     is_looped: bool = False
     rdkit_mol: Chem.Mol | None = None
@@ -41,6 +42,8 @@ class ReactionProgression:
         self.session.reaction_progression_session = ReactionProgressionSession()
 
         self.fg_detector = FunctionalGroupsDetector()
+        self.rxn_detector = ReactionDetector()
+
         self.reaction_progression()
 
     def reaction_progression(self, max_loop: int = MAX_LOOP) -> None:
@@ -52,11 +55,13 @@ class ReactionProgression:
             max_loop (int): Maximum number of iterations for the reaction progression loop.
         """
         iteration = 0
-        monomer_roles_in_loop = self.session.monomer_roles.copy()  # Create a copy to avoid modifying the original list during iteration
+        monomer_roles_in_loop = self.session.monomer_roles.copy()
+        reaction_instances = self.session.reaction_instances.copy()
 
         while iteration < max_loop:
             iteration += 1
-            
+            self.session.reaction_progression_session.iteration = iteration
+
             if iteration == 1:
                 self._populate_monomer_roles()
 
@@ -69,12 +74,34 @@ class ReactionProgression:
             size_of_pool = self._set_is_monomer_flag()
 
             print(self.session.monomer_roles)  # Debug print
-            monomer_roles_for_idx_based_fg_detection = self._prepare_products_for_idx_based_fg_detection()
-            fg_detection_results = self.fg_detector.index_based_functional_groups_detector(
-                monomer_roles_for_idx_based_fg_detection
+
+            monomer_roles_for_idx_based_fg_detection = (
+                self._prepare_products_for_idx_based_fg_detection()
+            )
+
+            fg_detection_results = (
+                self.fg_detector.index_based_functional_groups_detector(
+                    monomer_roles_for_idx_based_fg_detection
                 )
+            )
+
+            if not fg_detection_results:
+                print(
+                    f"No new functional groups detected in iteration {iteration}. "
+                    f"Ending the reaction progression loop."
+                )
+                break
+
             monomer_roles_in_loop.extend(fg_detection_results)
+
+            rxns = self.rxn_detector.index_based_reaction_detector(
+                monomer_roles_in_loop
+            )
+            reaction_instances.extend(rxns)
+
+            print(len(reaction_instances))  # Debug print
             print(monomer_roles_in_loop)  # Debug print
+
             if self._loop_break_condition(size_of_pool):
                 break
 
@@ -88,49 +115,57 @@ class ReactionProgression:
         reaction_metadata = self.session.reaction_metadata
 
         for reaction in reaction_metadata:
+            product_mol = reaction.product_combined_RDmol
+
             monomer_roles_for_idx_based_fg_detection.append(
                 MonomerRoleforIndexBasedFGDetection(
-                    smiles=self._get_product_smiles(reaction.product_combined_RDmol),
+                    smiles=self._get_product_smiles(product_mol),
                     name=f"new_{reaction.reaction_id}",
                     indexes_in_template=self._get_product_index(
                         reaction.template_reactant_to_product_mapping
-                        ),
+                    ),
                     is_monomer=False,
                     is_looped=False,
-                    rdkit_mol=self._sanitize_molecule(reaction.product_combined_RDmol),
-
+                    rdkit_mol=self._sanitize_molecule(product_mol),
                 )
             )
 
         return monomer_roles_for_idx_based_fg_detection
-    
+
     def _sanitize_molecule(self, mol: Chem.Mol) -> Chem.Mol | None:
         """
-        Sanitizes an RDKit molecule object to ensure it is chemically valid.
+        Sanitizes an RDKit molecule object.
 
         Args:
-            mol (Chem.Mol): The RDKit molecule object to sanitize.
+            mol (Chem.Mol): RDKit molecule object.
 
         Returns:
-            Chem.Mol | None: The sanitized RDKit molecule object, or None if sanitization fails.
+            Chem.Mol | None: Sanitized molecule, or None if sanitization fails.
         """
-        self._clean_product(mol)  # Clean the product before sanitization
+        self._clean_product(mol)
+
         try:
             Chem.SanitizeMol(mol)
             return mol
         except Exception:
             return None
-        
-    def _clean_product(self, products: Chem.Mol) -> Chem.Mol | None:
-        for atom in products.GetAtoms():
+
+    def _clean_product(self, mol: Chem.Mol) -> Chem.Mol:
+        """
+        Removes atom map numbers and isotope labels from a product molecule.
+        """
+        for atom in mol.GetAtoms():
             atom.SetAtomMapNum(0)
             atom.SetIsotope(0)
+
+        return mol
 
     def _get_product_smiles(self, mol: Chem.Mol) -> str:
         """
         Converts an RDKit molecule object to its corresponding SMILES string.
         """
-        self._clean_product(mol)  # Clean the product before converting to SMILES
+        self._clean_product(mol)
+
         try:
             return Chem.MolToSmiles(mol)
         except Exception:
@@ -154,7 +189,9 @@ class ReactionProgression:
 
         for product_idx in template_reactant_to_product_mapping.values():
             product_indexes.append(product_idx)
+
         print(f"Product indexes: {product_indexes}")  # Debug print
+
         return product_indexes
 
     def _set_is_monomer_flag(self) -> int:
@@ -182,10 +219,10 @@ class ReactionProgression:
         Converts a SMILES string to an RDKit molecule object.
 
         Args:
-            smiles (str): The SMILES string to convert.
+            smiles (str): SMILES string.
 
         Returns:
-            Chem.Mol | None: The corresponding RDKit molecule object.
+            Chem.Mol | None: RDKit molecule object.
         """
         return Chem.MolFromSmiles(smiles)
 
