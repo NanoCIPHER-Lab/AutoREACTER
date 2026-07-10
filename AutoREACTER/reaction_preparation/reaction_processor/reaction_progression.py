@@ -11,6 +11,7 @@ from AutoREACTER.detectors.reaction_detector import ReactionDetector
 if TYPE_CHECKING:
     from AutoREACTER.session import Session
     from AutoREACTER.detectors.functional_groups_detector import MonomerRole
+    from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import ReactionInstance, ReactionMetadata
 
 
 @dataclass(slots=True)
@@ -40,13 +41,10 @@ class ReactionProgression:
     def __init__(self, session: "Session"):
         self.session = session
         self.session.reaction_progression_session = ReactionProgressionSession()
-
         self.fg_detector = FunctionalGroupsDetector()
         self.rxn_detector = ReactionDetector()
 
-        self.reaction_progression()
-
-    def reaction_progression(self, max_loop: int = MAX_LOOP) -> None:
+    def reaction_progression(self, max_loop: int = MAX_LOOP) -> list["ReactionMetadata"]:
         """
         Progresses the reaction by iteratively applying detected chemistries
         to the session's molecules.
@@ -101,10 +99,25 @@ class ReactionProgression:
 
             print(len(reaction_instances))  # Debug print
             print(monomer_roles_in_loop)  # Debug print
+            prepared_reactions = self._index_based_reaction_preparation(
+                reaction_instances=reaction_instances
+            )
+            print(prepared_reactions)  # Debug print
+            if self._loop_break_condition(
+                size_before=size_of_pool, size_after=len(monomer_roles_in_loop)
+            ):
+                return prepared_reactions
+        return prepared_reactions
 
-            if self._loop_break_condition(size_of_pool):
-                break
+    def _index_based_reaction_preparation(
+        self, reaction_instances: list["ReactionInstance"]
+    ) -> list["ReactionMetadata"]:
+        from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import PrepareReactions
 
+        prepare_reactions = PrepareReactions(self.session)
+        prepared_reactions = prepare_reactions._prepare_reactions_stage(reaction_instances)
+        return prepared_reactions
+    
     def _prepare_products_for_idx_based_fg_detection(
         self,
     ) -> list[MonomerRoleforIndexBasedFGDetection]:
@@ -226,13 +239,11 @@ class ReactionProgression:
         """
         return Chem.MolFromSmiles(smiles)
 
-    def _loop_break_condition(self, size_of_pool: int) -> bool:
-        if size_of_pool <= len(self.session.monomer_roles):
+    def _loop_break_condition(self, size_before: int, size_after: int) -> bool:
+        if size_after <= size_before:
             print(
-                f"Breaking the loop as the size of the pool ({size_of_pool}) "
-                f"is less than or equal to the number of monomer roles "
-                f"({len(self.session.monomer_roles)})."
+                f"Breaking the loop as the pool did not grow "
+                f"(before={size_before}, after={size_after})."
             )
             return True
-
         return False

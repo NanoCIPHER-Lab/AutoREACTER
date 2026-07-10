@@ -355,8 +355,8 @@ class ReactionLibrary:
 
             "Secondary Amine and Epoxide Polyaddition (Epoxy-Amine, Second Addition / Crosslink)": {
                 "same_reactants": False,
-                "reactant_1": "secondary_amine_monomer",
-                "reactant_2": "di_epoxy_monomer",
+                "reactant_1": "secondary_amine",
+                "reactant_2": "di_epoxide",
                 "product": "tertiary_amine_crosslink_product",
                 "delete_atom": False,
                 "reaction": "[NX3H1:1]-[H:6].[CX4:2]1[OX2:5][CX4:3]1>>[NX3:1][C:2][C:3][OX2:5][H:6]",
