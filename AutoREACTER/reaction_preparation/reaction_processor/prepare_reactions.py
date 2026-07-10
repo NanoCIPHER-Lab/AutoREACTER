@@ -8,7 +8,7 @@ consistency and completeness.
 """
 
 # WARNING:
-# When modifying this file for dataframe or any other indexing variables use idx and idxs, do not use index or indices or similar.
+# When modifying this file for dataframe or any other indexing variables use idx and idxs, do not use index or indices or similar. Mapping validation error
 
 from dataclasses import dataclass
 from functools import reduce
@@ -570,9 +570,10 @@ class PrepareReactions:
         # All atoms must be mapped (complete mapping)
         if len(r_idxs) != reactant.GetNumAtoms():
             raise MappingError(f"Mapping validation error: incomplete mapping for reactant.")
+            # pass
         if len(p_idxs) != product.GetNumAtoms():
             raise MappingError(f"Mapping validation error: incomplete mapping for product.")
-
+            # pass 
     # --- ATOM MAPPING ---
 
     def _assign_atom_map_numbers_and_set_isotopes(self, r1: Chem.Mol, r2: Chem.Mol) -> None:

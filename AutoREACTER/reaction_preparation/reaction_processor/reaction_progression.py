@@ -129,14 +129,15 @@ class ReactionProgression:
 
         for reaction in reaction_metadata:
             product_mol = reaction.product_combined_RDmol
-
+            indexes_in_template, product_mol = self._get_product_idxs(
+                        reaction.template_reactant_to_product_mapping,
+                        product_mol
+                    )
             monomer_roles_for_idx_based_fg_detection.append(
                 MonomerRoleforIndexBasedFGDetection(
                     smiles=self._get_product_smiles(product_mol),
                     name=f"new_{reaction.reaction_id}",
-                    indexes_in_template=self._get_product_index(
-                        reaction.template_reactant_to_product_mapping
-                    ),
+                    indexes_in_template=indexes_in_template,
                     is_monomer=False,
                     is_looped=False,
                     rdkit_mol=self._sanitize_molecule(product_mol),
@@ -165,47 +166,121 @@ class ReactionProgression:
 
     def _clean_product(self, mol: Chem.Mol) -> Chem.Mol:
         """
-        Removes atom map numbers and isotope labels from a product molecule.
+        Return a copy of the molecule with atom-map numbers and isotope
+        labels removed.
+
+        The input molecule is not modified.
         """
-        for atom in mol.GetAtoms():
+        cleaned_mol = Chem.Mol(mol)
+
+        for atom in cleaned_mol.GetAtoms():
             atom.SetAtomMapNum(0)
             atom.SetIsotope(0)
 
-        return mol
+        return cleaned_mol
+
 
     def _get_product_smiles(self, mol: Chem.Mol) -> str:
         """
-        Converts an RDKit molecule object to its corresponding SMILES string.
+        Convert a product molecule to SMILES without modifying the
+        original RDKit molecule.
         """
-        self._clean_product(mol)
+        cleaned_mol = self._clean_product(mol)
 
         try:
-            return Chem.MolToSmiles(mol)
+            return Chem.MolToSmiles(cleaned_mol)
         except Exception:
             return ""
 
-    def _get_product_index(
-        self,
-        template_reactant_to_product_mapping: dict,
-    ) -> list[int]:
-        """
-        Retrieves product indexes from the reactant-to-product mapping.
 
-        Args:
-            template_reactant_to_product_mapping (dict): Mapping from reactant
-                indices to product indices.
+    def _get_product_idxs(
+        self,
+        template_reactant_to_product_mapping: dict[int, int],
+        mol: Chem.Mol,
+    ) -> tuple[list[int], Chem.Mol]:
+        """
+        Retrieve mapped product atom idxs and keep only the largest
+        molecular fragment when the product contains multiple fragments.
 
         Returns:
-            list[int]: Corresponding product indexes.
+            A tuple containing:
+                - Product atom idxs relative to the returned molecule.
+                - The complete product or its largest fragment.
         """
-        product_indexes = []
+        product = Chem.Mol(mol)
 
-        for product_idx in template_reactant_to_product_mapping.values():
-            product_indexes.append(product_idx)
+        product_idxs = list(
+            template_reactant_to_product_mapping.values()
+        )
 
-        print(f"Product indexes: {product_indexes}")  # Debug print
+        if len(Chem.GetMolFrags(product)) > 1:
+            product, product_idxs = self._keep_largest_fragment(
+                product,
+                product_idxs,
+            )
 
-        return product_indexes
+        print(f"Product idxs: {product_idxs}")
+
+        return product_idxs, product
+
+
+    def _keep_largest_fragment(
+        self,
+        mol: Chem.Mol,
+        product_idxs: list[int],
+    ) -> tuple[Chem.Mol, list[int]]:
+        """
+        Keep the fragment with the largest number of heavy atoms and
+        remap product atom idxs to the retained fragment.
+
+        Args:
+            mol:
+                Molecule containing one or more disconnected fragments.
+            product_idxs:
+                Product atom idxs referring to the original molecule.
+
+        Returns:
+            A tuple containing:
+                - The largest fragment.
+                - Product atom idxs remapped to the largest fragment.
+        """
+        fragment_atom_mappings: list[tuple[int, ...]] = []
+
+        fragments = Chem.GetMolFrags(
+            mol,
+            asMols=True,
+            sanitizeFrags=True,
+            fragsMolAtomMapping=fragment_atom_mappings,
+        )
+
+        if not fragments:
+            raise ValueError("No fragments found in the product molecule.")
+
+        largest_fragment_position = max(
+            range(len(fragments)),
+            key=lambda position: fragments[position].GetNumHeavyAtoms(),
+        )
+
+        largest_fragment = fragments[largest_fragment_position]
+
+        # The atom mapping stores:
+        # new fragment idx -> original molecule idx.
+        original_atom_idxs = fragment_atom_mappings[
+            largest_fragment_position
+        ]
+
+        original_to_new_idx = {
+            original_idx: new_idx
+            for new_idx, original_idx in enumerate(original_atom_idxs)
+        }
+
+        remapped_product_idxs = [
+            original_to_new_idx[product_idx]
+            for product_idx in product_idxs
+            if product_idx in original_to_new_idx
+        ]
+
+        return largest_fragment, remapped_product_idxs
 
     def _set_is_monomer_flag(self) -> int:
         """
