@@ -103,6 +103,8 @@ class PrepareReactions:
         self.staging_dir = Path(session.staging_dir)
         self.cache = self.staging_dir
         self.csv_cache = prepare_paths(self.cache, "csv_cache")
+        if not hasattr(session, "reaction_id_counter"):
+            session.reaction_id_counter = 0 # Initialize a counter for unique reaction IDs if not already present
 
     def prepare_reactions(self, session):
         prepared_reactions = self._prepare_reactions_stage(session)
@@ -260,14 +262,14 @@ class PrepareReactions:
         return reaction_metadata
 
     def _process_reaction_products(self,
-                               rxn: Chem.rdChemReactions.ChemicalReaction,
-                               csv_cache: Path,
-                               reaction_tuple: list,
-                               delete_atoms: bool = True,
-                               reaction_metadata: Optional[list[ReactionMetadata]] = None,
-                               forced_indexes_1: Optional[set] = None,
-                               forced_indexes_2: Optional[set] = None,
-                               ) -> list[ReactionMetadata]:
+                           rxn: Chem.rdChemReactions.ChemicalReaction,
+                           csv_cache: Path,
+                           reaction_tuple: list,
+                           delete_atoms: bool = True,
+                           reaction_metadata: Optional[list[ReactionMetadata]] = None,
+                           forced_indexes_1: Optional[set] = None,
+                           forced_indexes_2: Optional[set] = None,
+                           ) -> list[ReactionMetadata]:
         """
         Runs reactions on reactant pairs and builds metadata for each product set.
 
@@ -340,7 +342,11 @@ class PrepareReactions:
                     pd.Series(byproduct_reactant_idxs, name="byproduct_idx")
                 ], axis=1).astype(pd.Int64Dtype())
 
-                total_products = len(reaction_metadata) + 1
+                # counter so every reaction across the whole run — including every
+                # pass of the progression loop — gets a distinct, ever-increasing id.
+                self.session.reaction_id_counter += 1
+                total_products = self.session.reaction_id_counter
+
                 self._clear_isotopes(reactant_combined, product_combined)
                 df_combined.to_csv(csv_cache / f"reaction_{total_products}.csv", index=False)
 

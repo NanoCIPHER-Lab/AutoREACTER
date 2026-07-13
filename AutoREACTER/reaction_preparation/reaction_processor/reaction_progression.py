@@ -7,6 +7,7 @@ from rdkit import Chem
 
 from AutoREACTER.detectors.functional_groups_detector import FunctionalGroupsDetector
 from AutoREACTER.detectors.reaction_detector import ReactionDetector
+from AutoREACTER.reaction_preparation.deduplication_detector import DeduplicationDetector
 
 if TYPE_CHECKING:
     from AutoREACTER.session import Session
@@ -54,12 +55,14 @@ class ReactionProgression:
         """
         iteration = 0
         monomer_roles_in_loop = self.session.monomer_roles.copy()
-        reaction_instances = self.session.reaction_instances.copy()
+
+        # Accumulate prepared reactions across iterations to avoid reprocessing in each loop.
+        all_prepared_reactions: list["ReactionMetadata"] = []
 
         while iteration < max_loop:
             iteration += 1
             self.session.reaction_progression_session.iteration = iteration
-
+            size_of_initial_reaction_pool = self._length_of_active_reactions()
             if iteration == 1:
                 self._populate_monomer_roles()
 
@@ -95,19 +98,39 @@ class ReactionProgression:
             rxns = self.rxn_detector.index_based_reaction_detector(
                 monomer_roles_in_loop
             )
-            reaction_instances.extend(rxns)
 
-            print(len(reaction_instances))  # Debug print
+            # Debug prints to trace the reaction progression loop.
+            if not rxns:
+                print(
+                    f"No new reactions detected in iteration {iteration}. "
+                    f"Ending the reaction progression loop."
+                )
+                break
+
+            print(len(rxns))  # Debug print (was len(reaction_instances); now just the new batch)
             print(monomer_roles_in_loop)  # Debug print
+
+            # 
             prepared_reactions = self._index_based_reaction_preparation(
-                reaction_instances=reaction_instances
+                reaction_instances=rxns
             )
             print(prepared_reactions)  # Debug print
+
+            # Accumulate prepared reactions across iterations.
+            all_prepared_reactions.extend(prepared_reactions)
+            print(size_of_initial_reaction_pool)
+            deduplication_detector = DeduplicationDetector()
+            all_prepared_reactions = deduplication_detector.compare_graphs_mol(
+                all_prepared_reactions
+            )
+            
             if self._loop_break_condition(
-                size_before=size_of_pool, size_after=len(monomer_roles_in_loop)
+                size_before=size_of_initial_reaction_pool, size_after=len(all_prepared_reactions)
             ):
-                return prepared_reactions
-        return prepared_reactions
+                self.session.reaction_metadata = all_prepared_reactions
+                return all_prepared_reactions
+        self.session.reaction_metadata = all_prepared_reactions
+        return all_prepared_reactions
 
     def _index_based_reaction_preparation(
         self, reaction_instances: list["ReactionInstance"]
@@ -128,6 +151,8 @@ class ReactionProgression:
         reaction_metadata = self.session.reaction_metadata
 
         for reaction in reaction_metadata:
+            if not reaction.activity_stats:
+                continue
             product_mol = reaction.product_combined_RDmol
             indexes_in_template, product_mol = self._get_product_idxs(
                         reaction.template_reactant_to_product_mapping,
@@ -322,3 +347,12 @@ class ReactionProgression:
             )
             return True
         return False
+    
+    def _length_of_active_reactions(self) -> int:
+        """
+        Returns the number of reactions in the session that have activity stats.
+        """
+        return sum(
+            1 for reaction in self.session.reaction_metadata
+            if reaction.activity_stats
+        )

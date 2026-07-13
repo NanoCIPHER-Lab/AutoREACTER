@@ -1,64 +1,257 @@
-import os
+from __future__ import annotations
+
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import networkx as nx
+from rdkit import Chem
+
+if TYPE_CHECKING:
+    from AutoREACTER.reaction_preparation.reaction_processor.reaction_progression import (
+        ReactionMetadata,
+    )
 
 
 class DeduplicationDetector:
-    def __init__(self):
-        # Graphs are not hashable, so store reaction graph pairs in a list.
-        self.seen_reactions: list[tuple[nx.Graph, nx.Graph]] = []
+    """
+    Detect duplicate pre/post reaction graph pairs.
+
+    Coordinates, atom IDs, and bond IDs are ignored during graph
+    isomorphism comparison.
+
+    A coupled graph is created for every reaction pair so that the same
+    atom mapping must be valid for both the reactant and product graphs.
+    """
+
+    NODE_ATTRIBUTE = "atom_label"
+    EDGE_ATTRIBUTE = "bond_label"
+
+    LAMMPS_COMPARISON_GROUP = "lammps"
+    RDKIT_COMPARISON_GROUP = "rdkit"
+
+    def __init__(self) -> None:
+        """
+        Initialize independent deduplication caches.
+        """
+        self.seen_reactions: dict[str, list[nx.Graph]] = {
+            self.LAMMPS_COMPARISON_GROUP: [],
+            self.RDKIT_COMPARISON_GROUP: [],
+        }
 
     def is_duplicate(
         self,
         pre_template_graph: nx.Graph,
         post_template_graph: nx.Graph,
+        comparison_group: str,
     ) -> bool:
         """
-        Check whether a pre/post reaction graph pair has already been seen.
+        Check whether an equivalent pre/post reaction pair has been seen.
 
-        Atom types and bond types are included in the graph comparison.
-        Coordinates are intentionally ignored because the same molecular
-        topology can have different coordinates.
+        Args:
+            pre_template_graph:
+                Graph representing the reactant state.
+
+            post_template_graph:
+                Graph representing the product state.
+
+            comparison_group:
+                Cache group used for the comparison, such as ``lammps``
+                or ``rdkit``.
+
+        Returns:
+            True if an equivalent reaction pair has already been seen.
+            Otherwise, stores the reaction pair and returns False.
         """
+        coupled_graph = self._couple_graphs(
+            pre_template_graph=pre_template_graph,
+            post_template_graph=post_template_graph,
+        )
+
         node_match = nx.algorithms.isomorphism.categorical_node_match(
-            "atom_type",
-            None,
+            ["phase", self.NODE_ATTRIBUTE],
+            [None, None],
         )
+
         edge_match = nx.algorithms.isomorphism.categorical_edge_match(
-            "bond_type",
-            None,
+            ["relationship", self.EDGE_ATTRIBUTE],
+            [None, None],
         )
 
-        for seen_pre_graph, seen_post_graph in self.seen_reactions:
-            pre_matches = nx.is_isomorphic(
-                pre_template_graph,
-                seen_pre_graph,
-                node_match=node_match,
-                edge_match=edge_match,
-            )
+        seen_graphs = self.seen_reactions.setdefault(
+            comparison_group,
+            [],
+        )
 
-            if not pre_matches:
+        for seen_graph in seen_graphs:
+            # Cheap checks before running graph isomorphism.
+            if coupled_graph.number_of_nodes() != seen_graph.number_of_nodes():
                 continue
 
-            post_matches = nx.is_isomorphic(
-                post_template_graph,
-                seen_post_graph,
+            if coupled_graph.number_of_edges() != seen_graph.number_of_edges():
+                continue
+
+            if nx.is_isomorphic(
+                coupled_graph,
+                seen_graph,
                 node_match=node_match,
                 edge_match=edge_match,
-            )
-
-            if post_matches:
+            ):
                 return True
 
-        self.seen_reactions.append(
-            (
-                pre_template_graph.copy(),
-                post_template_graph.copy(),
-            )
-        )
+        seen_graphs.append(coupled_graph.copy())
 
         return False
+
+    def _couple_graphs(
+        self,
+        pre_template_graph: nx.Graph,
+        post_template_graph: nx.Graph,
+    ) -> nx.Graph:
+        """
+        Combine the reactant and product graphs into one graph.
+
+        Every atom is represented twice:
+
+            ("pre", atom_id)
+            ("post", atom_id)
+
+        A correspondence edge connects the same atom ID in the pre- and
+        post-reaction graphs. This requires one consistent atom mapping
+        across both reaction states.
+        """
+        pre_atom_ids = set(pre_template_graph.nodes)
+        post_atom_ids = set(post_template_graph.nodes)
+
+        if pre_atom_ids != post_atom_ids:
+            missing_from_post = sorted(
+                pre_atom_ids - post_atom_ids
+            )
+            missing_from_pre = sorted(
+                post_atom_ids - pre_atom_ids
+            )
+
+            raise ValueError(
+                "Pre- and post-reaction graphs must contain matching "
+                "atom IDs. "
+                f"Missing from post graph: {missing_from_post}. "
+                f"Missing from pre graph: {missing_from_pre}."
+            )
+
+        coupled_graph = nx.Graph()
+
+        self._add_phase_to_coupled_graph(
+            source_graph=pre_template_graph,
+            coupled_graph=coupled_graph,
+            phase="pre",
+        )
+
+        self._add_phase_to_coupled_graph(
+            source_graph=post_template_graph,
+            coupled_graph=coupled_graph,
+            phase="post",
+        )
+
+        for atom_id in pre_atom_ids:
+            coupled_graph.add_edge(
+                ("pre", atom_id),
+                ("post", atom_id),
+                relationship="atom_correspondence",
+                **{self.EDGE_ATTRIBUTE: None},
+            )
+
+        return coupled_graph
+
+    def _add_phase_to_coupled_graph(
+        self,
+        source_graph: nx.Graph,
+        coupled_graph: nx.Graph,
+        phase: str,
+    ) -> None:
+        """
+        Add one reaction phase to a coupled pre/post graph.
+        """
+        for atom_id, attributes in source_graph.nodes(data=True):
+            atom_label = attributes.get(self.NODE_ATTRIBUTE)
+
+            if atom_label is None:
+                raise ValueError(
+                    f"Node {atom_id} is missing the required "
+                    f"{self.NODE_ATTRIBUTE!r} attribute."
+                )
+
+            coupled_graph.add_node(
+                (phase, atom_id),
+                phase=phase,
+                **{self.NODE_ATTRIBUTE: atom_label},
+            )
+
+        for atom1_id, atom2_id, attributes in source_graph.edges(
+            data=True
+        ):
+            bond_label = attributes.get(self.EDGE_ATTRIBUTE)
+
+            if bond_label is None:
+                raise ValueError(
+                    f"Edge {atom1_id}-{atom2_id} is missing the required "
+                    f"{self.EDGE_ATTRIBUTE!r} attribute."
+                )
+
+            coupled_graph.add_edge(
+                (phase, atom1_id),
+                (phase, atom2_id),
+                relationship="bond",
+                **{self.EDGE_ATTRIBUTE: bond_label},
+            )
+
+    def rdkit_mol_to_networkx(
+        self,
+        molecule: Chem.Mol,
+    ) -> nx.Graph:
+        """
+        Convert an in-memory RDKit molecule into a NetworkX graph.
+
+        Coordinates are not read or stored.
+
+        Node attribute:
+            atom_label:
+                Chemical element symbol.
+
+        Edge attribute:
+            bond_label:
+                RDKit bond type.
+        """
+        if molecule is None:
+            raise ValueError(
+                "Cannot create a graph from a None RDKit molecule."
+            )
+
+        graph = nx.Graph()
+
+        for atom in molecule.GetAtoms():
+            atom_id = atom.GetIdx()
+
+            graph.add_node(
+                atom_id,
+                **{
+                    self.NODE_ATTRIBUTE: atom.GetSymbol(),
+                },
+            )
+
+        for bond in molecule.GetBonds():
+            atom1_id = bond.GetBeginAtomIdx()
+            atom2_id = bond.GetEndAtomIdx()
+
+            graph.add_edge(
+                atom1_id,
+                atom2_id,
+                **{
+                    self.EDGE_ATTRIBUTE: str(
+                        bond.GetBondType()
+                    ),
+                },
+            )
+
+        return graph
 
     def lammps_molecule_to_networkx(
         self,
@@ -67,122 +260,150 @@ class DeduplicationDetector:
         """
         Convert a LAMMPS molecule-template file into a NetworkX graph.
 
-        Supported sections:
+        Only the following sections are used:
+
             Types
-            Coords
             Bonds
+
+        Coordinates, charges, angles, dihedrals, impropers, atom IDs,
+        and bond IDs are not used in graph isomorphism comparison.
         """
         file_path = Path(file_path)
 
-        if not file_path.exists():
+        if not file_path.is_file():
             raise FileNotFoundError(
-                f"Molecule file does not exist: {file_path}"
+                f"LAMMPS molecule file does not exist: {file_path}"
             )
 
-        sections = self._read_sections(file_path)
+        sections = self._read_lammps_sections(file_path)
 
-        atom_mapping: dict[int, str] = {}
-        coord_mapping: dict[int, tuple[float, float, float]] = {}
-        bond_mapping: dict[int, tuple[str, int, int]] = {}
-
-        for line in sections.get("Types", []):
-            atom_data = line.split()
-
-            if len(atom_data) < 2:
-                raise ValueError(
-                    f"Invalid Types line in {file_path}: {line!r}"
-                )
-
-            atom_id = int(atom_data[0])
-            atom_type = atom_data[1]
-            atom_mapping[atom_id] = atom_type
-
-        for line in sections.get("Coords", []):
-            coord_data = line.split()
-
-            if len(coord_data) < 4:
-                raise ValueError(
-                    f"Invalid Coords line in {file_path}: {line!r}"
-                )
-
-            atom_id = int(coord_data[0])
-            x = float(coord_data[1])
-            y = float(coord_data[2])
-            z = float(coord_data[3])
-
-            coord_mapping[atom_id] = (x, y, z)
-
-        for line in sections.get("Bonds", []):
-            bond_data = line.split()
-
-            if len(bond_data) < 4:
-                raise ValueError(
-                    f"Invalid Bonds line in {file_path}: {line!r}"
-                )
-
-            bond_id = int(bond_data[0])
-            bond_type = bond_data[1]
-            atom1_id = int(bond_data[2])
-            atom2_id = int(bond_data[3])
-
-            bond_mapping[bond_id] = (
-                bond_type,
-                atom1_id,
-                atom2_id,
+        if "Types" not in sections:
+            raise ValueError(
+                f"Types section was not found in {file_path}."
             )
 
         graph = nx.Graph()
 
-        for atom_id, atom_type in atom_mapping.items():
-            if atom_id not in coord_mapping:
-                raise ValueError(
-                    f"Atom {atom_id} has a type but no coordinates "
-                    f"in {file_path}."
-                )
+        self._add_lammps_atoms(
+            graph=graph,
+            type_lines=sections["Types"],
+            file_path=file_path,
+        )
 
-            graph.add_node(
-                atom_id,
-                atom_type=atom_type,
-                coords=coord_mapping[atom_id],
-            )
-
-        for bond_id, bond_data in bond_mapping.items():
-            bond_type, atom1_id, atom2_id = bond_data
-
-            if atom1_id not in graph or atom2_id not in graph:
-                raise ValueError(
-                    f"Bond {bond_id} references an undefined atom "
-                    f"in {file_path}."
-                )
-
-            graph.add_edge(
-                atom1_id,
-                atom2_id,
-                bond_id=bond_id,
-                bond_type=bond_type,
-            )
+        self._add_lammps_bonds(
+            graph=graph,
+            bond_lines=sections.get("Bonds", []),
+            file_path=file_path,
+        )
 
         print(
-            f"Graph created from {file_path} with "
-            f"{graph.number_of_nodes()} nodes and "
-            f"{graph.number_of_edges()} edges."
+            f"Graph created from {file_path.name}: "
+            f"{graph.number_of_nodes()} atoms and "
+            f"{graph.number_of_edges()} bonds."
         )
 
         return graph
 
-    def _read_sections(
+    def _add_lammps_atoms(
+        self,
+        graph: nx.Graph,
+        type_lines: list[str],
+        file_path: Path,
+    ) -> None:
+        """
+        Add atoms from a LAMMPS Types section to a graph.
+        """
+        for line in type_lines:
+            parts = line.split()
+
+            if len(parts) < 2:
+                raise ValueError(
+                    f"Invalid Types line in {file_path}: {line!r}"
+                )
+
+            try:
+                atom_id = int(parts[0])
+            except ValueError as error:
+                raise ValueError(
+                    f"Invalid atom ID in {file_path}: {line!r}"
+                ) from error
+
+            atom_type = parts[1]
+
+            if atom_id in graph:
+                raise ValueError(
+                    f"Duplicate atom ID {atom_id} in {file_path}."
+                )
+
+            graph.add_node(
+                atom_id,
+                **{
+                    self.NODE_ATTRIBUTE: atom_type,
+                },
+            )
+
+    def _add_lammps_bonds(
+        self,
+        graph: nx.Graph,
+        bond_lines: list[str],
+        file_path: Path,
+    ) -> None:
+        """
+        Add bonds from a LAMMPS Bonds section to a graph.
+        """
+        for line in bond_lines:
+            parts = line.split()
+
+            if len(parts) < 4:
+                raise ValueError(
+                    f"Invalid Bonds line in {file_path}: {line!r}"
+                )
+
+            try:
+                bond_id = int(parts[0])
+                atom1_id = int(parts[2])
+                atom2_id = int(parts[3])
+            except ValueError as error:
+                raise ValueError(
+                    f"Invalid Bonds line in {file_path}: {line!r}"
+                ) from error
+
+            bond_type = parts[1]
+
+            self._validate_bond_atoms(
+                graph=graph,
+                bond_id=bond_id,
+                atom1_id=atom1_id,
+                atom2_id=atom2_id,
+                source=file_path,
+            )
+
+            graph.add_edge(
+                atom1_id,
+                atom2_id,
+                **{
+                    self.EDGE_ATTRIBUTE: bond_type,
+                },
+            )
+
+    def _read_lammps_sections(
         self,
         file_path: Path,
     ) -> dict[str, list[str]]:
         """
         Read relevant sections from a LAMMPS molecule-template file.
         """
-        supported_sections = {
+        relevant_sections = {
             "Types",
-            "Coords",
             "Bonds",
+        }
+
+        all_section_headers = {
+            "Coords",
+            "Types",
             "Charges",
             "Molecules",
+            "Bonds",
             "Angles",
             "Dihedrals",
             "Impropers",
@@ -193,104 +414,242 @@ class DeduplicationDetector:
         sections: dict[str, list[str]] = {}
         current_section: str | None = None
 
-        with file_path.open("r", encoding="utf-8") as file:
+        with file_path.open(
+            "r",
+            encoding="utf-8",
+        ) as file:
             for raw_line in file:
-                # Remove comments but preserve the actual data.
-                line = raw_line.split("#", maxsplit=1)[0].strip()
+                # Remove comments while preserving the actual data.
+                line = raw_line.split(
+                    "#",
+                    maxsplit=1,
+                )[0].strip()
 
                 if not line:
                     continue
 
-                if line in supported_sections:
-                    current_section = line
-                    sections.setdefault(current_section, [])
+                if line in all_section_headers:
+                    if line in relevant_sections:
+                        current_section = line
+                        sections.setdefault(
+                            current_section,
+                            [],
+                        )
+                    else:
+                        current_section = None
+
                     continue
 
                 if current_section is not None:
-                    # Stop collecting when another unsupported header/count
-                    # line is encountered only through recognized sections.
                     sections[current_section].append(line)
 
         return sections
 
-    def _couple_graphs(
+    def _validate_bond_atoms(
         self,
-        pre_template_graph: nx.Graph,
-        post_template_graph: nx.Graph,
-    ) -> dict[str, nx.Graph]:
+        graph: nx.Graph,
+        bond_id: int,
+        atom1_id: int,
+        atom2_id: int,
+        source: Path | str,
+    ) -> None:
         """
-        Store the pre- and post-template graphs together.
+        Ensure that both atoms referenced by a bond exist.
         """
-        return {
-            "pre_template_graph": pre_template_graph,
-            "post_template_graph": post_template_graph,
-        }
+        undefined_atoms = [
+            atom_id
+            for atom_id in (atom1_id, atom2_id)
+            if atom_id not in graph
+        ]
 
-    def _compare_graphs(
+        if undefined_atoms:
+            raise ValueError(
+                f"Bond {bond_id} references undefined atom IDs "
+                f"{undefined_atoms} in {source}."
+            )
+
+    def compare_graphs(
         self,
-        mol_file_paths: list[str | Path],
+        molecule_file_paths: list[str | Path],
     ) -> dict[str, bool]:
         """
-        Process pre-template files and report whether each reaction is
-        a duplicate of a previously processed pre/post pair.
+        Compare LAMMPS pre/post molecule-template pairs.
+
+        A pre-template filename must contain ``pre``. Its corresponding
+        post-template filename is found by replacing the first occurrence
+        of ``pre`` with ``post``.
 
         Returns:
-            Mapping from the pre-template file path to duplicate status.
+            Mapping from each pre-template path to its duplicate status.
         """
         results: dict[str, bool] = {}
 
-        for file_path_value in mol_file_paths:
-            file_path = Path(file_path_value)
+        for file_path_value in molecule_file_paths:
+            pre_file_path = Path(file_path_value)
 
-            if "pre" not in file_path.name:
+            if "pre" not in pre_file_path.name:
                 continue
 
-            post_file_name = file_path.name.replace("pre", "post", 1)
-            post_file_path = file_path.with_name(post_file_name)
+            post_file_path = pre_file_path.with_name(
+                pre_file_path.name.replace(
+                    "pre",
+                    "post",
+                    1,
+                )
+            )
 
-            if not post_file_path.exists():
+            if not post_file_path.is_file():
                 print(
-                    f"Post-template file does not exist for "
-                    f"{file_path}."
+                    "Skipping reaction because its post-template file "
+                    f"does not exist: {post_file_path}"
                 )
                 continue
 
-            pre_template_graph = self.lammps_molecule_to_networkx(
-                file_path
+            pre_graph = self.lammps_molecule_to_networkx(
+                pre_file_path
             )
-            post_template_graph = self.lammps_molecule_to_networkx(
+
+            post_graph = self.lammps_molecule_to_networkx(
                 post_file_path
             )
 
-            is_duplicate = self.is_duplicate(
-                pre_template_graph,
-                post_template_graph,
+            duplicate = self.is_duplicate(
+                pre_template_graph=pre_graph,
+                post_template_graph=post_graph,
+                comparison_group=self.LAMMPS_COMPARISON_GROUP,
             )
 
-            results[str(file_path)] = is_duplicate
+            results[str(pre_file_path)] = duplicate
 
-            if is_duplicate:
-                print(
-                    f"Duplicate reaction: {file_path.name} and "
-                    f"{post_file_path.name}"
-                )
-            else:
-                print(
-                    f"Unique reaction: {file_path.name} and "
-                    f"{post_file_path.name}"
-                )
+            status = (
+                "Duplicate"
+                if duplicate
+                else "Unique"
+            )
+
+            print(
+                f"{status} reaction: "
+                f"{pre_file_path.name} -> "
+                f"{post_file_path.name}"
+            )
 
         return results
 
+    def compare_graphs_mol(
+        self,
+        reaction_metadata_items: list[ReactionMetadata],
+    ) -> list[ReactionMetadata]:
+        """
+        Detect duplicate reactions using in-memory RDKit molecules.
+
+        Reactions whose ``activity_stats`` value is already False are
+        skipped.
+
+        Duplicate reactions are disabled by setting:
+
+            reaction_metadata.activity_stats = False
+
+        Args:
+            reaction_metadata_items:
+                Prepared reaction metadata objects.
+
+        Returns:
+            The original metadata list with duplicate reactions disabled.
+        """
+        for reaction_index, reaction_metadata in enumerate(
+            reaction_metadata_items,
+            start=1,
+        ):
+            if reaction_metadata.activity_stats is False:
+                continue
+
+            reactant_mol = (
+                reaction_metadata.reactant_combined_RDmol
+            )
+            product_mol = (
+                reaction_metadata.product_combined_RDmol
+            )
+            template_reactant_to_product_mapping = (
+                reaction_metadata.template_reactant_to_product_mapping
+            )
+            if reactant_mol is None:
+                raise ValueError(
+                    f"Reaction {reaction_index} does not contain a "
+                    "combined reactant RDKit molecule."
+                )
+
+            if product_mol is None:
+                raise ValueError(
+                    f"Reaction {reaction_index} does not contain a "
+                    "combined product RDKit molecule."
+                )
+
+            pre_graph = self.rdkit_mol_to_networkx(
+                reactant_mol
+            )
+
+            post_graph = self.rdkit_mol_to_networkx(
+                product_mol
+            )
+
+            duplicate = self.is_duplicate(
+                pre_template_graph=pre_graph,
+                post_template_graph=post_graph,
+                comparison_group=self.RDKIT_COMPARISON_GROUP,
+            )
+
+            if duplicate:
+                reaction_metadata.activity_stats = False
+
+                print(
+                    f"Reaction {reaction_index}: "
+                    "duplicate reaction detected and disabled."
+                )
+            else:
+                print(
+                    f"Reaction {reaction_index}: "
+                    "unique reaction retained."
+                )
+
+        return reaction_metadata_items
+
+    def clear_cache(
+        self,
+        comparison_group: str | None = None,
+    ) -> None:
+        """
+        Clear stored reaction graphs.
+
+        Args:
+            comparison_group:
+                Clear only one cache group. When None, all cache groups
+                are cleared.
+        """
+        if comparison_group is None:
+            for seen_graphs in self.seen_reactions.values():
+                seen_graphs.clear()
+
+            return
+
+        self.seen_reactions.setdefault(
+            comparison_group,
+            [],
+        ).clear()
+
 
 if __name__ == "__main__":
-    deduplication_detector = DeduplicationDetector()
-
     folder_path = Path(
-        "/mnt/c/Users/Janitha/Documents/AutoREACTER/examples/"
-        "AutoREACTER_outputs/"
-        "Epoxy_Test_Primary_Diamine_Diepoxy"
+        "/mnt/c/Users/janit/Documents/GitHub/AutoREACTER/"
+        "examples/AutoREACTER_outputs/"
+        "Epoxy_Test_Primary_Diamine_Diepoxy/"
+        "LAMMPS_input_files/"
+        "Epoxy_Test_Primary_Diamine_Diepoxy_epoxy_test"
     )
+
+    if not folder_path.is_dir():
+        raise NotADirectoryError(
+            f"Invalid folder path: {folder_path}"
+        )
 
     pre_template_files = sorted(
         file_path
@@ -298,12 +657,26 @@ if __name__ == "__main__":
         if "pre" in file_path.name
     )
 
-    results = deduplication_detector._compare_graphs(
+    print(
+        f"Found {len(pre_template_files)} "
+        "pre-reaction molecule files."
+    )
+
+    detector = DeduplicationDetector()
+
+    results = detector.compare_graphs(
         pre_template_files
     )
 
     print("\nDeduplication results:")
 
-    for file_path, is_duplicate in results.items():
-        status = "duplicate" if is_duplicate else "unique"
-        print(f"{Path(file_path).name}: {status}")
+    for file_path, duplicate in results.items():
+        status = (
+            "duplicate"
+            if duplicate
+            else "unique"
+        )
+
+        print(
+            f"{Path(file_path).name}: {status}"
+        )
