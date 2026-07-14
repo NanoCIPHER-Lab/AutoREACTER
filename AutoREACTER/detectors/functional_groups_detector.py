@@ -441,9 +441,9 @@ class FunctionalGroupsDetector:
         return bool(matching_hits)
     
     def index_based_functional_groups_detector(
-    self, monomer_roles_in: list[MonomerRoleforIndexBasedFGDetection]
-    ) -> None:
-        """
+        self,
+        monomer_roles_in: list[MonomerRoleforIndexBasedFGDetection],
+    ) -> list[MonomerRole] | bool:
         Detect functional groups across a list of monomers and categorize them into roles,
         restricted to a given set of atom indices per monomer.
 
