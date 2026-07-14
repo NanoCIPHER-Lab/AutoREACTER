@@ -16,8 +16,9 @@ def ascii_art(message: str) -> None:
 
 
 def print_warning() -> None:
-    message = "Warning " \
-              "Entering to the reaction progression Loop still in the Beta phase" \
-              "Caution: Can be chemically inaccurate"
+    message = (
+        "Entering the reaction progression loop is still in the beta phase. "
+        "Caution: results can be chemically inaccurate."
+    )
     ascii_art(message)
     
