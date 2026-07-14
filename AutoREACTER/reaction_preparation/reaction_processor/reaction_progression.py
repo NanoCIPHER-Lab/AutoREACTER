@@ -1,9 +1,8 @@
-MAX_LOOP = 5  # Maximum number of reaction progression iterations.
-
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from rdkit import Chem
+from rdkit.Chem.rdchem import MolSanitizeException
 
 from AutoREACTER.detectors.functional_groups_detector import (
     FunctionalGroupsDetector,
@@ -22,12 +21,12 @@ if TYPE_CHECKING:
     from AutoREACTER.session import Session
 
 
+MAX_LOOP = 5
+
+
 @dataclass(slots=True)
 class MonomerRoleforIndexBasedFGDetection:
-    """
-    Represents a monomer role used for index-based functional-group
-    detection.
-    """
+    """Monomer role used for index-based functional-group detection."""
 
     smiles: str
     name: str
@@ -39,9 +38,7 @@ class MonomerRoleforIndexBasedFGDetection:
 
 @dataclass(slots=True)
 class ReactionProgressionSession:
-    """
-    Stores state associated with reaction progression.
-    """
+    """State associated with reaction progression."""
 
     monomer_roles: list["MonomerRole"] = field(default_factory=list)
     iteration: int = 0
@@ -56,48 +53,49 @@ class ReactionProgression:
 
         self.fg_detector = FunctionalGroupsDetector()
         self.rxn_detector = ReactionDetector()
+        self.deduplication_detector = DeduplicationDetector()
 
     def reaction_progression(
         self,
         max_loop: int = MAX_LOOP,
     ) -> list["ReactionMetadata"]:
         """
-        Progress a reaction by repeatedly detecting functional groups,
-        detecting reactions, preparing reactions, and removing duplicates.
+        Repeatedly detect functional groups, detect reactions, prepare
+        reactions, and remove duplicate products.
 
         Args:
             max_loop:
                 Maximum number of progression iterations.
 
         Returns:
-            Prepared reaction metadata accumulated across the progression
-            loop.
+            Reaction metadata generated during the progression loop.
         """
         iteration = 0
-        monomer_roles_in_loop = self.session.monomer_roles.copy()
-        all_prepared_reactions: list["ReactionMetadata"] = []
+        monomer_roles_in_loop = list["MonomerRole"](
+            self.session.monomer_roles
+        )
+        all_prepared_reactions: list["ReactionMetadata"] = list(
+            self.session.reaction_metadata
+        )
 
         while iteration < max_loop:
             iteration += 1
             self.session.reaction_progression_session.iteration = iteration
 
-            size_of_initial_reaction_pool = (
-                self._length_of_active_reactions()
-            )
-
             if iteration == 1:
                 self._populate_monomer_roles()
-
-            if iteration > 1:
+            else:
                 print(
                     f"Starting iteration {iteration} "
                     "of the reaction progression loop."
                 )
 
-            self._set_is_monomer_flag()
+            self._set_is_looped_flag(monomer_roles_in_loop)
 
             initial_reaction_pool_size = (
-                self._length_of_active_reactions()
+                self._length_of_active_reactions(
+                    self.session.reaction_metadata
+                )
             )
 
             print(
@@ -123,6 +121,7 @@ class ReactionProgression:
                 break
 
             monomer_roles_in_loop.extend(fg_detection_results)
+            self.session.monomer_roles = monomer_roles_in_loop
 
             reaction_instances = (
                 self.rxn_detector.index_based_reaction_detector(
@@ -137,40 +136,35 @@ class ReactionProgression:
                 )
                 break
 
-            print(len(reaction_instances))
-
             prepared_reactions = (
                 self._index_based_reaction_preparation(
                     reaction_instances=reaction_instances
                 )
             )
-
-            print(prepared_reactions)
-
+    
             all_prepared_reactions.extend(prepared_reactions)
-
-            print(
-                f"Total prepared reactions after iteration {iteration}: "
-                f"{len(all_prepared_reactions)}"
-            )
-            print(size_of_initial_reaction_pool)
-
-            deduplication_detector = DeduplicationDetector()
+            self.session.reaction_metadata = all_prepared_reactions
 
             all_prepared_reactions = (
-                deduplication_detector.compare_graphs_mol(
+                self.deduplication_detector.compare_graphs_mol(
+                    all_prepared_reactions
+                )
+            )
+            self.session.reaction_metadata = all_prepared_reactions
+
+            deduplicated_reaction_count = (
+                self._length_of_active_reactions(
                     all_prepared_reactions
                 )
             )
 
             should_break = self._loop_break_condition(
-                size_before=size_of_initial_reaction_pool,
-                size_after=len(all_prepared_reactions),
+                size_before=initial_reaction_pool_size,
+                size_after=deduplicated_reaction_count,
             )
 
             if should_break:
-                self.session.reaction_metadata = all_prepared_reactions
-                return all_prepared_reactions
+                return self._store_reactions(all_prepared_reactions)
 
         self.session.reaction_metadata = all_prepared_reactions
         return all_prepared_reactions
@@ -192,14 +186,12 @@ class ReactionProgression:
     def _prepare_products_for_idx_based_fg_detection(
         self,
     ) -> list[MonomerRoleforIndexBasedFGDetection]:
-        """
-        Prepare generated products for index-based functional-group
-        detection.
-        """
-        prepared_monomer_roles = []
-        reaction_metadata = self.session.reaction_metadata
+        """Prepare generated products for functional-group detection."""
+        prepared_monomer_roles: list[
+            MonomerRoleforIndexBasedFGDetection
+        ] = []
 
-        for reaction in reaction_metadata:
+        for reaction in self.session.reaction_metadata:
             if not reaction.activity_stats:
                 continue
 
@@ -215,40 +207,45 @@ class ReactionProgression:
                     smiles=self._get_product_smiles(product_mol),
                     name=f"new_{reaction.reaction_id}",
                     indexes_in_template=indexes_in_template,
-                    is_monomer=False,
-                    is_looped=False,
                     rdkit_mol=self._sanitize_molecule(product_mol),
                 )
             )
 
         return prepared_monomer_roles
+    
+    def _store_reactions(
+        self,
+        reactions: list["ReactionMetadata"],
+    ) -> list["ReactionMetadata"]:
+        self.session.reaction_metadata = reactions
+        return reactions
 
     def _sanitize_molecule(
         self,
         mol: Chem.Mol,
     ) -> Chem.Mol | None:
         """
-        Sanitize an RDKit molecule.
+        Sanitize an RDKit molecule by cleaning it and applying RDKit sanitization.
 
         Args:
-            mol:
-                RDKit molecule to sanitize.
+            mol: The RDKit molecule to sanitize.
 
         Returns:
-            The sanitized molecule, or ``None`` when sanitization fails.
+            The sanitized molecule, or ``None`` if sanitization fails.
         """
-        self._clean_product(mol)
+        cleaned_mol = self._clean_product(mol)
 
         try:
-            Chem.SanitizeMol(mol)
-            return mol
-        except Exception:
+            Chem.SanitizeMol(cleaned_mol)
+        except Exception as error:
+            print(f"Could not sanitize product molecule: {error}")
             return None
+
+        return cleaned_mol
 
     def _clean_product(self, mol: Chem.Mol) -> Chem.Mol:
         """
-        Return a copy of a molecule with atom-map numbers and isotope
-        labels removed.
+        Return a molecule copy without atom-map numbers or isotope labels.
 
         The input molecule is not modified.
         """
@@ -261,10 +258,7 @@ class ReactionProgression:
         return cleaned_mol
 
     def _get_product_smiles(self, mol: Chem.Mol) -> str:
-        """
-        Convert a product molecule to SMILES without modifying the
-        original molecule.
-        """
+        """Convert a cleaned product molecule to SMILES."""
         cleaned_mol = self._clean_product(mol)
 
         try:
@@ -280,16 +274,11 @@ class ReactionProgression:
         """
         Retrieve mapped product atom indexes.
 
-        When the product contains disconnected fragments, retain only
-        the fragment with the largest number of heavy atoms and remap
-        the product indexes to that fragment.
-
-        Returns:
-            A tuple containing the product atom indexes and the retained
-            product molecule.
+        When the product contains multiple fragments, retain the fragment
+        with the largest number of heavy atoms and remap the product
+        indexes to that fragment.
         """
         product = Chem.Mol(mol)
-
         product_idxs = list(
             template_reactant_to_product_mapping.values()
         )
@@ -311,17 +300,16 @@ class ReactionProgression:
     ) -> tuple[Chem.Mol, list[int]]:
         """
         Retain the fragment with the largest number of heavy atoms and
-        remap product atom indexes to the retained fragment.
+        remap the product indexes to the retained fragment.
 
         Args:
             mol:
                 Molecule containing one or more disconnected fragments.
             product_idxs:
-                Product atom indexes referring to the original molecule.
+                Product indexes referring to the original molecule.
 
         Returns:
-            A tuple containing the largest fragment and the remapped
-            product atom indexes.
+            The largest fragment and its remapped product indexes.
         """
         fragment_atom_mappings: list[tuple[int, ...]] = []
 
@@ -365,22 +353,16 @@ class ReactionProgression:
 
         return largest_fragment, remapped_product_idxs
 
-    def _set_is_monomer_flag(self) -> int:
-        """
-        Mark every session monomer role as looped.
-
-        Returns:
-            Number of monomer roles in the session.
-        """
-        for monomer_role in self.session.monomer_roles:
+    def _set_is_looped_flag(
+        self,
+        monomer_roles: list["MonomerRole"],
+    ) -> None:
+        """Mark the supplied monomer roles as already processed."""
+        for monomer_role in monomer_roles:
             monomer_role.is_looped = True
 
-        return len(self.session.monomer_roles)
-
     def _populate_monomer_roles(self) -> None:
-        """
-        Populate RDKit molecules for roles marked as monomers.
-        """
+        """Create RDKit molecules for roles marked as monomers."""
         for monomer in self.session.monomer_roles:
             if monomer.is_monomer:
                 monomer.rdkit_mol = self._smiles_to_rdkit_mol(
@@ -391,9 +373,7 @@ class ReactionProgression:
         self,
         smiles: str,
     ) -> Chem.Mol | None:
-        """
-        Convert a SMILES string to an RDKit molecule.
-        """
+        """Convert a SMILES string to an RDKit molecule."""
         return Chem.MolFromSmiles(smiles)
 
     def _loop_break_condition(
@@ -401,9 +381,7 @@ class ReactionProgression:
         size_before: int,
         size_after: int,
     ) -> bool:
-        """
-        Determine whether progression should stop based on pool growth.
-        """
+        """Return whether the active reaction pool failed to grow."""
         if size_after <= size_before:
             print(
                 "Breaking the loop as the pool did not grow "
@@ -413,12 +391,20 @@ class ReactionProgression:
 
         return False
 
-    def _length_of_active_reactions(self) -> int:
+    def _count_active_reactions(
+        self,
+        reactions: list["ReactionMetadata"],
+    ) -> int:
         """
-        Return the number of session reactions with activity statistics.
+        Count the number of active reactions in the supplied list.
+
+        Args:
+            reactions: A list of ``ReactionMetadata`` objects to check for activity.
+
+        Returns:
+            The number of reactions that have activity statistics.
         """
         return sum(
-            1
-            for reaction in self.session.reaction_metadata
-            if reaction.activity_stats
-        )
+            bool(reaction.activity_stats)
+            for reaction in reactions
+    )
