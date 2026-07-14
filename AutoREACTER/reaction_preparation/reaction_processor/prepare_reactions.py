@@ -252,22 +252,46 @@ class PrepareReactions:
             forced_indexes_2 = None
 
             if loop:
-                # FORCED-REACTION MODE: use the actual index-scoped rdkit_mol (not a
-                # fresh SMILES reparse) so atom indices line up with fg_*_indexes.
-                forced_indexes_1 = self._flatten_fg_indexes(reaction.functional_group_1)
-
+                forced_indexes_1 = self._flatten_fg_indexes(
+                    reaction.functional_group_1
+                )
+            
                 if reaction.functional_group_2 is not None:
-                    forced_indexes_2 = self._flatten_fg_indexes(reaction.functional_group_2)
-
-                # Direction is already known from the ReactionInstance (monomer_1 ->
-                # reactant slot 1, monomer_2 -> reactant slot 2), so unlike the normal
-                # path we do NOT also try the swapped ordering.
-                reaction_tuple = [[mol_reactant_1, mol_reactant_2], [mol_reactant_2, mol_reactant_1]] if same_reactants else [[mol_reactant_1, mol_reactant_2]]
+                    forced_indexes_2 = self._flatten_fg_indexes(
+                        reaction.functional_group_2
+                    )
+            
+                mol_reactant_1 = Chem.AddHs(
+                    Chem.Mol(reaction.monomer_1.rdkit_mol)
+                )
+            
+                monomer_2 = (
+                    reaction.monomer_1
+                    if same_reactants
+                    else reaction.monomer_2
+                )
+                mol_reactant_2 = Chem.AddHs(
+                    Chem.Mol(monomer_2.rdkit_mol)
+                )
+            
+                # ReactionInstance already defines slot direction.
+                reaction_tuple = [[mol_reactant_1, mol_reactant_2]]
             else:
                 reactant_smiles_1 = reaction.monomer_1.smiles
-                reactant_smiles_2 = reactant_smiles_1 if same_reactants else reaction.monomer_2.smiles
-                mol_reactant_1, mol_reactant_2 = self._build_reactants(reactant_smiles_1, reactant_smiles_2)
-                reaction_tuple = self._build_reaction_tuple(same_reactants, mol_reactant_1, mol_reactant_2)
+                reactant_smiles_2 = (
+                    reactant_smiles_1
+                    if same_reactants
+                    else reaction.monomer_2.smiles
+                )
+                mol_reactant_1, mol_reactant_2 = self._build_reactants(
+                    reactant_smiles_1,
+                    reactant_smiles_2,
+                )
+                reaction_tuple = self._build_reaction_tuple(
+                    same_reactants,
+                    mol_reactant_1,
+                    mol_reactant_2,
+                )
 
             rxn = self._build_reaction(rxn_smarts)
 
