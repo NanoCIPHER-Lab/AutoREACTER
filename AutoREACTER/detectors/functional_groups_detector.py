@@ -557,7 +557,7 @@ class FunctionalGroupsDetector:
         if not monomer_roles_out:
             return False  # No functional groups detected; handle as needed
         # first break condition: if no monomer roles are detected, return False to indicate no further processing is needed.
-
+        
         return monomer_roles_out  # Return list of MonomerRole; visualization not considered here.
 
     def functional_group_highlighted_molecules_image_grid(self, session: Session) -> Image:
