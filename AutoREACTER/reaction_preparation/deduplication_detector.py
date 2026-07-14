@@ -1,3 +1,12 @@
+"""
+Graph-based reaction deduplication for RDKit molecules and LAMMPS
+molecule templates.
+
+The comparison intentionally ignores coordinates, atom IDs, and bond IDs.
+RDKit comparisons use chemical element and bond type. LAMMPS comparisons
+use atom type and bond type.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -7,31 +16,13 @@ import networkx as nx
 from rdkit import Chem
 
 if TYPE_CHECKING:
-    from AutoREACTER.reaction_preparation.reaction_processor.reaction_progression import (
+    from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import (
         ReactionMetadata,
     )
 
 
-"""
-In here we do not add any coordinations, atom IDs, or bond IDs to the graphs. This is because these
-There tempalate can generate from different reactanats but can have same template
-How ever the is a possible herdle in here that element can be same but atom types in 
-LAMMPS can be different. In future release we can add one more attribute to 
-the graph which is atom type in LAMMPS and bond type in LAMMPS. 
-This will make sure that we are comparing the same template and not different template with same element.
-"""
-
 class DeduplicationDetector:
-    """
-    Detect duplicate pre/post-reaction graph pairs.
-
-    Coordinates, atom IDs, and bond IDs are ignored during graph
-    isomorphism comparison.
-
-    Each pre/post pair is combined into a coupled graph. Correspondence
-    edges connect the same atom across the reactant and product states,
-    ensuring that one consistent atom mapping must satisfy both graphs.
-    """
+    """Detect duplicate pre/post-reaction graph pairs."""
 
     NODE_ATTRIBUTE = "atom_label"
     EDGE_ATTRIBUTE = "bond_label"
@@ -64,17 +55,22 @@ class DeduplicationDetector:
     }
 
     def __init__(self) -> None:
-        """Initialize independent deduplication caches."""
+        """Initialize independent graph-comparison caches."""
         self.seen_reactions: dict[str, list[nx.Graph]] = {
             self.LAMMPS_COMPARISON_GROUP: [],
             self.RDKIT_COMPARISON_GROUP: [],
         }
-        self.seen_reaction_pairs: dict[str, list[tuple[nx.Graph, nx.Graph]]] = {
+
+        self.seen_reaction_pairs: dict[
+            str,
+            list[tuple[nx.Graph, nx.Graph]],
+        ] = {
+            self.LAMMPS_COMPARISON_GROUP: [],
             self.RDKIT_COMPARISON_GROUP: [],
         }
 
     # ------------------------------------------------------------------
-    # Public duplicate-detection API
+    # Duplicate-detection API
     # ------------------------------------------------------------------
 
     def is_duplicate(
@@ -84,20 +80,12 @@ class DeduplicationDetector:
         comparison_group: str,
     ) -> bool:
         """
-        Check whether an equivalent pre/post-reaction pair was seen.
+        Check whether an equivalent coupled pre/post pair was previously
+        cached.
 
-        Args:
-            pre_template_graph:
-                Graph representing the reactant state.
-            post_template_graph:
-                Graph representing the product state.
-            comparison_group:
-                Cache group used for the comparison, such as ``lammps``
-                or ``rdkit``.
-
-        Returns:
-            True when an equivalent reaction pair is already cached.
-            Otherwise, caches the reaction pair and returns False.
+        The pre- and post-reaction graphs are coupled using atom
+        correspondence edges. This requires one consistent atom mapping
+        to satisfy both reaction phases.
         """
         coupled_graph = self._couple_graphs(
             pre_template_graph=pre_template_graph,
@@ -120,10 +108,16 @@ class DeduplicationDetector:
         )
 
         for seen_graph in seen_graphs:
-            if coupled_graph.number_of_nodes() != seen_graph.number_of_nodes():
+            if (
+                coupled_graph.number_of_nodes()
+                != seen_graph.number_of_nodes()
+            ):
                 continue
 
-            if coupled_graph.number_of_edges() != seen_graph.number_of_edges():
+            if (
+                coupled_graph.number_of_edges()
+                != seen_graph.number_of_edges()
+            ):
                 continue
 
             if nx.is_isomorphic(
@@ -144,33 +138,11 @@ class DeduplicationDetector:
         comparison_group: str,
     ) -> bool:
         """
-        # NEW METHOD
-        Simple, uncoupled duplicate check for a (reactant graph, product graph)
-        pair.
+        Check whether an equivalent uncoupled pre/post graph pair was
+        previously cached.
 
-        Unlike is_duplicate, this does NOT combine the two graphs into one
-        coupled graph and does NOT require a single consistent atom mapping
-        across both phases. It only checks graph topology and atom/bond
-        labels — no coordinates, no atom IDs, no bond IDs, no cross-phase
-        atom correspondence.
-
-        A pair is a duplicate only if BOTH:
-            - pre_graph is isomorphic to some cached pre_graph, AND
-            - post_graph is isomorphic to that SAME cached entry's post_graph.
-
-        Args:
-            pre_graph:
-                Reactant-side graph, already restricted to the desired atom
-                indices (e.g. via rdkit_mol_to_networkx(atom_idxs=...)).
-            post_graph:
-                Product-side graph, already restricted to the desired atom
-                indices.
-            comparison_group:
-                Cache group used for the comparison.
-
-        Returns:
-            True when an equivalent (reactant, product) pair was already
-            cached. Otherwise, caches the pair and returns False.
+        A reaction is considered a duplicate only when both its reactant
+        graph and product graph match the same cached reaction entry.
         """
         node_match = nx.algorithms.isomorphism.categorical_node_match(
             self.NODE_ATTRIBUTE,
@@ -187,27 +159,58 @@ class DeduplicationDetector:
             [],
         )
 
-        for seen_pre, seen_post in seen_pairs:
-            if pre_graph.number_of_nodes() != seen_pre.number_of_nodes():
-                continue
-            if pre_graph.number_of_edges() != seen_pre.number_of_edges():
-                continue
-            if post_graph.number_of_nodes() != seen_post.number_of_nodes():
-                continue
-            if post_graph.number_of_edges() != seen_post.number_of_edges():
-                continue
-
-            if not nx.is_isomorphic(
-                pre_graph, seen_pre, node_match=node_match, edge_match=edge_match
+        for seen_pre_graph, seen_post_graph in seen_pairs:
+            if (
+                pre_graph.number_of_nodes()
+                != seen_pre_graph.number_of_nodes()
             ):
                 continue
 
-            if nx.is_isomorphic(
-                post_graph, seen_post, node_match=node_match, edge_match=edge_match
+            if (
+                pre_graph.number_of_edges()
+                != seen_pre_graph.number_of_edges()
             ):
+                continue
+
+            if (
+                post_graph.number_of_nodes()
+                != seen_post_graph.number_of_nodes()
+            ):
+                continue
+
+            if (
+                post_graph.number_of_edges()
+                != seen_post_graph.number_of_edges()
+            ):
+                continue
+
+            pre_matches = nx.is_isomorphic(
+                pre_graph,
+                seen_pre_graph,
+                node_match=node_match,
+                edge_match=edge_match,
+            )
+
+            if not pre_matches:
+                continue
+
+            post_matches = nx.is_isomorphic(
+                post_graph,
+                seen_post_graph,
+                node_match=node_match,
+                edge_match=edge_match,
+            )
+
+            if post_matches:
                 return True
 
-        seen_pairs.append((pre_graph.copy(), post_graph.copy()))
+        seen_pairs.append(
+            (
+                pre_graph.copy(),
+                post_graph.copy(),
+            )
+        )
+
         return False
 
     def compare_graphs(
@@ -217,17 +220,9 @@ class DeduplicationDetector:
         """
         Compare LAMMPS pre/post molecule-template pairs.
 
-        A pre-template filename must contain ``pre``. The corresponding
-        post-template filename is determined by replacing the first
-        occurrence of ``pre`` with ``post``.
-
-        Args:
-            molecule_file_paths:
-                Candidate LAMMPS molecule-template file paths.
-
-        Returns:
-            A mapping from each processed pre-template path to its
-            duplicate status.
+        A pre-template filename must contain ``pre``. Its post-template
+        path is determined by replacing the first occurrence of ``pre``
+        with ``post``.
         """
         results: dict[str, bool] = {}
 
@@ -255,6 +250,7 @@ class DeduplicationDetector:
             pre_graph = self.lammps_molecule_to_networkx(
                 pre_file_path
             )
+
             post_graph = self.lammps_molecule_to_networkx(
                 post_file_path
             )
@@ -278,44 +274,41 @@ class DeduplicationDetector:
 
     def compare_graphs_mol(
         self,
-        reaction_metadata_items: list[ReactionMetadata],
-        index_source: str = "template",  # which ReactionMetadata index attribute
-                                        # restricts the graph build. Defaults to
-                                        # "template". Other supported value:
-                                        # "first_shell".
-    ) -> list[ReactionMetadata]:
+        reaction_metadata_items: list["ReactionMetadata"],
+        index_source: str = "template",
+    ) -> list["ReactionMetadata"]:
         """
         Detect duplicate reactions using in-memory RDKit molecules.
 
-        Reactions whose ``activity_stats`` value is already False are
-        skipped. Detected duplicates are disabled by setting
-        ``activity_stats`` to False.
+        The RDKit pair cache is cleared at the start of every call. This
+        makes each invocation one independent deduplication pass over the
+        supplied accumulated reaction pool.
 
-        # NEW: Comparison is now a simple, uncoupled topology check. The
-        # reactant graph is built restricted to the selected reactant indices;
-        # the product graph is built restricted to the corresponding product
-        # indices. These two graphs form one "set" for this reaction. Each new
-        # set is compared against previously seen sets using is_duplicate_pair:
-        # if both the reactant graph and the product graph independently match
-        # a previously seen pair's reactant/product graphs (same atom/bond
-        # topology and labels — no coordinates, no atom IDs, no bond IDs, no
-        # cross-phase atom correspondence), the reaction is marked as a
-        # duplicate and disabled.
+        Reactions already marked inactive are skipped. When multiple active
+        reactions have equivalent reactant and product graphs, the first is
+        retained and later matches are disabled.
 
         Args:
             reaction_metadata_items:
-                Prepared reaction metadata objects.
+                Accumulated reaction metadata pool.
+
             index_source:
-                Selects which ReactionMetadata attribute defines the
-                restricted atom-index set used to build the pre/post graphs.
-                "template" (default) uses template_reactant_to_product_mapping.
-                "first_shell" restricts the reactant side to
-                reaction_metadata.first_shell (mapped through
-                reactant_to_product_mapping for the product side) instead.
+                Determines which atom indexes restrict the graph comparison.
+
+                ``template``:
+                    Use ``template_reactant_to_product_mapping``.
+
+                ``first_shell``:
+                    Use ``first_shell`` reactant indexes mapped through
+                    ``reactant_to_product_mapping``.
 
         Returns:
             The original metadata list with duplicate reactions disabled.
         """
+        # Each call represents a new full-pool deduplication pass.
+        # Do not retain RDKit graph pairs from previous progression loops.
+        self._clear_pair_cache(self.RDKIT_COMPARISON_GROUP)
+
         for reaction_index, reaction_metadata in enumerate(
             reaction_metadata_items,
             start=1,
@@ -338,60 +331,22 @@ class DeduplicationDetector:
                     "combined product RDKit molecule."
                 )
 
-            # index_source selection block: picks which reactant->product
-            # index mapping restricts the graph build.
-            if index_source == "template":
-                reactant_to_product_mapping = (
-                    reaction_metadata.template_reactant_to_product_mapping
+            reactant_to_product_mapping = (
+                self._select_reactant_to_product_mapping(
+                    reaction_metadata=reaction_metadata,
+                    reaction_index=reaction_index,
+                    index_source=index_source,
                 )
+            )
 
-                if not reactant_to_product_mapping:
-                    raise ValueError(
-                        f"Reaction {reaction_index} does not contain a "
-                        "template_reactant_to_product_mapping; duplicate "
-                        "comparison cannot be restricted to template atoms."
-                    )
+            reactant_template_indices = set(
+                reactant_to_product_mapping
+            )
 
-            elif index_source == "first_shell":
-                # Build the restriction from first_shell reactant indices,
-                # mapped to product indices via the full reactant_to_product_mapping.
-                first_shell_idxs = reaction_metadata.first_shell
-                full_mapping = reaction_metadata.reactant_to_product_mapping
+            product_template_indices = set(
+                reactant_to_product_mapping.values()
+            )
 
-                if not first_shell_idxs:
-                    raise ValueError(
-                        f"Reaction {reaction_index} does not contain "
-                        "first_shell indices; duplicate comparison cannot "
-                        "be restricted to first-shell atoms."
-                    )
-
-                if not full_mapping:
-                    raise ValueError(
-                        f"Reaction {reaction_index} does not contain a "
-                        "reactant_to_product_mapping; duplicate comparison "
-                        "cannot be restricted to first-shell atoms."
-                    )
-
-                reactant_to_product_mapping = {
-                    r_idx: full_mapping[r_idx]
-                    for r_idx in first_shell_idxs
-                    if r_idx in full_mapping
-                }
-
-            else:
-                raise ValueError(
-                    f"Unsupported index_source {index_source!r}. "
-                    "Expected 'template' or 'first_shell'."
-                )
-
-            reactant_template_indices = set(reactant_to_product_mapping)
-            product_template_indices = set(reactant_to_product_mapping.values())
-
-            # NEW: no idx_relabel — each graph keeps its own native atom
-            # indices. Isomorphism comparison doesn't care about absolute
-            # index/label values, only structure + atom_label/bond_label
-            # attributes, so relabeling into a shared index space is
-            # unnecessary for this simple pairwise check.
             pre_graph = self.rdkit_mol_to_networkx(
                 molecule=reactant_mol,
                 atom_idxs=reactant_template_indices,
@@ -402,8 +357,6 @@ class DeduplicationDetector:
                 atom_idxs=product_template_indices,
             )
 
-            # NEW: simple uncoupled comparison instead of is_duplicate's
-            # coupled-graph approach.
             duplicate = self.is_duplicate_pair(
                 pre_graph=pre_graph,
                 post_graph=post_graph,
@@ -430,18 +383,17 @@ class DeduplicationDetector:
         comparison_group: str | None = None,
     ) -> None:
         """
-        Clear stored reaction graphs.
+        Clear graph-comparison caches.
 
         Args:
             comparison_group:
-                Cache group to clear. When None, all cache groups are
-                cleared.
+                Specific cache group to clear. All groups are cleared
+                when omitted.
         """
         if comparison_group is None:
             for seen_graphs in self.seen_reactions.values():
                 seen_graphs.clear()
 
-            # NEW: also clear the pairwise cache used by compare_graphs_mol.
             for seen_pairs in self.seen_reaction_pairs.values():
                 seen_pairs.clear()
 
@@ -452,14 +404,13 @@ class DeduplicationDetector:
             [],
         ).clear()
 
-        # NEW: mirror the clear on the pairwise cache.
         self.seen_reaction_pairs.setdefault(
             comparison_group,
             [],
         ).clear()
 
     # ------------------------------------------------------------------
-    # Public graph-conversion API
+    # RDKit graph conversion
     # ------------------------------------------------------------------
 
     def rdkit_mol_to_networkx(
@@ -469,32 +420,15 @@ class DeduplicationDetector:
         idx_relabel: dict[int, int] | None = None,
     ) -> nx.Graph:
         """
-        Convert an in-memory RDKit molecule into a NetworkX graph.
+        Convert an RDKit molecule into a NetworkX graph.
 
         Coordinates are not read or stored.
 
         Node attributes:
-            atom_label:
-                Chemical element symbol.
+            ``atom_label`` contains the chemical element symbol.
 
         Edge attributes:
-            bond_label:
-                RDKit bond type represented as a string.
-
-        Args:
-            molecule:
-                RDKit molecule to convert.
-            atom_idxs:
-                Optional atom-index set defining the induced subgraph.
-                Atoms outside this set and bonds touching excluded atoms
-                are omitted.
-            idx_relabel:
-                Optional mapping from RDKit atom indices to graph node
-                IDs. This can be used to express a product graph in the
-                corresponding reactant-index space.
-
-        Returns:
-            NetworkX representation of the selected molecule region.
+            ``bond_label`` contains the RDKit bond type.
         """
         if molecule is None:
             raise ValueError(
@@ -555,6 +489,7 @@ class DeduplicationDetector:
                 atom_index=atom1_index,
                 idx_relabel=idx_relabel,
             )
+
             node2_id = self._resolve_node_id(
                 atom_index=atom2_index,
                 idx_relabel=idx_relabel,
@@ -572,6 +507,10 @@ class DeduplicationDetector:
 
         return graph
 
+    # ------------------------------------------------------------------
+    # LAMMPS graph conversion
+    # ------------------------------------------------------------------
+
     def lammps_molecule_to_networkx(
         self,
         file_path: str | Path,
@@ -579,16 +518,7 @@ class DeduplicationDetector:
         """
         Convert a LAMMPS molecule-template file into a NetworkX graph.
 
-        Only the ``Types`` and ``Bonds`` sections are used. Coordinates,
-        charges, angles, dihedrals, impropers, atom IDs, and bond IDs do
-        not participate in graph-isomorphism comparison.
-
-        Args:
-            file_path:
-                Path to the LAMMPS molecule-template file.
-
-        Returns:
-            NetworkX representation of the molecule template.
+        Only the ``Types`` and ``Bonds`` sections are included.
         """
         file_path = Path(file_path)
 
@@ -627,7 +557,74 @@ class DeduplicationDetector:
         return graph
 
     # ------------------------------------------------------------------
-    # Private coupled-graph helpers
+    # Reaction-index selection
+    # ------------------------------------------------------------------
+
+    def _select_reactant_to_product_mapping(
+        self,
+        reaction_metadata: "ReactionMetadata",
+        reaction_index: int,
+        index_source: str,
+    ) -> dict[int, int]:
+        """Select the atom-index mapping used for graph restriction."""
+        if index_source == "template":
+            mapping = (
+                reaction_metadata.template_reactant_to_product_mapping
+            )
+
+            if not mapping:
+                raise ValueError(
+                    f"Reaction {reaction_index} does not contain a "
+                    "template_reactant_to_product_mapping."
+                )
+
+            return mapping
+
+        if index_source == "first_shell":
+            first_shell_indices = reaction_metadata.first_shell
+            full_mapping = (
+                reaction_metadata.reactant_to_product_mapping
+            )
+
+            if not first_shell_indices:
+                raise ValueError(
+                    f"Reaction {reaction_index} does not contain "
+                    "first_shell indices."
+                )
+
+            if not full_mapping:
+                raise ValueError(
+                    f"Reaction {reaction_index} does not contain a "
+                    "reactant_to_product_mapping."
+                )
+
+            return {
+                reactant_index: full_mapping[reactant_index]
+                for reactant_index in first_shell_indices
+                if reactant_index in full_mapping
+            }
+
+        raise ValueError(
+            f"Unsupported index_source {index_source!r}. "
+            "Expected 'template' or 'first_shell'."
+        )
+
+    # ------------------------------------------------------------------
+    # Cache helpers
+    # ------------------------------------------------------------------
+
+    def _clear_pair_cache(
+        self,
+        comparison_group: str,
+    ) -> None:
+        """Clear only the uncoupled pre/post pair cache for one group."""
+        self.seen_reaction_pairs.setdefault(
+            comparison_group,
+            [],
+        ).clear()
+
+    # ------------------------------------------------------------------
+    # Coupled-graph helpers
     # ------------------------------------------------------------------
 
     def _couple_graphs(
@@ -636,15 +633,8 @@ class DeduplicationDetector:
         post_template_graph: nx.Graph,
     ) -> nx.Graph:
         """
-        Combine reactant and product graphs into one coupled graph.
-
-        Every atom is represented twice:
-
-            ("pre", atom_id)
-            ("post", atom_id)
-
-        A correspondence edge connects matching atom IDs across the two
-        phases, requiring one consistent mapping for both states.
+        Combine reactant and product graphs using atom-correspondence
+        edges.
         """
         pre_atom_ids = set(pre_template_graph.nodes)
         post_atom_ids = set(post_template_graph.nodes)
@@ -653,6 +643,7 @@ class DeduplicationDetector:
             missing_from_post = sorted(
                 pre_atom_ids - post_atom_ids
             )
+
             missing_from_pre = sorted(
                 post_atom_ids - pre_atom_ids
             )
@@ -698,7 +689,7 @@ class DeduplicationDetector:
         coupled_graph: nx.Graph,
         phase: str,
     ) -> None:
-        """Add one reaction phase to a coupled pre/post graph."""
+        """Add one reaction phase to a coupled graph."""
         for atom_id, attributes in source_graph.nodes(data=True):
             atom_label = attributes.get(self.NODE_ATTRIBUTE)
 
@@ -741,21 +732,21 @@ class DeduplicationDetector:
         atom_index: int,
         idx_relabel: dict[int, int] | None,
     ) -> int:
-        """Resolve an RDKit atom index to its output graph node ID."""
+        """Resolve an RDKit atom index to its graph node ID."""
         if idx_relabel is None:
             return atom_index
 
         return idx_relabel[atom_index]
 
     # ------------------------------------------------------------------
-    # Private LAMMPS parsing helpers
+    # LAMMPS parsing helpers
     # ------------------------------------------------------------------
 
     def _read_lammps_sections(
         self,
         file_path: Path,
     ) -> dict[str, list[str]]:
-        """Read relevant sections from a LAMMPS molecule-template file."""
+        """Read relevant sections from a LAMMPS molecule file."""
         sections: dict[str, list[str]] = {}
         current_section: str | None = None
 
@@ -875,7 +866,7 @@ class DeduplicationDetector:
         atom2_id: int,
         source: Path | str,
     ) -> None:
-        """Ensure that both atoms referenced by a bond exist."""
+        """Ensure both atoms referenced by a bond exist."""
         undefined_atoms = [
             atom_id
             for atom_id in (atom1_id, atom2_id)
@@ -921,9 +912,7 @@ def _main() -> None:
     for file_path, duplicate in results.items():
         status = "duplicate" if duplicate else "unique"
 
-        print(
-            f"{Path(file_path).name}: {status}"
-        )
+        print(f"{Path(file_path).name}: {status}")
 
 
 if __name__ == "__main__":
