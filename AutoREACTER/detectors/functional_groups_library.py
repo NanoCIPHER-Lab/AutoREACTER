@@ -1,10 +1,27 @@
 """
-This module defines a library of functional groups relevant to polymer chemistry, 
-particularly for the detection of monomers in reaction simulations. Each functional group is characterized by 
-its functionality type (e.g., 'vinyl', 'mono', 'di_different', 'di_identical'), 
-SMARTS patterns for substructure matching, and group names for identification. This library serves as a reference 
-for the FunctionalGroupsDetector to identify and classify monomers based on their chemical structure.
+Functional group library for epoxy polymerization chemistry.
+
+This library focuses on monomers and curing-agent functional groups relevant to
+epoxy polymerization / epoxy curing systems. It includes epoxides and common
+epoxy-reactive groups such as primary amines, secondary amines, thiols, alcohols,
+carboxylic acids, and cyclic anhydrides.
+
+Each entry defines:
+    - functionality_type:
+        "mono"          : one reactive functional group
+        "di_identical"  : two identical reactive functional groups
+        "di_different"  : two different reactive functional groups
+
+    - smarts_1 / smarts_2:
+        SMARTS patterns used for substructure matching
+
+    - group_name:
+        functional group label used by the detector
+
+    - comments:
+        optional chemistry notes
 """
+
 
 
 class FunctionalGroupsLibrary:
@@ -117,6 +134,45 @@ class FunctionalGroupsLibrary:
                 "functionality_type": "di_identical",
                 "smarts_1": "[NX2]=[CX2:1]=[OX1]",
                 "group_name": "di_isocyanate",
+                "comments": None,
+            },
+
+            # ============================================================
+            # Epoxy / Amine Functional Monomers
+            # Relevant for epoxy-amine polymerization
+            #
+            # Polymer-forming epoxy monomer:
+            #     must contain two epoxide groups, i.e. diepoxy
+            #
+            # Primary monoamine:
+            #     one -NH2 group has two active hydrogens
+            #     can react with two epoxide groups in two stages
+            #
+            # Stage 1:
+            #     primary amine + epoxide -> secondary amine
+            #
+            # Stage 2:
+            #     secondary amine + epoxide -> tertiary amine
+            # ============================================================
+
+            "di_epoxy_monomer": {
+                "functionality_type": "di_identical",
+                "smarts_1": "[CX4;R1]1[OX2;R1][CX4;R1]1",
+                "group_name": "di_epoxide",
+                "comments": None,
+            },
+
+            "primary_amine_monomer": {
+                "functionality_type": "mono",
+                "smarts_1": "[NX3H2;!$(NC=O);!$(NC=[N,O,S])]",
+                "group_name": "primary_amine",
+                "comments": None,
+            },
+
+            "secondary_amine_monomer": {
+                "functionality_type": "mono",
+                "smarts_1": "[NX3H1;!$(NC=O);!$(NC=[N,O,S])]",
+                "group_name": "secondary_amine",
                 "comments": None,
             },
 

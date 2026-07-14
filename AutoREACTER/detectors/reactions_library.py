@@ -339,6 +339,33 @@ class ReactionLibrary:
                 },
                 "comments": None
             },
+            "Primary Amine and Epoxide Polyaddition (Epoxy-Amine, First Addition)": {
+                "same_reactants": False,
+                "reactant_1": "primary_amine",
+                "reactant_2": "di_epoxide",
+                "product": "secondary_amine_hydroxyl_product",
+                "delete_atom": False,
+                "reaction": "[NX3H2:1]-[H:6].[CX4:2]1[OX2:5][CX4:3]1>>[NX3:1][C:2][C:3][OX2:5][H:6]",
+                "reference": {
+                    "smarts": None,
+                    "reaction_and_mechanism": None
+                },
+                "comments": "Primary amine (-NH2) opens one epoxide ring. One N-H is consumed and transferred to the epoxide oxygen as -OH; nitrogen becomes a secondary amine with one remaining N-H, still reactive toward a second epoxide."
+            },
+
+            "Secondary Amine and Epoxide Polyaddition (Epoxy-Amine, Second Addition / Crosslink)": {
+                "same_reactants": False,
+                "reactant_1": "secondary_amine",
+                "reactant_2": "di_epoxide",
+                "product": "tertiary_amine_crosslink_product",
+                "delete_atom": False,
+                "reaction": "[NX3H1:1]-[H:6].[CX4:2]1[OX2:5][CX4:3]1>>[NX3:1][C:2][C:3][OX2:5][H:6]",
+                "reference": {
+                    "smarts": None,
+                    "reaction_and_mechanism": None
+                },
+                "comments": "Secondary amine's remaining N-H opens a second epoxide ring. Nitrogen becomes a fully substituted tertiary amine (network crosslink point); no reactive N-H remains on this nitrogen."
+            },
 
             # ============================================================
             # Commented reactions
@@ -473,4 +500,5 @@ class ReactionLibrary:
             #     "delete_atom": False,
             #     "reaction": "[NX2:3]=[CX2:4]=[OX1,SX1:5].[OX2,SX2;H1;!$([O,S]C=*):6]>>[NX3:3][CX3:4](=[OX1,SX1:5])[OX2,SX2;!$([O,S]C=*):6]"
             # },
+        #}
         }

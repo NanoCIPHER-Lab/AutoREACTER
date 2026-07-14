@@ -241,6 +241,140 @@ class ReactionDetector:
                                 )
         session.reaction_instances = reaction_instances
 
+
+    def index_based_reaction_detector(
+        self, monomer_roles: List[MonomerRole]
+    ) -> List[ReactionInstance]:
+        """
+        Scans a list of index-based monomer roles to find all possible polymerization
+        reactions, same logic as reaction_detector but operating on a direct list of
+        MonomerRole objects (as produced by index_based_functional_groups_detector)
+        instead of session.monomer_roles.
+
+        Looping rule:
+            - Homo-polymerization (single monomer role): skip if that monomer role
+            is already looped (is_looped=True).
+            - Co-polymerization / same-reactant-two-FG (two monomer roles involved):
+            skip ONLY if BOTH monomer roles are already looped. If either one is
+            still fresh (is_looped=False), the pair is still looked up/processed.
+
+        Args:
+            monomer_roles: List of MonomerRole objects to analyze.
+
+        Returns:
+            List[ReactionInstance]: All detected reaction instances for this pass.
+        """
+        reaction_instances = []
+        seen_pairs: Set[Tuple] = set()
+
+        for reaction_name, reaction_info in self.reactions.items():
+            reactant_1_name = reaction_info.get("reactant_1")
+            reactant_2_name = reaction_info.get("reactant_2")
+            same_reactants = reaction_info.get("same_reactants", False)
+
+            # CASE 1: HOMO-POLYMERIZATION (e.g., A + A)
+            if same_reactants and reactant_2_name is None:
+                for monomer_role in monomer_roles:
+                    # Single-monomer case: skip only if this monomer is already looped.
+                    if monomer_role.is_looped:
+                        continue
+
+                    fg_hits = self._matching_fgs(monomer_role, reactant_1_name)
+                    for fg in fg_hits:
+                        pair_key = self._seen_pair_key(reaction_name, monomer_role, fg)
+                        if pair_key not in seen_pairs:
+                            seen_pairs.add(pair_key)
+                            reaction_instances.append(
+                                ReactionInstance(
+                                    reaction_name=reaction_name,
+                                    reaction_smarts=reaction_info["reaction"],
+                                    delete_atom=reaction_info["delete_atom"],
+                                    references=reaction_info["reference"],
+                                    same_reactants=same_reactants,
+                                    monomer_1=monomer_role,
+                                    functional_group_1=fg
+                                )
+                            )
+
+            # CASE 2: CO-POLYMERIZATION (e.g., A + B)
+            else:
+                for monomer_role_i in monomer_roles:
+                    fg_hits_i = self._matching_fgs(monomer_role_i, reactant_1_name)
+                    if not fg_hits_i:
+                        continue
+
+                    for fg_i in fg_hits_i:
+                        for monomer_role_j in monomer_roles:
+                            # Prevent a monomer reacting with itself in a co-monomer definition
+                            if monomer_role_i == monomer_role_j:
+                                continue
+
+                            # Pairwise rule: skip only if BOTH are already looped.
+                            if monomer_role_i.is_looped and monomer_role_j.is_looped:
+                                continue
+
+                            fg_hits_j = self._matching_fgs(monomer_role_j, reactant_2_name)
+                            for fg_j in fg_hits_j:
+                                pair_key = self._seen_pair_key(
+                                    reaction_name, monomer_role_i, fg_i, monomer_role_j, fg_j
+                                )
+                                if pair_key not in seen_pairs:
+                                    seen_pairs.add(pair_key)
+                                    reaction_instances.append(
+                                        ReactionInstance(
+                                            reaction_name=reaction_name,
+                                            reaction_smarts=reaction_info["reaction"],
+                                            delete_atom=reaction_info["delete_atom"],
+                                            references=reaction_info["reference"],
+                                            same_reactants=same_reactants,
+                                            monomer_1=monomer_role_i,
+                                            functional_group_1=fg_i,
+                                            monomer_2=monomer_role_j,
+                                            functional_group_2=fg_j
+                                        )
+                                    )
+
+            # CASE 1.1: Same reactant has two functional groups (e.g., A + A with FG1 and FG2)
+            if not same_reactants and reactant_2_name is not None:
+                for monomer_role in monomer_roles:
+                    # Both "slots" are the same monomer role here, so the pairwise
+                    # both-looped rule collapses to a single-monomer check.
+                    if monomer_role.is_looped:
+                        continue
+
+                    fg_hits_1 = self._matching_fgs(monomer_role, reactant_1_name)
+                    fg_hits_2 = self._matching_fgs(monomer_role, reactant_2_name)
+
+                    for fg_1 in fg_hits_1:
+                        for fg_2 in fg_hits_2:
+
+                            # Skip identical FG objects
+                            if fg_1 == fg_2:
+                                continue
+
+                            pair_key = self._seen_pair_key(
+                                reaction_name, monomer_role, fg_1, monomer_role, fg_2
+                            )
+
+                            if pair_key not in seen_pairs:
+                                seen_pairs.add(pair_key)
+
+                                reaction_instances.append(
+                                    ReactionInstance(
+                                        reaction_name=reaction_name,
+                                        reaction_smarts=reaction_info["reaction"],
+                                        delete_atom=reaction_info["delete_atom"],
+                                        references=reaction_info["reference"],
+                                        same_reactants=same_reactants,
+                                        monomer_1=monomer_role,
+                                        functional_group_1=fg_1,
+                                        monomer_2=monomer_role,
+                                        functional_group_2=fg_2
+                                    )
+                                )
+
+        return reaction_instances
+
     def create_reaction_image(self, reactant_a_smiles: str, reactant_b_smiles: str, 
                               reaction_smarts: str, reaction_name: str) -> Image.Image:
         """

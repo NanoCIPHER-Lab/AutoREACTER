@@ -1,0 +1,19 @@
+{
+    "simulation_name": "Glycine_Test",
+    "simulations": [
+        {
+            "tag": "glycine_test",
+            "temperature": 300,
+            "density": 1.0,
+            "monomer_counts": {
+                "glycine": 200
+            }
+        }
+    ],
+    "monomers": [
+        {
+            "name": "glycine",
+            "smiles": "NCC(=O)O"
+        }
+    ]
+}
