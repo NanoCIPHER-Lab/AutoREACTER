@@ -118,8 +118,9 @@ from .functional_groups_library import FunctionalGroupsLibrary
 logger = logging.getLogger(__name__)  # Module-level logger for future diagnostics.
 if TYPE_CHECKING:
     from AutoREACTER.session import Session
-    from AutoREACTER.detectors.functional_groups_detector import MonomerRoleforIndexBasedFGDetection
-
+    from AutoREACTER.reaction_preparation.reaction_processor.reaction_progression import (
+        MonomerRoleforIndexBasedFGDetection,
+    )
 
 @dataclass(slots=True)
 class FunctionalGroupInfo:
