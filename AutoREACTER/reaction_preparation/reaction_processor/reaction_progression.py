@@ -60,15 +60,23 @@ class ReactionProgression:
         max_loop: int = MAX_LOOP,
     ) -> list["ReactionMetadata"]:
         """
-        Progresses the reaction process iteratively, detecting functional groups and reactions,
-        preparing reactions, and deduplicating them until no new reactions are found or the maximum
-        number of iterations is reached.
-        
-        Returns a list of all prepared reaction metadata.
+        Repeatedly detect functional groups, detect reactions, prepare
+        reactions, and remove duplicate products.
+
+        Args:
+            max_loop:
+                Maximum number of progression iterations.
+
+        Returns:
+            Reaction metadata generated during the progression loop.
         """
         iteration = 0
-        monomer_roles_in_loop = list(self.session.monomer_roles)
-        all_prepared_reactions = list(self.session.reaction_metadata)
+        monomer_roles_in_loop = list["MonomerRole"](
+            self.session.monomer_roles
+        )
+        all_prepared_reactions: list["ReactionMetadata"] = list(
+            self.session.reaction_metadata
+        )
 
         while iteration < max_loop:
             iteration += 1
@@ -85,8 +93,8 @@ class ReactionProgression:
             self._set_is_looped_flag(monomer_roles_in_loop)
 
             initial_reaction_pool_size = (
-                self._length_of_active_reactions(
-                    all_prepared_reactions
+                self._count_active_reactions(
+                    self.session.reaction_metadata
                 )
             )
 
@@ -133,37 +141,30 @@ class ReactionProgression:
                     reaction_instances=reaction_instances
                 )
             )
-
+    
             all_prepared_reactions.extend(prepared_reactions)
-
-            # Required for internal reaction-state modifications.
             self.session.reaction_metadata = all_prepared_reactions
-
-            print(
-                f"Total prepared reactions after iteration {iteration}: "
-                f"{len(all_prepared_reactions)}"
-            )
 
             all_prepared_reactions = (
                 self.deduplication_detector.compare_graphs_mol(
-                    self.session.reaction_metadata
+                    all_prepared_reactions
                 )
             )
-
-            # Update the session with the deduplicated reactions.
             self.session.reaction_metadata = all_prepared_reactions
 
             deduplicated_reaction_count = (
-                self._length_of_active_reactions(
+                self._count_active_reactions(
                     all_prepared_reactions
                 )
             )
 
-            if self._loop_break_condition(
+            should_break = self._loop_break_condition(
                 size_before=initial_reaction_pool_size,
                 size_after=deduplicated_reaction_count,
-            ):
-                break
+            )
+
+            if should_break:
+                return self._store_reactions(all_prepared_reactions)
 
         self.session.reaction_metadata = all_prepared_reactions
         return all_prepared_reactions
