@@ -223,16 +223,7 @@ class PrepareReactions:
             if loop:
                 # FORCED-REACTION MODE: use the actual index-scoped rdkit_mol (not a
                 # fresh SMILES reparse) so atom indices line up with fg_*_indexes.
-                # AddHs only appends new explicit H atoms at the end, so heavy-atom
-                # indices — the ones that matter for the FG match indices — are preserved.
-                mol_reactant_1 = Chem.AddHs(Chem.Mol(reaction.monomer_1.rdkit_mol))
                 forced_indexes_1 = self._flatten_fg_indexes(reaction.functional_group_1)
-
-                # Handle case where both reactants are identical
-                if same_reactants:
-                    mol_reactant_2 = Chem.AddHs(Chem.Mol(reaction.monomer_1.rdkit_mol))
-                else:
-                    mol_reactant_2 = Chem.AddHs(Chem.Mol(reaction.monomer_2.rdkit_mol))
 
                 if reaction.functional_group_2 is not None:
                     forced_indexes_2 = self._flatten_fg_indexes(reaction.functional_group_2)
@@ -240,7 +231,7 @@ class PrepareReactions:
                 # Direction is already known from the ReactionInstance (monomer_1 ->
                 # reactant slot 1, monomer_2 -> reactant slot 2), so unlike the normal
                 # path we do NOT also try the swapped ordering.
-                reaction_tuple = [[mol_reactant_1, mol_reactant_2]]
+                reaction_tuple = [[mol_reactant_1, mol_reactant_2], [mol_reactant_2, mol_reactant_1]] if same_reactants else [[mol_reactant_1, mol_reactant_2]]
             else:
                 reactant_smiles_1 = reaction.monomer_1.smiles
                 reactant_smiles_2 = reactant_smiles_1 if same_reactants else reaction.monomer_2.smiles
