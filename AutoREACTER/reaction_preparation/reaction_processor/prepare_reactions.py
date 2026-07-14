@@ -40,6 +40,8 @@ class MappingError(Exception):
 class SMARTSParsingError(Exception):
     """Custom exception raised when parsing SMILES or reaction SMARTS fails."""
 
+class ZeroActiveReactionsError(Exception):
+    """Custom exception raised when no active reactions are found in the dataset."""
 
 @dataclass(slots=True)
 class ReactionMetadata:
@@ -115,7 +117,28 @@ class PrepareReactions:
 
         prepared_reactions.extend(added_reaction_progression)
         session.reaction_metadata = prepared_reactions   # update with full final list
+        self._zero_active_reactions_error(prepared_reactions)
         return session
+    
+    def _zero_active_reactions_error(self, reaction_metadata: list[ReactionMetadata]):
+        """
+        Checks if there are any active reactions in the provided reaction metadata list.
+
+        Args:
+            reaction_metadata: List of ReactionMetadata objects to check for active reactions.
+
+        Raises:
+            ZeroActiveReactionsError: If no active reactions are found in the list.
+        """
+        active_reactions = False
+        for reaction in reaction_metadata:
+            if reaction.activity_stats:
+                active_reactions = True
+                break
+        if not active_reactions:
+            raise ZeroActiveReactionsError("No active reactions found in the dataset." \
+            "This is an AutoREACTER error indicating that no active reactions were found in the dataset." \
+            "Please Raise an issue at https://github.com/NanoCIPHER-Lab/AutoREACTER/issues")
 
     def _prepare_reactions_stage(self, session: "Session", loop: bool = False) -> list[ReactionMetadata]:
         """
