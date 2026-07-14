@@ -1,18 +1,18 @@
 {
-    "simulation_name": "Epoxy_Test_Primary_Diamine_Diepoxy",
+    "simulation_name": "Glycine_Test",
     "simulations": [
         {
-            "tag": "epoxy_test",
+            "tag": "glycine_test",
             "temperature": 300,
             "density": 1.0,
             "monomer_counts": {
-                "di_epoxy": 200
+                "glycine": 200
             }
         }
     ],
     "monomers": [
         {
-            "name": "di_epoxy",
+            "name": "glycine",
             "smiles": "NCC(=O)O"
         }
     ]
