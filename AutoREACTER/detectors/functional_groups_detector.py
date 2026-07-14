@@ -1,7 +1,6 @@
 from __future__ import annotations  
 from typing import TYPE_CHECKING, List
 
-from numpy import indices
 """
 * Monomer Functionality Detection Module
 --------------------------------------
