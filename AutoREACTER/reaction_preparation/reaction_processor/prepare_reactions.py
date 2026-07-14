@@ -109,16 +109,22 @@ class PrepareReactions:
             session.reaction_id_counter = 0 # Initialize a counter for unique reaction IDs if not already present
 
     def prepare_reactions(self, session):
+        # 1. Get initial reactions
         prepared_reactions = self._prepare_reactions_stage(session)
-        session.reaction_metadata = prepared_reactions   # set BEFORE progression needs it
+        session.reaction_metadata = prepared_reactions
 
+        # 2. Run progression loop (this returns the FULL, deduplicated list)
         reaction_progression = ReactionProgression(session)
-        added_reaction_progression = reaction_progression.reaction_progression()
+        final_reactions = reaction_progression.reaction_progression()
 
-        prepared_reactions.extend(added_reaction_progression)
-        session.reaction_metadata = prepared_reactions   # update with full final list
-        self._zero_active_reactions_error(prepared_reactions)
+        # 3. Overwrite the session metadata with the final deduplicated list
+        session.reaction_metadata = final_reactions 
+        
+        # 4. Error check
+        self._zero_active_reactions_error(final_reactions)
+        
         return session
+
     
     def _zero_active_reactions_error(self, reaction_metadata: list[ReactionMetadata]):
         """

@@ -280,13 +280,19 @@ class DeduplicationDetector:
         """
         Detect duplicate reactions using in-memory RDKit molecules.
 
-        The RDKit pair cache is cleared at the start of every call. This
-        makes each invocation one independent deduplication pass over the
-        supplied accumulated reaction pool.
+        Each call performs one independent deduplication pass over the
+        supplied accumulated reaction pool. The RDKit coupled-graph cache
+        is therefore cleared before the comparison starts.
 
-        Reactions already marked inactive are skipped. When multiple active
-        reactions have equivalent reactant and product graphs, the first is
-        retained and later matches are disabled.
+        Reactions that are already inactive are ignored. Repeated references
+        to the exact same ReactionMetadata object are removed from the
+        returned list without disabling the retained object. This matters
+        because setting ``activity_stats`` to False on one repeated reference
+        would otherwise disable every occurrence of that same object.
+
+        For distinct ReactionMetadata objects, the first unique reaction is
+        retained. Later equivalent reactions are disabled by setting
+        ``activity_stats`` to False and are excluded from the returned pool.
 
         Args:
             reaction_metadata_items:
@@ -303,17 +309,31 @@ class DeduplicationDetector:
                     ``reactant_to_product_mapping``.
 
         Returns:
-            The original metadata list with duplicate reactions disabled.
+            A new list containing one active representative of each unique
+            reaction.
         """
-        # Each call represents a new full-pool deduplication pass.
-        # Do not retain RDKit graph pairs from previous progression loops.
-        self._clear_pair_cache(self.RDKIT_COMPARISON_GROUP)
+        # Each call is a complete deduplication pass over the current pool.
+        # Cached graphs from an earlier progression iteration must not be
+        # reused, or retained reactions will match their own old cache entry.
+        self.clear_cache(self.RDKIT_COMPARISON_GROUP)
+
+        unique_reactions: list["ReactionMetadata"] = []
+        retained_object_ids: set[int] = set()
 
         for reaction_index, reaction_metadata in enumerate(
             reaction_metadata_items,
             start=1,
         ):
-            if reaction_metadata.activity_stats is False:
+            # Inactive reactions do not participate in the active pool.
+            if not reaction_metadata.activity_stats:
+                continue
+
+            reaction_object_id = id(reaction_metadata)
+
+            # The accumulated progression pool can contain the exact same
+            # metadata object more than once. Do not mark that object inactive;
+            # simply keep its first occurrence.
+            if reaction_object_id in retained_object_ids:
                 continue
 
             reactant_mol = reaction_metadata.reactant_combined_RDmol
@@ -339,44 +359,58 @@ class DeduplicationDetector:
                 )
             )
 
-            reactant_template_indices = set(
-                reactant_to_product_mapping
-            )
-
-            product_template_indices = set(
+            reactant_indices = set(reactant_to_product_mapping)
+            product_indices = set(
                 reactant_to_product_mapping.values()
             )
 
+            # Relabel the product graph into reactant-index space so the
+            # coupled graph preserves atom correspondence across the
+            # pre- and post-reaction states.
+            product_to_reactant_mapping = {
+                product_idx: reactant_idx
+                for reactant_idx, product_idx
+                in reactant_to_product_mapping.items()
+            }
+
+            if len(product_to_reactant_mapping) != len(
+                reactant_to_product_mapping
+            ):
+                raise ValueError(
+                    f"Reaction {reaction_index} contains a non-bijective "
+                    "reactant-to-product mapping."
+                )
+
             pre_graph = self.rdkit_mol_to_networkx(
                 molecule=reactant_mol,
-                atom_idxs=reactant_template_indices,
+                atom_idxs=reactant_indices,
             )
 
             post_graph = self.rdkit_mol_to_networkx(
                 molecule=product_mol,
-                atom_idxs=product_template_indices,
+                atom_idxs=product_indices,
+                idx_relabel=product_to_reactant_mapping,
             )
 
-            duplicate = self.is_duplicate_pair(
-                pre_graph=pre_graph,
-                post_graph=post_graph,
+            duplicate = self.is_duplicate(
+                pre_template_graph=pre_graph,
+                post_template_graph=post_graph,
                 comparison_group=self.RDKIT_COMPARISON_GROUP,
             )
 
             if duplicate:
                 reaction_metadata.activity_stats = False
+                continue
 
-                print(
-                    f"Reaction {reaction_index}: "
-                    "duplicate reaction detected and disabled."
-                )
-            else:
-                print(
-                    f"Reaction {reaction_index}: "
-                    "unique reaction retained."
-                )
+            retained_object_ids.add(reaction_object_id)
+            unique_reactions.append(reaction_metadata)
 
-        return reaction_metadata_items
+            print(
+                f"Reaction {reaction_index}: "
+                "unique reaction retained."
+            )
+
+        return unique_reactions
 
     def clear_cache(
         self,
@@ -608,20 +642,6 @@ class DeduplicationDetector:
             f"Unsupported index_source {index_source!r}. "
             "Expected 'template' or 'first_shell'."
         )
-
-    # ------------------------------------------------------------------
-    # Cache helpers
-    # ------------------------------------------------------------------
-
-    def _clear_pair_cache(
-        self,
-        comparison_group: str,
-    ) -> None:
-        """Clear only the uncoupled pre/post pair cache for one group."""
-        self.seen_reaction_pairs.setdefault(
-            comparison_group,
-            [],
-        ).clear()
 
     # ------------------------------------------------------------------
     # Coupled-graph helpers
