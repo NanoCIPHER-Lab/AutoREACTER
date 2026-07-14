@@ -532,6 +532,7 @@ class FunctionalGroupsDetector:
 
             # Add to roles if any functionalities detected.
             if detected_functionalities:
+                print(f"Detected functionalities for monomer {detected_functionalities}")
                 monomer_roles_out.append(
                     MonomerRole(
                         smiles=monomer.smiles,

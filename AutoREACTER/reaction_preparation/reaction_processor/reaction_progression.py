@@ -145,13 +145,14 @@ class ReactionProgression:
 
             monomer_roles_in_loop.extend(fg_detection_results)
             self.session.monomer_roles = monomer_roles_in_loop
+            print(monomer_roles_in_loop)
 
             reaction_instances = (
                 self.rxn_detector.index_based_reaction_detector(
                     monomer_roles_in_loop
                 )
             )
-
+            print(reaction_instances)
             if not reaction_instances:
                 print(
                     f"No new reactions detected in iteration {iteration}. "
@@ -193,11 +194,7 @@ class ReactionProgression:
         self,
         reaction_instances: list["ReactionInstance"],
     ) -> list["ReactionMetadata"]:
-        """Convert detected reaction instances into prepared reaction metadata.
-
-        The import is local to avoid importing the reaction-preparation module
-        during module initialization, which also helps prevent circular imports.
-        """
+        """Convert detected reaction instances into prepared reaction metadata."""
         from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import (
             PrepareReactions,
         )
@@ -205,7 +202,7 @@ class ReactionProgression:
         reaction_preparer = PrepareReactions(self.session)
 
         return reaction_preparer._prepare_reactions_stage(
-            reaction_instances
+            reaction_instances, loop=True
         )
 
     def _prepare_products_for_idx_based_fg_detection(
@@ -232,15 +229,33 @@ class ReactionProgression:
                 product_mol,
             )
 
-            sanitized_mol = self._sanitize_molecule(product_mol)
+            sanitized_mol, success = self._sanitize_molecule(product_mol)
+            
+            # THIS IS A DEBUG  BLOCK ---
+            if success:
+                print("\n--- DEBUG MOLECULE ---")
+                print("SMILES:", Chem.MolToSmiles(sanitized_mol))
+                for a in sanitized_mol.GetAtoms():
+                    if a.GetDegree() == 2 and a.GetAtomicNum() == 6:
+                        print(f"Atom {a.GetIdx()}: Symbol={a.GetSymbol()}, Heavy Neighbors={a.GetDegree()}, Total Hs={a.GetTotalNumHs()}, Radicals={a.GetNumRadicalElectrons()}")
+                print("----------------------\n")
+            # ----------------------------
 
-            if sanitized_mol is None:
+            matches = sanitized_mol.GetSubstructMatches(Chem.MolFromSmarts("[C;!R;D3](-[H])(-[!#1])-[!#1]"))
+            print(f"Substructure matches for radical carbon: {matches}")
+            print(
+                f"Sanitizing reaction product {reaction.reaction_id}... "
+                f"result {success}"
+            )
+            if not success:
                 print(
                     f"Skipping reaction product {reaction.reaction_id}: "
                     "RDKit molecule sanitization failed."
                 )
-                continue
-
+            else:
+                print(
+                    f"Reaction product {reaction.reaction_id} sanitized successfully."
+                )
             prepared_monomer_roles.append(
                 MonomerRoleforIndexBasedFGDetection(
                     smiles=self._get_product_smiles(sanitized_mol),
@@ -263,45 +278,110 @@ class ReactionProgression:
     def _sanitize_molecule(
         self,
         mol: Chem.Mol,
-    ) -> Chem.Mol | None:
-        """Clean and sanitize an RDKit molecule.
-
-        Atom-map numbers and isotope labels are removed before sanitization.
-        Products that RDKit cannot sanitize are discarded and represented by
-        ``None``.
-
-        Args:
-            mol: Molecule to clean and sanitize.
-
-        Returns:
-            The sanitized molecule, or ``None`` if sanitization fails.
-        """
+    ) -> tuple[Chem.Mol | None, bool]:
         cleaned_mol = self._clean_product(mol)
+        patched_mol = Chem.RWMol(cleaned_mol)
+        patched_mol.UpdatePropertyCache(strict=False)
+        Chem.FastFindRings(patched_mol)
+
+        for atom in patched_mol.GetAtoms():
+            if atom.GetAtomicNum() == 6:
+                atom.SetNoImplicit(True)
+
+                heavy_val = int(sum(bond.GetValenceContrib(atom) for bond in atom.GetBonds()))
+                explicit_hs = atom.GetNumExplicitHs()
+                rads = atom.GetNumRadicalElectrons()
+
+                # 1. STRIP radical electrons ONLY from the OLD chain end!
+                # If it just formed a new bond, its heavy + Hs equals 4. It is no longer a radical.
+                if heavy_val + explicit_hs >= 4 and rads > 0:
+                    atom.SetNumRadicalElectrons(0)
+                    rads = 0
+
+                # 2. Fix over-valent carbons (if RunReactants forces too many Hs)
+                if heavy_val + explicit_hs + rads > 4:
+                    allowed_hs = max(0, 4 - heavy_val - rads)
+                    atom.SetNumExplicitHs(allowed_hs)
+                    explicit_hs = allowed_hs
+
+                # 3. PROTECT the NEW chain end!
+                # If it has 3 bonds, it's the new radical. Give it the electron back 
+                # so Chem.AddHs() doesn't accidentally quench it with a fake hydrogen!
+                if heavy_val + explicit_hs == 3 and atom.GetFormalCharge() == 0:
+                    atom.SetNumRadicalElectrons(1)
+
+        patched_mol = patched_mol.GetMol()
+        patched_mol.ClearComputedProps()
 
         try:
-            Chem.SanitizeMol(cleaned_mol)
-        except Exception as error:
-            print(f"Could not sanitize product molecule: {error}")
-            return None
+            Chem.SanitizeMol(patched_mol)
+            return patched_mol, True
+        except Exception:
+            pass
 
-        return cleaned_mol
+        radical_fixed_mol = self._fix_radical_and_sanitize(patched_mol)
 
-    def _clean_product(self, mol: Chem.Mol) -> Chem.Mol:
-        """Return a copy of ``mol`` without atom maps or isotope labels.
+        try:
+            Chem.SanitizeMol(radical_fixed_mol)
+            return radical_fixed_mol, True
+        
+        except Exception as error2:
+            radical_fixed_mol.UpdatePropertyCache(strict=False)
+            Chem.FastFindRings(radical_fixed_mol)
+            return radical_fixed_mol, False
 
-        The input molecule is copied and therefore remains unchanged.
+    def _fix_radical_and_sanitize(
+        self,
+        raw_mol: Chem.Mol,
+        query: str = "[CH;X3;v3]",
+    ) -> Chem.Mol:
+        """
+        RunReactants() output is unsanitized. Our radical carbon is deliberately
+        under-valent (v3 instead of v4) to mark it in SMARTS, but that's not a
+        real chemical species RDKit can sanitize or round-trip through SMILES.
+        This finds that atom and gives it an actual radical electron, so the
+        missing valence is accounted for and the mol becomes fully sanitizable.
 
         Args:
-            mol: Molecule whose atom annotations should be removed.
+            raw_mol: Molecule that may contain an under-valent radical carbon.
+            query: SMARTS identifying the deliberately under-valent radical atom.
 
         Returns:
-            A cleaned copy of the input molecule.
+            A new Chem.Mol with the radical atom's valence properly accounted
+            for via NumRadicalElectrons, ready for Chem.SanitizeMol().
         """
+        mol = Chem.RWMol(raw_mol)
+        mol.UpdatePropertyCache(strict=False)   # need valence to even run the query
+        Chem.FastFindRings(mol)
+
+        query_mol = Chem.MolFromSmarts(query)
+        hits = mol.GetSubstructMatches(query_mol)
+
+        for match in hits:
+            atom = mol.GetAtomWithIdx(match[0])   # first atom = the radical carbon
+            atom.SetNoImplicit(True)
+            if atom.GetTotalNumHs() != 1:
+                atom.SetNumExplicitHs(1)
+            atom.SetNumRadicalElectrons(1)
+
+        return mol.GetMol()
+
+    def _clean_product(self, mol: Chem.Mol) -> Chem.Mol:
+        """Return a copy of ``mol`` without atom maps, isotopes, or ghost properties."""
         cleaned_mol = Chem.Mol(mol)
 
         for atom in cleaned_mol.GetAtoms():
+            # Clean standard tracking labels
             atom.SetAtomMapNum(0)
             atom.SetIsotope(0)
+
+            # EXORCISE THE GHOSTS: 
+            # RDKit hides tracking data like 'old_mapno' deep in the atom properties.
+            # We MUST clear them so AutoREACTER doesn't mistake old atoms for new initiators!
+            if atom.HasProp("old_mapno"):
+                atom.ClearProp("old_mapno")
+            if atom.HasProp("react_atom_idx"):
+                atom.ClearProp("react_atom_idx")
 
         return cleaned_mol
 

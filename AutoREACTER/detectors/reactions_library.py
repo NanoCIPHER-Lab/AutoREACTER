@@ -378,43 +378,43 @@ class ReactionLibrary:
             "Vinyl Addition Polymerization Initiation": {
                 "same_reactants": True,
                 "reactant_1": "vinyl",
-                "product": "vinyl_chain_radical",
+                "product": "vinyl_chain_end_radical",
                 "delete_atom": False,
                 "reaction": (
-                    "[CH2:1]=[CH;!R:3]."
-                    "[CH2:2]=[C;!R:4]-[*:5]"
+                    "[CH2:1]=[CH:3]-[*:5]."
+                    "[CH2:2]=[CH:4]-[*:6]"
                     ">>"
-                    "[C:1]-[C:3]-[C:2]-[C:4]-[*:5]"
+                    "[CH2:1](-[C:3]-[*:5])-[CH2:2]-[C:4]-[*:6]"
                 ),
                 "reference": {
                     "smarts": None,
                     "reaction_and_mechanism": None,
                 },
                 "comments": (
-                    "Vinyl initiation reaction. Atom maps 1 and 2 identify the "
-                    "reacting atoms from the first and second vinyl molecules."
+                    "Atom maps 1 and 2 are the initiating atoms from the two vinyl "
+                    "molecules. Atom 4 becomes the new carbon-centered radical."
                 ),
             },
-
             "Vinyl Addition Polymerization Propagation": {
                 "same_reactants": False,
-                "reactant_1": "vinyl_chain_radical",
-                "reactant_2": "vinyl",
-                "product": "vinyl_chain_radical",
+                "reactant_1": "vinyl",
+                "reactant_2": "vinyl_chain_end_radical",
+                "product": "vinyl_chain_end_radical",
                 "delete_atom": False,
-                "reaction": (
-                    "[C:1]-[*:5]."
-                    "[CH2:2]=[CH;!R:3]-[*:6]"
+                "reaction":(
+                    "[CH2:2]=[CH:3]-[*:6]."
+                    "[*:5]-[C;!R;H1:1]-[*:7]"
                     ">>"
-                    "[C:1]([*:5])-[CH2:2]-[CH:3]-[*:6]"
+                    "[*:5]-[C:1](-[*:7])-[CH2:2]-[C:3]-[*:6]"
                 ),
                 "reference": {
                     "smarts": None,
                     "reaction_and_mechanism": None,
                 },
                 "comments": (
-                    "Vinyl propagation reaction. Atom map 1 is the reacting chain-end "
-                    "atom, and atom map 2 is the reacting atom of the incoming vinyl molecule."
+                    "Atom 1 is the existing radical chain-end carbon. Atom 2 is the "
+                    "reacting atom of the incoming vinyl monomer. Atom 3 becomes the "
+                    "new radical chain end."
                 ),
             },
             # ============================================================

@@ -186,11 +186,14 @@ class FunctionalGroupsLibrary:
                 "comments": None,
             },
 
-            "vinyl_chain_radical_monomer": {
+            "vinyl_chain_end_radical": {
                 "functionality_type": "mono",
-                "smarts_1": "[C]-[*]",
-                "group_name": "vinyl_chain_radical",
-                "comments": "Reactive chain-end group used for vinyl propagation.",
+                "smarts_1": "[C;!R;D3](-[H])(-[!#1])-[!#1]",
+                "group_name": "vinyl_chain_end_radical",
+                "comments": (
+                    "Secondary carbon-centered radical attached through two carbon bonds. "
+                    "Does not match the valence-4 alkene carbon of an unreacted monomer."
+                ),
             },
 
             # ============================================================
