@@ -175,6 +175,23 @@ class FunctionalGroupsLibrary:
                 "group_name": "secondary_amine",
                 "comments": None,
             },
+            # ============================================================
+            # Vinyl Addition Polymerization
+            # ============================================================
+
+            "vinyl_monomer": {
+                "functionality_type": "vinyl",
+                "smarts_1": "[CH2]=[C;!R]",
+                "group_name": "vinyl",
+                "comments": None,
+            },
+
+            "vinyl_chain_radical_monomer": {
+                "functionality_type": "mono",
+                "smarts_1": "[C]-[*]",
+                "group_name": "vinyl_chain_radical",
+                "comments": "Reactive chain-end group used for vinyl propagation.",
+            },
 
             # ============================================================
             # Commented functional groups

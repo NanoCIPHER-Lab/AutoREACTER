@@ -435,6 +435,7 @@ class FunctionalGroupsDetector:
         self,
         monomer_roles_in: list[MonomerRoleforIndexBasedFGDetection],
     ) -> list[MonomerRole] | bool:
+        """
         Detect functional groups across a list of monomers and categorize them into roles,
         restricted to a given set of atom indices per monomer.
 

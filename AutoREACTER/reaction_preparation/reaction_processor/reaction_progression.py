@@ -222,8 +222,6 @@ class ReactionProgression:
         ] = []
 
         for reaction in self.session.reaction_metadata:
-            # Inactive reactions do not contain products that can participate
-            # in a subsequent progression iteration.
             if not reaction.activity_stats:
                 continue
 
@@ -234,12 +232,21 @@ class ReactionProgression:
                 product_mol,
             )
 
+            sanitized_mol = self._sanitize_molecule(product_mol)
+
+            if sanitized_mol is None:
+                print(
+                    f"Skipping reaction product {reaction.reaction_id}: "
+                    "RDKit molecule sanitization failed."
+                )
+                continue
+
             prepared_monomer_roles.append(
                 MonomerRoleforIndexBasedFGDetection(
-                    smiles=self._get_product_smiles(product_mol),
+                    smiles=self._get_product_smiles(sanitized_mol),
                     name=f"new_{reaction.reaction_id}",
                     indexes_in_template=indexes_in_template,
-                    rdkit_mol=self._sanitize_molecule(product_mol),
+                    rdkit_mol=sanitized_mol,
                 )
             )
 

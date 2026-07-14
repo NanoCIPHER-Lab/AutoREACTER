@@ -34,7 +34,15 @@ Special Polymerization Environments
 - Polymerization in Supercritical Carbon Dioxide
 - Thiophene Polymerizations: Oxidative Polymerization of Thiophenes
 """
+rxn_prop_smarts = (
+    "[C:1]-[*:5].[CH2:3]=[CH;!R:4]-[*:6]"
+    ">>[C:1]([*:5])-[CH2:3]-[CH:4]-[*:6]"
+)
 
+rxn_init_smarts = (
+    "[CH2:1]=[CH;!R:2].[CH2:3]=[C;!R:4]-[*:5]"
+    ">>[C:1]-[C:2]-[C:3]-[C:4]-[*:5]"
+)
 
 class ReactionLibrary:
     def __init__(self):
@@ -366,7 +374,49 @@ class ReactionLibrary:
                 },
                 "comments": "Secondary amine's remaining N-H opens a second epoxide ring. Nitrogen becomes a fully substituted tertiary amine (network crosslink point); no reactive N-H remains on this nitrogen."
             },
+            
+            "Vinyl Addition Polymerization Initiation": {
+                "same_reactants": True,
+                "reactant_1": "vinyl",
+                "product": "vinyl_chain_radical",
+                "delete_atom": False,
+                "reaction": (
+                    "[CH2:1]=[CH;!R:3]."
+                    "[CH2:2]=[C;!R:4]-[*:5]"
+                    ">>"
+                    "[C:1]-[C:3]-[C:2]-[C:4]-[*:5]"
+                ),
+                "reference": {
+                    "smarts": None,
+                    "reaction_and_mechanism": None,
+                },
+                "comments": (
+                    "Vinyl initiation reaction. Atom maps 1 and 2 identify the "
+                    "reacting atoms from the first and second vinyl molecules."
+                ),
+            },
 
+            "Vinyl Addition Polymerization Propagation": {
+                "same_reactants": False,
+                "reactant_1": "vinyl_chain_radical",
+                "reactant_2": "vinyl",
+                "product": "vinyl_chain_radical",
+                "delete_atom": False,
+                "reaction": (
+                    "[C:1]-[*:5]."
+                    "[CH2:2]=[CH;!R:3]-[*:6]"
+                    ">>"
+                    "[C:1]([*:5])-[CH2:2]-[CH:3]-[*:6]"
+                ),
+                "reference": {
+                    "smarts": None,
+                    "reaction_and_mechanism": None,
+                },
+                "comments": (
+                    "Vinyl propagation reaction. Atom map 1 is the reacting chain-end "
+                    "atom, and atom map 2 is the reacting atom of the incoming vinyl molecule."
+                ),
+            },
             # ============================================================
             # Commented reactions
             # ============================================================
