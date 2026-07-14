@@ -142,9 +142,11 @@ class PrepareReactions:
                 active_reactions = True
                 break
         if not active_reactions:
-            raise ZeroActiveReactionsError("No active reactions found in the dataset." \
-            "This is an AutoREACTER error indicating that no active reactions were found in the dataset." \
-            "Please Raise an issue at https://github.com/NanoCIPHER-Lab/AutoREACTER/issues")
+            raise ZeroActiveReactionsError(
+                "No active reactions found in the dataset. "
+                "This is an AutoREACTER error indicating that no active reactions were found in the dataset. "
+                "Please raise an issue at https://github.com/NanoCIPHER-Lab/AutoREACTER/issues"
+            )
 
     def _prepare_reactions_stage(self, session: "Session", loop: bool = False) -> list[ReactionMetadata]:
         """
