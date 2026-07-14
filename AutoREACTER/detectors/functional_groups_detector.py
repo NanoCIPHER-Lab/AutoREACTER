@@ -474,7 +474,6 @@ class FunctionalGroupsDetector:
                 continue  # Skip already processed monomers
 
             mol = monomer.rdkit_mol
-            print(f"Processing monomer: {monomer.name} with SMILES: {monomer.smiles}")
 
             target_indices = set(monomer.indexes_in_template or [])
             detected_functionalities = []
@@ -521,7 +520,7 @@ class FunctionalGroupsDetector:
                     all_matches.extend(functional_matches)
 
                     # Log detected functionality for debugging/user feedback.
-                    print(f"{monomer.smiles} has functionality: {functional_group['group_name']}")
+                    # print(f"{monomer.smiles} has functionality: {functional_group['group_name']}") 
 
                     if functional_group.get("comments"):
                         print(f"Note: {monomer.smiles} - {functional_group['comments']}")

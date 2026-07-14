@@ -405,10 +405,11 @@ class DeduplicationDetector:
             retained_object_ids.add(reaction_object_id)
             unique_reactions.append(reaction_metadata)
 
-            print(
-                f"Reaction {reaction_index}: "
-                "unique reaction retained."
-            )
+            # Debugging: print unique reaction retention information.
+            # print(
+            #     f"Reaction {reaction_index}: "
+            #     "unique reaction retained."
+            # )
 
         return unique_reactions
 

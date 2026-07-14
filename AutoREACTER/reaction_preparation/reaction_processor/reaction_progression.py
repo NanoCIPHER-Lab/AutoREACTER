@@ -345,8 +345,6 @@ class ReactionProgression:
                 product_idxs,
             )
 
-        print(f"Product idxs: {product_idxs}")
-
         return product_idxs, product
 
     def _keep_largest_fragment(
