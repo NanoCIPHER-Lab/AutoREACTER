@@ -414,31 +414,22 @@ class FunctionalGroupsDetector:
                 )
         return monomer_roles_visualization
     
-    def _detect_functional_groups_by_index(self, mol: Chem.Mol, smarts: str, indices: list[int]) -> bool:
-        """
-        mol: RDKit Mol object
-        smarts: SMARTS pattern string
-        indices: iterable of atom indices you care about
-
-        Returns: bool
-                True if any of the specified indices match the SMARTS pattern, False otherwise
-        """
-        target_indices = set(indices)
-        results = {}
+    def _detect_functional_groups_by_index(
+        self,
+        mol: Chem.Mol,
+        smarts: str,
+        atom_indices: list[int],
+    ) -> bool:
+        """Return True when any SMARTS match overlaps the supplied atom indices."""
+        target_indices = set(atom_indices)
 
         patt = Chem.MolFromSmarts(smarts)
         if patt is None:
-            # invalid SMARTS
-            results["present"] = False
-            results["error"] = "invalid SMARTS"
-            return results
+            logger.warning("Invalid SMARTS pattern: %s", smarts)
+            return False
 
-        matches = mol.GetSubstructMatches(patt, uniquify=True)  # tuple of tuples of atom idx
-
-        # check if ANY match shares AT LEAST ONE atom with your target indices
-        matching_hits = [m for m in matches if target_indices.intersection(m)]
-
-        return bool(matching_hits)
+        matches = mol.GetSubstructMatches(patt, uniquify=True)
+        return any(target_indices.intersection(match) for match in matches)
     
     def index_based_functional_groups_detector(
         self,
