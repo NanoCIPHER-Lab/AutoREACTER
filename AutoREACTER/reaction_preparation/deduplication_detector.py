@@ -3,8 +3,8 @@ Graph-based reaction deduplication for RDKit molecules and LAMMPS
 molecule templates.
 
 The comparison intentionally ignores coordinates, atom IDs, and bond IDs.
-RDKit comparisons use chemical element and bond type. LAMMPS comparisons
-use atom type and bond type.
+RDKit comparisons use chemical element, radical state, and bond type.
+LAMMPS comparisons use atom type and bond type.
 """
 
 from __future__ import annotations
@@ -26,6 +26,10 @@ class DeduplicationDetector:
 
     NODE_ATTRIBUTE = "atom_label"
     EDGE_ATTRIBUTE = "bond_label"
+
+    RADICAL_COUNT_ATTRIBUTE = "radical_count"
+    RADICAL_PRESENT_ATTRIBUTE = "contains_radical"
+    RADICAL_SIGNATURE_ATTRIBUTE = "radical_signature"
 
     LAMMPS_COMPARISON_GROUP = "lammps"
     RDKIT_COMPARISON_GROUP = "rdkit"
@@ -108,6 +112,19 @@ class DeduplicationDetector:
         )
 
         for seen_graph in seen_graphs:
+            # The restricted template graph may not include every radical
+            # center in the complete molecule. Compare the full-molecule
+            # pre/post radical signature before checking graph isomorphism.
+            if (
+                coupled_graph.graph.get(
+                    self.RADICAL_SIGNATURE_ATTRIBUTE
+                )
+                != seen_graph.graph.get(
+                    self.RADICAL_SIGNATURE_ATTRIBUTE
+                )
+            ):
+                continue
+
             if (
                 coupled_graph.number_of_nodes()
                 != seen_graph.number_of_nodes()
@@ -392,6 +409,33 @@ class DeduplicationDetector:
                 idx_relabel=product_to_reactant_mapping,
             )
 
+            # Keep full-molecule radical information in addition to the
+            # atom-level radical labels inside the restricted template graph.
+            # Progression may explicitly mark the product as radical even when
+            # the original unsanitized RDKit product does not retain the
+            # radical-electron property cleanly.
+            reactant_radical_count = self._count_radical_atoms(
+                reactant_mol
+            )
+            product_radical_count = self._count_radical_atoms(
+                product_mol
+            )
+
+            pre_graph.graph[self.RADICAL_COUNT_ATTRIBUTE] = (
+                reactant_radical_count
+            )
+            post_graph.graph[self.RADICAL_COUNT_ATTRIBUTE] = (
+                product_radical_count
+            )
+
+            pre_graph.graph[self.RADICAL_PRESENT_ATTRIBUTE] = (
+                reactant_radical_count > 0
+            )
+            post_graph.graph[self.RADICAL_PRESENT_ATTRIBUTE] = (
+                product_radical_count > 0
+                or bool(getattr(reaction_metadata, "is_radical", False))
+            )
+
             duplicate = self.is_duplicate(
                 pre_template_graph=pre_graph,
                 post_template_graph=post_graph,
@@ -460,11 +504,14 @@ class DeduplicationDetector:
         Coordinates are not read or stored.
 
         Node attributes:
-            ``atom_label`` contains the chemical element symbol.
+            ``atom_label`` contains a tuple of:
+                - chemical element symbol
+                - whether the atom is a radical center
 
         Edge attributes:
             ``bond_label`` contains the RDKit bond type.
         """
+        
         if molecule is None:
             raise ValueError(
                 "Cannot create a graph from a None RDKit molecule."
@@ -503,10 +550,17 @@ class DeduplicationDetector:
                 idx_relabel=idx_relabel,
             )
 
+            is_radical = self._is_radical_atom(atom)
+
+            atom_label = (
+                atom.GetSymbol(),
+                is_radical,
+            )
+
             graph.add_node(
                 node_id,
                 **{
-                    self.NODE_ATTRIBUTE: atom.GetSymbol(),
+                    self.NODE_ATTRIBUTE: atom_label,
                 },
             )
 
@@ -657,6 +711,7 @@ class DeduplicationDetector:
         Combine reactant and product graphs using atom-correspondence
         edges.
         """
+        
         pre_atom_ids = set(pre_template_graph.nodes)
         post_atom_ids = set(post_template_graph.nodes)
 
@@ -677,6 +732,25 @@ class DeduplicationDetector:
             )
 
         coupled_graph = nx.Graph()
+
+        coupled_graph.graph[self.RADICAL_SIGNATURE_ATTRIBUTE] = (
+            pre_template_graph.graph.get(
+                self.RADICAL_COUNT_ATTRIBUTE,
+                0,
+            ),
+            post_template_graph.graph.get(
+                self.RADICAL_COUNT_ATTRIBUTE,
+                0,
+            ),
+            pre_template_graph.graph.get(
+                self.RADICAL_PRESENT_ATTRIBUTE,
+                False,
+            ),
+            post_template_graph.graph.get(
+                self.RADICAL_PRESENT_ATTRIBUTE,
+                False,
+            ),
+        )
 
         self._add_phase_to_coupled_graph(
             source_graph=pre_template_graph,
@@ -899,6 +973,82 @@ class DeduplicationDetector:
                 f"Bond {bond_id} references undefined atom IDs "
                 f"{undefined_atoms} in {source}."
             )
+        
+    @classmethod
+    def _count_radical_atoms(
+        cls,
+        molecule: Chem.Mol,
+    ) -> int:
+        """Count radical atoms in a complete RDKit molecule."""
+        return sum(
+            cls._is_radical_atom(atom)
+            for atom in molecule.GetAtoms()
+        )
+
+    @staticmethod
+    def _is_radical_atom(atom: Chem.Atom) -> bool:
+        """Return True for an explicit or structurally under-valent radical atom.
+
+        Progression normally sets ``NumRadicalElectrons`` on the cleaned
+        product. The structural fallback is needed because the original
+        ``RunReactants`` product stored in ``ReactionMetadata`` can retain
+        incomplete valence bookkeeping before later sanitization.
+
+        The fallback is intentionally limited to neutral, non-aromatic carbon
+        atoms used by the current vinyl-radical implementation.
+        """
+
+        # Best source when progression or RDKit has explicitly assigned the
+        # radical electron.
+        if atom.GetNumRadicalElectrons() > 0:
+            return True
+
+        # Current vinyl implementation only needs neutral carbon radicals.
+        if atom.GetAtomicNum() != 6:
+            return False
+
+        if atom.GetFormalCharge() != 0:
+            return False
+
+        if atom.GetIsAromatic():
+            return False
+
+        # A normal carbon with an implicit hydrogen can have only three visible
+        # graph bonds. Do not classify it as a radical.
+        try:
+            if atom.GetNumImplicitHs() > 0:
+                return False
+        except RuntimeError:
+            # Unsanitized reaction products may not have a complete property
+            # cache. Continue with the graph-based valence calculation.
+            pass
+
+        # Count actual graph bonds, including explicit hydrogen atoms.
+        #
+        # Do not blindly add GetNumExplicitHs(): RunReactants may retain both
+        # real hydrogen atoms and a duplicate product-SMARTS hydrogen count.
+        graph_bond_valence = sum(
+            bond.GetBondTypeAsDouble()
+            for bond in atom.GetBonds()
+        )
+
+        explicit_hydrogen_neighbors = sum(
+            neighbor.GetAtomicNum() == 1
+            for neighbor in atom.GetNeighbors()
+        )
+
+        # When no real hydrogen atoms are attached, the explicit-H property is
+        # part of the atom's valence description and must be included. When
+        # real H atoms are already present, ignore the property to avoid
+        # double-counting the same hydrogens.
+        effective_valence = graph_bond_valence
+
+        if explicit_hydrogen_neighbors == 0:
+            effective_valence += atom.GetNumExplicitHs()
+
+        # Neutral carbon with effective valence three and no available implicit
+        # hydrogen is the carbon-centered radical used by vinyl progression.
+        return abs(effective_valence - 3.0) < 1.0e-6
 
 
 def _main() -> None:
