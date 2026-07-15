@@ -187,7 +187,7 @@ class FunctionalGroupsLibrary:
             },
 
             "vinyl_chain_end_radical": {
-                "functionality_type": "mono",
+                "functionality_type": "vinyl",
                 "smarts_1": "[C;!R;D3;v3]",
                 "group_name": "vinyl_chain_end_radical",
                 "comments": (
