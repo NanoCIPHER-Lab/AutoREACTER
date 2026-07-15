@@ -2,6 +2,8 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from pathlib import Path
+import time
+
 from typing import Any, Literal, Optional
 
 from PIL.Image import Image
@@ -948,27 +950,40 @@ class InputParser:
     
     def _validate_loop(self, inputs: dict) -> tuple[bool, int | None]:
         """
-        Validates the 'loop' parameter in the input dictionary.
+        Validate the ``loop`` input.
 
-        Returns a tuple (loop, max_loop_count) where 'loop' is a boolean indicating
-        whether looping is enabled, and 'max_loop_count' is an integer specifying
-        the maximum number of loop iterations if 'loop' is an integer, or None otherwise.
+        Returns:
+            A tuple containing:
+            - Whether looping is enabled.
+            - The maximum iteration count, or ``None`` when no limit is specified.
+
+        Raises:
+            InputSchemaError: If ``loop`` is not a boolean, a positive integer,
+                or a supported loop keyword.
         """
-        loop_variables = ["loop", "repeat", "iterations", "do_loop"]
-        loop = inputs.get("loop", True)
-        if not isinstance(loop, bool):
-            if isinstance(loop, int):
-                if loop <= 0:
-                    raise InputSchemaError(
-                        "'loop' must be a positive integer."
-                    )
-                return True, loop
-            if loop in loop_variables:
-                return True, None
-            raise InputSchemaError(
-                "'loop' must be a boolean value or a positive integer."
+        loop_keywords = {"loop", "repeat", "iterations", "do_loop"}
+        loop_value = inputs.get("loop", True)
+
+        if isinstance(loop_value, bool):
+            return loop_value, None
+
+        if isinstance(loop_value, int):
+            if loop_value <= 0:
+                raise InputSchemaError("'loop' must be a positive integer.")
+
+            print(
+                f"Reaction will be looped and maximum iterations set to {loop_value}"
             )
-        return loop, None
+            time.sleep(5)
+            return True, loop_value
+
+        if isinstance(loop_value, str) and loop_value in loop_keywords:
+            return True, None
+
+        raise InputSchemaError(
+            "'loop' must be a boolean value, a positive integer, "
+            "or a supported loop keyword."
+        )
 
 
 if __name__ == "__main__":

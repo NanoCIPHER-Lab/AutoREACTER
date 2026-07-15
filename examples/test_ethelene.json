@@ -1,18 +1,19 @@
 {
-    "simulation_name": "Epoxy_Test_Primary_Diamine_Diepoxy",
+    "simulation_name": "Epoxy_ethene",
+    "loop": 9,
     "simulations": [
         {
             "tag": "vinyl_test",
             "temperature": 300,
             "density": 1.0,
             "monomer_counts": {
-                "styrene": 200
+                "ethene": 200
             }
         }
     ],
     "monomers": [
         {
-            "name": "styrene",
+            "name": "ethene",
             "smiles": "C=C"
         }
     ]

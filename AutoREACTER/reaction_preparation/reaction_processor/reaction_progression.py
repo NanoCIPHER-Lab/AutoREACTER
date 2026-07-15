@@ -11,6 +11,9 @@ from AutoREACTER.detectors.reaction_detector import ReactionDetector
 from AutoREACTER.reaction_preparation.deduplication_detector import (
     DeduplicationDetector,
 )
+from AutoREACTER.reaction_preparation.reaction_processor.warning_asci import (
+    print_warning
+)
 
 if TYPE_CHECKING:
     from AutoREACTER.detectors.functional_groups_detector import MonomerRole
@@ -73,6 +76,7 @@ class ReactionProgression:
         self.fg_detector = FunctionalGroupsDetector()
         self.rxn_detector = ReactionDetector()
         self.deduplication_detector = DeduplicationDetector()
+        print_warning()
 
     def reaction_progression(
         self,
@@ -147,14 +151,12 @@ class ReactionProgression:
 
             monomer_roles_in_loop.extend(fg_detection_results)
             self.session.monomer_roles = monomer_roles_in_loop
-            print(monomer_roles_in_loop)
 
             reaction_instances = (
                 self.rxn_detector.index_based_reaction_detector(
                     monomer_roles_in_loop
                 )
             )
-            print(reaction_instances)
             if not reaction_instances:
                 print(
                     f"No new reactions detected in iteration {iteration}. "
@@ -193,7 +195,6 @@ class ReactionProgression:
             )
 
             if should_break:
-                continue
                 return self._store_reactions(all_prepared_reactions)
 
         return all_prepared_reactions
@@ -246,22 +247,12 @@ class ReactionProgression:
             else:
                 reaction.is_radical = False
                 reaction.radical_atom_idxs = ()
-
-            matches = sanitized_mol.GetSubstructMatches(Chem.MolFromSmarts("[C;!R;D3](-[H])(-[!#1])-[!#1]"))
-            print(f"Substructure matches for radical carbon: {matches}")
-            print(
-                f"Sanitizing reaction product {reaction.reaction_id}... "
-                f"result {success}"
-            )
             if not success:
                 print(
                     f"Skipping reaction product {reaction.reaction_id}: "
                     "RDKit molecule sanitization failed."
                 )
-            else:
-                print(
-                    f"Reaction product {reaction.reaction_id} sanitized successfully."
-                )
+            
             prepared_monomer_roles.append(
                 MonomerRoleforIndexBasedFGDetection(
                     smiles=self._get_product_smiles(sanitized_mol),

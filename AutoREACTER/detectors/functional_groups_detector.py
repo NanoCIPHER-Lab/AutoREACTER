@@ -514,9 +514,6 @@ class FunctionalGroupsDetector:
                     # Log detected functionality for debugging/user feedback.
                     # print(f"{monomer.smiles} has functionality: {functional_group['group_name']}") 
 
-                    if functional_group.get("comments"):
-                        print(f"Note: {monomer.smiles} - {functional_group['comments']}")
-
                     detected_functionalities.append(
                         FunctionalGroupInfo(
                             functionality_type=ftype,
@@ -532,7 +529,6 @@ class FunctionalGroupsDetector:
 
             # Add to roles if any functionalities detected.
             if detected_functionalities:
-                print(f"Detected functionalities for monomer {detected_functionalities}")
                 monomer_roles_out.append(
                     MonomerRole(
                         smiles=monomer.smiles,
