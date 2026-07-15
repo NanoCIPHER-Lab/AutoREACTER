@@ -164,6 +164,11 @@ class ReactionProgression:
                 reaction_instances=reaction_instances
             )
 
+            # Radical identity must exist before NetworkX deduplication.
+            self._annotate_radicals_before_deduplication(
+                prepared_reactions
+            )
+
             all_prepared_reactions.extend(prepared_reactions)
             self.session.reaction_metadata = all_prepared_reactions
 
@@ -186,6 +191,7 @@ class ReactionProgression:
             )
 
             if should_break:
+                continue
                 return self._store_reactions(all_prepared_reactions)
 
         return all_prepared_reactions
@@ -230,16 +236,14 @@ class ReactionProgression:
             )
 
             sanitized_mol, success = self._sanitize_molecule(product_mol)
-            
-            # THIS IS A DEBUG  BLOCK ---
-            if success:
-                print("\n--- DEBUG MOLECULE ---")
-                print("SMILES:", Chem.MolToSmiles(sanitized_mol))
-                for a in sanitized_mol.GetAtoms():
-                    if a.GetDegree() == 2 and a.GetAtomicNum() == 6:
-                        print(f"Atom {a.GetIdx()}: Symbol={a.GetSymbol()}, Heavy Neighbors={a.GetDegree()}, Total Hs={a.GetTotalNumHs()}, Radicals={a.GetNumRadicalElectrons()}")
-                print("----------------------\n")
-            # ----------------------------
+            if success and sanitized_mol is not None:
+                self._set_reaction_radical_metadata(
+                    reaction,
+                    sanitized_mol,
+                )
+            else:
+                reaction.is_radical = False
+                reaction.radical_atom_idxs = ()
 
             matches = sanitized_mol.GetSubstructMatches(Chem.MolFromSmarts("[C;!R;D3](-[H])(-[!#1])-[!#1]"))
             print(f"Substructure matches for radical carbon: {matches}")
@@ -563,3 +567,60 @@ class ReactionProgression:
             bool(reaction.activity_stats)
             for reaction in reactions
         )
+
+    def _set_reaction_radical_metadata(
+        self,
+        reaction: "ReactionMetadata",
+        sanitized_product: Chem.Mol,
+    ) -> None:
+        """Store product radical atoms in reactant-index space.
+
+        Deduplication relabels product atoms into reactant-index space, so
+        radical indexes are converted using product_to_reactant_mapping.
+        """
+        product_radical_idxs = {
+            atom.GetIdx()
+            for atom in sanitized_product.GetAtoms()
+            if atom.GetNumRadicalElectrons() > 0
+        }
+
+        radical_reactant_idxs = {
+            reaction.product_to_reactant_mapping[product_idx]
+            for product_idx in product_radical_idxs
+            if product_idx in reaction.product_to_reactant_mapping
+        }
+
+        reaction.is_radical = bool(radical_reactant_idxs)
+        reaction.radical_atom_idxs = tuple(
+            sorted(radical_reactant_idxs)
+        )
+
+    def _annotate_radicals_before_deduplication(
+        self,
+        reactions: list["ReactionMetadata"],
+    ) -> None:
+        """Sanitize new products and record radical atoms before NetworkX comparison."""
+        for reaction in reactions:
+            if not reaction.activity_stats:
+                continue
+
+            product_mol = reaction.product_combined_RDmol
+
+            if product_mol is None:
+                reaction.is_radical = False
+                reaction.radical_atom_idxs = ()
+                continue
+
+            sanitized_mol, success = self._sanitize_molecule(
+                product_mol
+            )
+
+            if not success or sanitized_mol is None:
+                reaction.is_radical = False
+                reaction.radical_atom_idxs = ()
+                continue
+
+            self._set_reaction_radical_metadata(
+                reaction,
+                sanitized_mol,
+            )

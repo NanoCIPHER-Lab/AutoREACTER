@@ -88,6 +88,8 @@ class ReactionMetadata:
     delete_atom_idx: Optional[int] = None
     reactant_combined_3Dmol_path: Optional[Path] = None
     product_combined_3Dmol_path: Optional[Path] = None
+    is_radical: bool = False
+    radical_atom_idxs: Optional[tuple[int, ...]] = ()
     activity_stats: bool = True
 
 
