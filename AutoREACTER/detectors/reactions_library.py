@@ -34,15 +34,6 @@ Special Polymerization Environments
 - Polymerization in Supercritical Carbon Dioxide
 - Thiophene Polymerizations: Oxidative Polymerization of Thiophenes
 """
-rxn_prop_smarts = (
-    "[C:1]-[*:5].[CH2:3]=[CH;!R:4]-[*:6]"
-    ">>[C:1]([*:5])-[CH2:3]-[CH:4]-[*:6]"
-)
-
-rxn_init_smarts = (
-    "[CH2:1]=[CH;!R:2].[CH2:3]=[C;!R:4]-[*:5]"
-    ">>[C:1]-[C:2]-[C:3]-[C:4]-[*:5]"
-)
 
 class ReactionLibrary:
     def __init__(self):
