@@ -115,15 +115,20 @@ class PrepareReactions:
         prepared_reactions = self._prepare_reactions_stage(session)
         session.reaction_metadata = prepared_reactions
 
-        # 2. Run progression loop (this returns the FULL, deduplicated list)
-        reaction_progression = ReactionProgression(session)
-        final_reactions = reaction_progression.reaction_progression()
+        if session.inputs.loop:
+            # 2. Run progression loop (this returns the FULL, deduplicated list)
+            reaction_progression = ReactionProgression(session)
+            
+            final_reactions = reaction_progression.reaction_progression()
 
-        # 3. Overwrite the session metadata with the final deduplicated list
-        session.reaction_metadata = final_reactions 
-        
-        # 4. Error check
-        self._zero_active_reactions_error(final_reactions)
+            # 3. Overwrite the session metadata with the final deduplicated list
+            session.reaction_metadata = final_reactions 
+
+            # 4. Check weather is there avaible reaction present
+            self._zero_active_reactions_error(final_reactions)
+            
+        else:
+            self._zero_active_reactions_error(prepared_reactions)
         
         return session
 

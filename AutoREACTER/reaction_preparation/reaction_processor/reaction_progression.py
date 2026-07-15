@@ -91,6 +91,8 @@ class ReactionProgression:
         Returns:
             The prepared and deduplicated reaction metadata.
         """
+        if self.session.inputs.max_loop_count is not None:
+            max_loop = self.session.inputs.max_loop_count
         iteration = 0
         monomer_roles_in_loop = list["MonomerRole"](
             self.session.monomer_roles

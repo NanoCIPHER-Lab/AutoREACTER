@@ -149,6 +149,8 @@ class SimulationSetup:
     density: list[float]
     force_field: str | None
     monomers: list[MonomerEntry]
+    loop : bool = True
+    max_loop_count: int | None = None
     simulations: list[Simulation] | None = None
     composition_method: CompositionMethodType | None = None
     composition: dict[str, Any] | None = None
@@ -203,6 +205,8 @@ class InputParser:
             inputs.get("force_field", None)
         )
 
+        loop, max_loop_count = self._validate_loop(inputs)
+
         return SimulationSetup(
             simulation_name=simulation_name,
             temperature=validated_simulations["temperatures"],
@@ -212,6 +216,8 @@ class InputParser:
             composition_method=composition_method,
             composition=validated_simulations,
             force_field=force_field,
+            loop=loop,
+            max_loop_count=max_loop_count
         )
 
     def molecule_representation_of_initial_molecules(
@@ -939,6 +945,30 @@ class InputParser:
             "systems": systems,
             "simulations": simulations,
         }
+    
+    def _validate_loop(self, inputs: dict) -> tuple[bool, int | None]:
+        """
+        Validates the 'loop' parameter in the input dictionary.
+
+        Returns a tuple (loop, max_loop_count) where 'loop' is a boolean indicating
+        whether looping is enabled, and 'max_loop_count' is an integer specifying
+        the maximum number of loop iterations if 'loop' is an integer, or None otherwise.
+        """
+        loop_variables = ["loop", "repeat", "iterations", "do_loop"]
+        loop = inputs.get("loop", True)
+        if not isinstance(loop, bool):
+            if isinstance(loop, int):
+                if loop <= 0:
+                    raise InputSchemaError(
+                        "'loop' must be a positive integer."
+                    )
+                return True, loop
+            if loop in loop_variables:
+                return True, None
+            raise InputSchemaError(
+                "'loop' must be a boolean value or a positive integer."
+            )
+        return loop, None
 
 
 if __name__ == "__main__":
