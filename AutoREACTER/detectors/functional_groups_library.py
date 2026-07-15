@@ -188,11 +188,12 @@ class FunctionalGroupsLibrary:
 
             "vinyl_chain_end_radical": {
                 "functionality_type": "mono",
-                "smarts_1": "[C;!R;D3](-[H])(-[!#1])-[!#1]",
+                "smarts_1": "[C;!R;D3;v3]",
                 "group_name": "vinyl_chain_end_radical",
                 "comments": (
-                    "Secondary carbon-centered radical attached through two carbon bonds. "
-                    "Does not match the valence-4 alkene carbon of an unreacted monomer."
+                    "Neutral non-ring carbon-centered radical with degree 3 and "
+                    "valence 3. Supports primary, secondary, and tertiary vinyl "
+                    "polymer chain ends."
                 ),
             },
 

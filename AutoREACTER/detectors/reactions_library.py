@@ -381,18 +381,18 @@ class ReactionLibrary:
                 "product": "vinyl_chain_end_radical",
                 "delete_atom": False,
                 "reaction": (
-                    "[CH2:1]=[CH:3]-[*:5]."
-                    "[CH2:2]=[CH:4]-[*:6]"
+                    "[CH2:1]=[C;!R:3]."
+                    "[CH2:2]=[C;!R:4]"
                     ">>"
-                    "[CH2:1](-[C:3]-[*:5])-[CH2:2]-[C:4]-[*:6]"
+                    "[CH2:1](-[C:3])-[CH2:2]-[C:4]"
                 ),
                 "reference": {
                     "smarts": None,
                     "reaction_and_mechanism": None,
                 },
                 "comments": (
-                    "Atom maps 1 and 2 are the initiating atoms from the two vinyl "
-                    "molecules. Atom 4 becomes the new carbon-centered radical."
+                    "Joins two terminal vinyl groups. The two alkene carbons that do "
+                    "not form the new intermolecular bond become radical chain ends."
                 ),
             },
             "Vinyl Addition Polymerization Propagation": {
@@ -401,20 +401,41 @@ class ReactionLibrary:
                 "reactant_2": "vinyl_chain_end_radical",
                 "product": "vinyl_chain_end_radical",
                 "delete_atom": False,
-                "reaction":(
-                    "[CH2:2]=[CH:3]-[*:6]."
-                    "[*:5]-[C;!R;H1:1]-[*:7]"
+                "reaction": (
+                    "[CH2:2]=[C;!R:3]."
+                    "[C;!R;D3;v3:1]"
                     ">>"
-                    "[*:5]-[C:1](-[*:7])-[CH2:2]-[C:3]-[*:6]"
+                    "[C:1]-[CH2:2]-[C:3]"
                 ),
                 "reference": {
                     "smarts": None,
                     "reaction_and_mechanism": None,
                 },
                 "comments": (
-                    "Atom 1 is the existing radical chain-end carbon. Atom 2 is the "
-                    "reacting atom of the incoming vinyl monomer. Atom 3 becomes the "
-                    "new radical chain end."
+                    "The existing carbon radical forms a bond with the terminal CH2 "
+                    "of the incoming vinyl monomer. The other alkene carbon becomes "
+                    "the new radical center."
+                ),
+            },
+            "Vinyl Radical Coupling Termination": {
+                "same_reactants": True,
+                "reactant_1": "vinyl_chain_end_radical",
+                "product": "vinyl_terminated_chain",
+                "delete_atom": False,
+                "reaction": (
+                    "[C;!R;D3;v3;+0:1]."
+                    "[C;!R;D3;v3;+0:2]"
+                    ">>"
+                    "[C:1]-[C:2]"
+                ),
+                "reference": {
+                    "smarts": None,
+                    "reaction_and_mechanism": None,
+                },
+                "comments": (
+                    "Termination by combination of two neutral carbon-centered "
+                    "vinyl chain-end radicals. A new carbon-carbon single bond "
+                    "is formed and both radical centers are consumed."
                 ),
             },
             # ============================================================
