@@ -22,8 +22,9 @@ FUNCTIONAL_GROUPS = {
         'comments': None
     },
     'phosgene_monomer': {
-        'functionality_type': 'di_identical',
-        'smarts_1': '[CX3](=[OX1])[Cl]',
+        'functionality_type': 'mono',
+        # Elaborated SMARTS strictly requires a carbonyl carbon bonded to exactly two chlorines
+        'smarts_1': '[Cl:1]-[CX3:2](=[OX1:3])-[Cl:4]',
         'group_name': 'phosgene',
         'comments': None,
     },
