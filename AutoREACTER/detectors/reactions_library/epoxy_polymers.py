@@ -16,7 +16,8 @@ REACTIONS = {
                 'smarts': None,
                 'reaction_and_mechanism': None
                         },
-            'Notes': 'Corrected for SN2 regioselectivity (attacks less hindered carbon)'},
+            'Notes': 'Corrected for SN2 regioselectivity (attacks less hindered carbon)'
+        },
     
     'Secondary Amine and Epoxide Polyaddition (Epoxy-Amine, Second Addition / Crosslink)': 
         {
@@ -29,6 +30,6 @@ REACTIONS = {
             'reaction': '[NX3H1:1]-[H:6].[CH2;X4:2]1[OX2:5][CH1;X4:3]1>>[NX3:1][C:2][C:3][OX2:5][H:6]',
             'reference': {'smarts': None,
                         'reaction_and_mechanism': None},
-            'Notes': 'Corrected for SN2 regioselectivity (attacks less hindered carbon)'}
-            ,
+            'Notes': 'Corrected for SN2 regioselectivity (attacks less hindered carbon)'
         }
+    }
