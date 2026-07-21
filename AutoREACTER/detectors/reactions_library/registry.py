@@ -11,7 +11,7 @@ from .epoxy_polymers import REACTIONS as EPOXY_POLYMERS
 from .vinyl_polymers import REACTIONS as VINYL_POLYMERS
 from .polycarbonates import REACTIONS as POLYCARBONATES
 from .polyimides import REACTIONS as POLYIMIDES
-from .polybenzimidazoles import REACTIONS as POLYBENZIMIDAZOLES
+# from .polybenzimidazoles import REACTIONS as POLYBENZIMIDAZOLES
 # from .phenolic_resins import REACTIONS as PHENOLIC_RESINS
 from .polysiloxanes import REACTIONS as POLYSILOXANES
 from .polysulfides import REACTIONS as POLYSULFIDES
