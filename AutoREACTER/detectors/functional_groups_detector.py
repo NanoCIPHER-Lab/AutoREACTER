@@ -112,7 +112,7 @@ from PIL.Image import Image
 from AutoREACTER.input_parser import MonomerEntry
 
 # Conditional import for FunctionalGroupsLibrary to support both installed and local usage.
-from .functional_groups_library import FunctionalGroupsLibrary
+from AutoREACTER.detectors.functional_groups_library.registry import FunctionalGroupsLibrary
 
 logger = logging.getLogger(__name__)  # Module-level logger for future diagnostics.
 if TYPE_CHECKING:
