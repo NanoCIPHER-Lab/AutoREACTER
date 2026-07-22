@@ -24,6 +24,6 @@ REACTIONS = {
             'smarts': None,
             'reaction_and_mechanism': None
         },
-        'comments': 'UNTESTED: chemically consistent replacement for the commented entry whose label said epoxide/isocyanate but whose SMARTS was isocyanate + O/S-H.'
+        'comments': None
     }
 }
