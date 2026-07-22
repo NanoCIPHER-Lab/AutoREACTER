@@ -14,7 +14,7 @@ from .polycarbonates import REACTIONS as POLYCARBONATES
 # from .polybenzimidazoles import REACTIONS as POLYBENZIMIDAZOLES
 # from .phenolic_resins import REACTIONS as PHENOLIC_RESINS
 from .polysiloxanes import REACTIONS as POLYSILOXANES
-from .polysulfides import REACTIONS as POLYSULFIDES
+# from .polysulfides import REACTIONS as POLYSULFIDES
 from .thiol_ene_polymers import REACTIONS as THIOL_ENE_POLYMERS
 # from .metathesis_polymers import REACTIONS as METATHESIS_POLYMERS
 # from .cycloaddition_polymers import REACTIONS as CYCLOADDITION_POLYMERS
@@ -34,7 +34,7 @@ _REACTION_MODULES = [
     # POLYBENZIMIDAZOLES,
     # PHENOLIC_RESINS,
     POLYSILOXANES,
-    POLYSULFIDES,
+    # POLYSULFIDES,
     THIOL_ENE_POLYMERS,
     # METATHESIS_POLYMERS,
     # CYCLOADDITION_POLYMERS,

@@ -9,7 +9,7 @@ from .ring_groups import FUNCTIONAL_GROUPS as RING_GROUPS
 from .vinyl_and_alkene_groups import FUNCTIONAL_GROUPS as VINYL_AND_ALKENE_GROUPS
 from .aromatic_groups import FUNCTIONAL_GROUPS as AROMATIC_GROUPS
 from .silicon_groups import FUNCTIONAL_GROUPS as SILICON_GROUPS
-from .halide_groups import FUNCTIONAL_GROUPS as HALIDE_GROUPS
+# from .halide_groups import FUNCTIONAL_GROUPS as HALIDE_GROUPS
 from .heterocumulene_groups import FUNCTIONAL_GROUPS as HETEROCUMULENE_GROUPS
 from .active_centers import FUNCTIONAL_GROUPS as ACTIVE_CENTERS
 
@@ -23,7 +23,7 @@ _FUNCTIONAL_GROUP_MODULES = [
     VINYL_AND_ALKENE_GROUPS,
     AROMATIC_GROUPS,
     SILICON_GROUPS,
-    HALIDE_GROUPS,
+    # HALIDE_GROUPS,
     HETEROCUMULENE_GROUPS,
     ACTIVE_CENTERS,
 ]
