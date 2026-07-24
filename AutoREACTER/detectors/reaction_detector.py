@@ -42,7 +42,7 @@ if TYPE_CHECKING:
 
 # Attempt to import internal library components
 try:
-    from reactions_library import ReactionLibrary
+    from AutoREACTER.detectors.reactions_library.registry import ReactionLibrary
 except (ImportError, ModuleNotFoundError):
     from .reactions_library import ReactionLibrary
 
