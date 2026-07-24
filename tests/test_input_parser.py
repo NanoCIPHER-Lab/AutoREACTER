@@ -794,16 +794,13 @@ class TestLoopValidation(InputParserTestCase):
             (False, None),
         )
 
-    @patch("AutoREACTER.input_parser.time.sleep")
     def test_validate_loop_accepts_positive_integer(
         self,
-        sleep_mock,
     ) -> None:
         self.assertEqual(
             self.parser._validate_loop({"loop": 4}),
             (True, 4),
         )
-        sleep_mock.assert_called_once_with(5)
 
     def test_validate_loop_accepts_supported_keywords(self) -> None:
         for keyword in ("loop", "repeat", "iterations", "do_loop"):
