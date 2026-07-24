@@ -12,7 +12,6 @@ REACTIONS = {
         },
         'comments': None
     },
-    
     'Dithiol and Di-Carboxylic Acid Polycondensation(Polythioesterification)': {
         'same_reactants': False,
         'reactant_1': 'dithiol',
@@ -24,9 +23,8 @@ REACTIONS = {
             'smarts': None,
             'reaction_and_mechanism': None
         },
-        'comments': 'Possible thioesterification with water elimination, but generally less straightforward than acid-halide route.'
+        'comments': None
     },
-    
     'Hydroxy-Thiol and Di-Carboxylic Acid Halide Polycondensation through Hydroxy Group': {
         'same_reactants': False,
         'reactant_1': 'hydroxy_thiol',
@@ -40,7 +38,6 @@ REACTIONS = {
         },
         'comments': None
     },
-    
     'Hydroxy-Thiol and Di-Carboxylic Acid Halide Polycondensation through Thiol Group': {
         'same_reactants': False,
         'reactant_1': 'hydroxy_thiol',
