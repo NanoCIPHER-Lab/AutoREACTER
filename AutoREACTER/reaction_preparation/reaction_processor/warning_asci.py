@@ -24,5 +24,4 @@ def print_warning() -> None:
         "Caution: results can be chemically inaccurate."
     )
     ascii_art(message)
-    time.sleep(5)
     
