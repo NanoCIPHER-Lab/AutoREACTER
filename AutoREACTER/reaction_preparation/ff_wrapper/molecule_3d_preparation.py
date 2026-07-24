@@ -239,6 +239,13 @@ class Molecule3DPreparation:
 
         params = AllChem.ETKDGv3()
         params.randomSeed = 0xF00D
+        
+        # --- ADDED PARAMETERS FOR STERICALLY CONGESTED POLYMERS ---
+        # Use random coordinates for large, flexible, or dense macro-structures
+        params.useRandomCoords = True 
+        # Force RDKit to output a structure even if the distance bounds aren't perfectly smoothed
+        params.ignoreSmoothingFailures = True 
+        # ----------------------------------------------------------
 
         embed_result = AllChem.EmbedMolecule(mol, params)
 
