@@ -1,18 +1,15 @@
-# This reaction also needs to further studied and validated
 # REACTIONS = {
-#     'Di-cyclic Anhydride and Di-Primary Amine Polycondensation (Polyimidation)': 
-#         {
-#             'same_reactants': False,
-#             'reactant_1': 'di_cyclic_anhydride',
-#             'reactant_2': 'di_primary_amine',
-#             'product': 'polyimide_chain',
-#             'delete_atom': True,
-#             'reaction': '[NX3H2:1](-[H:6])-[H:8].[CX3;R:2](=[OX1:4])[OX2;R:5][CX3;R:3](=[OX1:7])>>[NX3:1]([CX3:2](=[OX1:4]))[CX3:3](=[OX1:7]).[OX2:5](-[H:6])-[H:8]',
-#             'reference': 
-#                 {
-#                     'smarts': None,
-#                     'reaction_and_mechanism': None
-#                 },
-#             'comments': None
-#         }
+#     'Tetra-Amine and Di-Carboxylic Acid Polycondensation (PBI Formation)': {
+#         'same_reactants': False,
+#         'reactant_1': 'tetra_amine',
+#         'reactant_2': 'di_carboxylic_acid',
+#         'product': 'polybenzimidazole_chain',
+#         'delete_atom': True,
+#         'reaction': '[c:7]([NX3H2:1](-[H:6])-[H:9])-[c:8]([NX3H2:2](-[H:10])-[H:11]).[CX3:3](=[OX1:4])[OX2H1:5]-[H:12]>>[c:7]1-[NX3:1](-[H:6])-[CX3:3]=[NX2:2]-[c:8]-1.[OX2:4](-[H:9])-[H:10].[OX2:5](-[H:11])-[H:12]',
+#         'reference': {
+#             'smarts': None,
+#             'reaction_and_mechanism': None
+#         },
+#         'comments': None
 #     }
+# }
