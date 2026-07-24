@@ -155,7 +155,7 @@ class ReactionProgression:
                 f"Overriding default max_loop of {MAX_LOOP} with "
                 f"user-specified max_loop_count of {max_loop}."
             )
-            time.sleep(1)
+            # Avoid sleeping in library code; callers control pacing.
 
         iteration = 0
         # Start from the monomer roles already present in the session.
