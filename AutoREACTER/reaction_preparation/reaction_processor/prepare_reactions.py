@@ -460,8 +460,10 @@ class PrepareReactions:
                 )
                 print(f"Reactant 1 SMILES: {Chem.MolToSmiles(r1)}")
                 print(f"Reactant 2 SMILES: {Chem.MolToSmiles(r2)}")
-                print("Reaction SMARTS: \n")
-                continue
+                print(
+                    "Reaction SMARTS: "
+                    f"{Chem.rdChemReactions.ReactionToSmarts(rxn)}\n"
+                )
 
             for product_set in products:
                 reactant_combined = Chem.CombineMols(r1, r2)
