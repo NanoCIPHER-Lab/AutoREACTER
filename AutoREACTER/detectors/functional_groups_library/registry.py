@@ -7,7 +7,7 @@ from .carboxyl_and_carbonyl_groups import FUNCTIONAL_GROUPS as CARBOXYL_AND_CARB
 from .mixed_ab_groups import FUNCTIONAL_GROUPS as MIXED_AB_GROUPS
 from .ring_groups import FUNCTIONAL_GROUPS as RING_GROUPS
 from .vinyl_and_alkene_groups import FUNCTIONAL_GROUPS as VINYL_AND_ALKENE_GROUPS
-from .aromatic_groups import FUNCTIONAL_GROUPS as AROMATIC_GROUPS
+# from .aromatic_groups import FUNCTIONAL_GROUPS as AROMATIC_GROUPS
 from .silicon_groups import FUNCTIONAL_GROUPS as SILICON_GROUPS
 # from .halide_groups import FUNCTIONAL_GROUPS as HALIDE_GROUPS
 from .heterocumulene_groups import FUNCTIONAL_GROUPS as HETEROCUMULENE_GROUPS
@@ -21,7 +21,7 @@ _FUNCTIONAL_GROUP_MODULES = [
     MIXED_AB_GROUPS,
     RING_GROUPS,
     VINYL_AND_ALKENE_GROUPS,
-    AROMATIC_GROUPS,
+    # AROMATIC_GROUPS,
     SILICON_GROUPS,
     # HALIDE_GROUPS,
     HETEROCUMULENE_GROUPS,

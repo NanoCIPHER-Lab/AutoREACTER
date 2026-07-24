@@ -1,14 +1,10 @@
-"""Functional-group definitions organized by the carboxyl and carbonyl groups motif.
-
-Each entry is defined once in the entire functional-group registry. Reaction libraries reference the entry's group_name value."""
-
 FUNCTIONAL_GROUPS = {
     'di_carboxylic_acid_monomer': {
         'functionality_type': 'di_identical',
         'smarts_1': '[CX3:1](=[O])[OX2H1]',
         'group_name': 'di_carboxylic_acid',
         'comments': None
-        },
+    },
     'di_carboxylic_acid_halide_monomer': {
         'functionality_type': 'di_identical',
         'smarts_1': '[CX3:1](=[O])[Cl,Br,I]',
@@ -26,7 +22,7 @@ FUNCTIONAL_GROUPS = {
         # Elaborated SMARTS strictly requires a carbonyl carbon bonded to exactly two chlorines
         'smarts_1': '[Cl:1]-[CX3:2](=[OX1:3])-[Cl:4]',
         'group_name': 'phosgene',
-        'comments': None,
+        'comments': None
     },
     'diphenyl_carbonate_monomer': {
         'functionality_type': 'di_identical',
@@ -34,8 +30,10 @@ FUNCTIONAL_GROUPS = {
         'group_name': 'diphenyl_carbonate',
         'comments': None
     }
-#  'formaldehyde_monomer': {'functionality_type': 'mono',
-#                           'smarts_1': '[CH2]=[OX1]',
-#                           'group_name': 'formaldehyde',
-#                           'comments': None}}
+    # 'formaldehyde_monomer': {
+    #     'functionality_type': 'mono',
+    #     'smarts_1': '[CH2]=[OX1]',
+    #     'group_name': 'formaldehyde',
+    #     'comments': None
+    # }
 }
