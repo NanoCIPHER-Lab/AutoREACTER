@@ -219,69 +219,160 @@ class Molecule3DPreparation:
         cache_dir: Path,
         separate_fragments: bool = False,
     ) -> Path:
-        """Embed a molecule in 3D, optionally separate fragments, optimize geometry,
-        and save the result as a .mol file.
+        """Repair, embed, optimize, and save a molecule without adding hydrogens."""
 
-        The optimization process includes:
-        1. Sanitization and property cache update
-        2. 3D coordinate embedding using ETKDG method
-        3. Optional fragment separation for multi-molecule complexes
-        4. Geometry optimization using MMFF force field
-        5. File saving
-
-        Args:
-            molecule_name: Name used for the output file.
-            mol: RDKit molecule to be optimized.
-            cache_dir: Directory where the .mol file will be saved.
-            separate_fragments: Whether to separate disconnected fragments before optimization.
-
-        Returns:
-            Path to the saved .mol file.
-
-        Raises:
-            OptimizationError: If atom count changes or optimization fails.
-        """
-        # Record initial atom count for integrity check
+        # Work on a copy so the ReactionMetadata molecule and its indexing remain
+        # unchanged outside this 3D preparation step.
+        mol = Chem.Mol(mol)
         n_atoms_start = mol.GetNumAtoms(onlyExplicit=True)
 
-        # Update property cache and sanitize molecule
-        mol.UpdatePropertyCache(strict=False)
-        Chem.SanitizeMol(
-            mol,
-            sanitizeOps=Chem.SanitizeFlags.SANITIZE_ALL
-            ^ Chem.SanitizeFlags.SANITIZE_PROPERTIES,
-        )
+        try:
+            mol = self._repair_reaction_molecule_for_3d(mol)
+        except Exception as error:
+            raise OptimizationError(
+                f"Failed to repair molecule {molecule_name} before 3D embedding: "
+                f"{error}"
+            ) from error
 
-        # Generate initial 3D coordinates using ETKDG method
-        result = AllChem.EmbedMolecule(mol, AllChem.ETKDG())
-        if result == -1:
-            raise OptimizationError(f"Failed to embed molecule {molecule_name} in 3D.")
+        # Remove any old or partial conformers before embedding.
+        mol.RemoveAllConformers()
 
-        # Separate fragments if this is a complex (reactants or products)
+        params = AllChem.ETKDGv3()
+        params.randomSeed = 0xF00D
+        
+        # --- ADDED PARAMETERS FOR STERICALLY CONGESTED POLYMERS ---
+        # Use random coordinates for large, flexible, or dense macro-structures
+        params.useRandomCoords = True 
+        # Force RDKit to output a structure even if the distance bounds aren't perfectly smoothed
+        params.ignoreSmoothingFailures = True 
+        # ----------------------------------------------------------
+
+        embed_result = AllChem.EmbedMolecule(mol, params)
+
+        if embed_result == -1:
+            raise OptimizationError(
+                f"Failed to embed molecule {molecule_name} in 3D."
+            )
+
         if separate_fragments:
             mol = self._separate_fragments_3d(mol)
 
-        # Perform geometry optimization using MMFF force field
-        ff_result = AllChem.MMFFOptimizeMolecule(mol)
-        if ff_result == -1:
-            print(f"MMFF optimization failed for {molecule_name}.")
-        if ff_result == 1:
-            print(f"Warning: MMFF optimization did not converge for {molecule_name}.")
-
-        # Verify atom count integrity (no atoms lost during optimization)
-        if n_atoms_start != mol.GetNumAtoms(onlyExplicit=True):
-            raise OptimizationError(
-                f"Atom count mismatch for {molecule_name}: started with {n_atoms_start} "
-                f"explicit atoms but ended with {mol.GetNumAtoms(onlyExplicit=True)}."
+        # MMFF generally works for these carbon radicals, but keep a UFF fallback
+        # for structures for which MMFF lacks parameters.
+        if AllChem.MMFFHasAllMoleculeParams(mol):
+            ff_result = AllChem.MMFFOptimizeMolecule(
+                mol,
+                maxIters=1000,
+            )
+            force_field_name = "MMFF"
+        elif AllChem.UFFHasAllMoleculeParams(mol):
+            ff_result = AllChem.UFFOptimizeMolecule(
+                mol,
+                maxIters=1000,
+            )
+            force_field_name = "UFF"
+        else:
+            ff_result = None
+            force_field_name = None
+            print(
+                f"Warning: no MMFF or UFF parameters are available for "
+                f"{molecule_name}. Saving the embedded geometry without "
+                "force-field optimization."
             )
 
-        # Ensure cache directory exists
+        if ff_result == -1:
+            raise OptimizationError(
+                f"{force_field_name} optimization failed for {molecule_name}."
+            )
+
+        if ff_result == 1:
+            print(
+                f"Warning: {force_field_name} optimization did not converge "
+                f"for {molecule_name}."
+            )
+
+        n_atoms_end = mol.GetNumAtoms(onlyExplicit=True)
+
+        if n_atoms_start != n_atoms_end:
+            raise OptimizationError(
+                f"Atom count mismatch for {molecule_name}: started with "
+                f"{n_atoms_start} explicit atoms but ended with {n_atoms_end}."
+            )
+
         os.makedirs(cache_dir, exist_ok=True)
 
-        # Save optimized structure to file
         output_path = Path(cache_dir) / f"{molecule_name}.mol"
         print(f"Saving optimized {molecule_name} to {output_path}")
 
-        Chem.MolToMolFile(mol, str(output_path))
+        Chem.MolToMolFile(
+            mol,
+            str(output_path),
+            includeStereo=True,
+            kekulize=False,
+        )
 
         return output_path
+
+    def _repair_reaction_molecule_for_3d(self, mol: Mol) -> Mol:
+        """Repair RDKit reaction-product valence bookkeeping before 3D embedding.
+
+        RunReactants may produce atoms that have both:
+        1. explicit hydrogen atoms as neighbors, and
+        2. a nonzero NumExplicitHs property inherited from the product SMARTS.
+
+        That double-counts hydrogens and can produce apparent carbon valences of
+        five or six. This method changes atom properties only; it does not add or
+        remove atoms.
+
+        Neutral, non-aromatic carbon atoms with bond valence three are retained as
+        carbon-centered radicals instead of being given an implicit hydrogen.
+        """
+        repaired = Chem.RWMol(Chem.Mol(mol))
+        repaired.UpdatePropertyCache(strict=False)
+        Chem.FastFindRings(repaired)
+
+        for atom in repaired.GetAtoms():
+            explicit_h_neighbors = sum(
+                neighbor.GetAtomicNum() == 1
+                for neighbor in atom.GetNeighbors()
+            )
+
+            # The hydrogen atoms already exist as real graph atoms. Clear only the
+            # duplicate SMARTS hydrogen-count property.
+            if explicit_h_neighbors > 0:
+                if atom.GetNumExplicitHs() > 0:
+                    atom.SetNumExplicitHs(0)
+
+                # Do not let RDKit add another implicit hydrogen during sanitization.
+                atom.SetNoImplicit(True)
+
+            if atom.GetAtomicNum() != 6:
+                continue
+
+            bond_valence = sum(
+                bond.GetValenceContrib(atom)
+                for bond in atom.GetBonds()
+            )
+
+            # Preserve neutral carbon-centered radical chain ends.
+            if (
+                not atom.GetIsAromatic()
+                and atom.GetFormalCharge() == 0
+                and abs(bond_valence - 3.0) < 1.0e-6
+            ):
+                atom.SetNoImplicit(True)
+                atom.SetNumRadicalElectrons(1)
+
+            # Radical-radical coupling gives each carbon its fourth valence.
+            elif bond_valence >= 4.0:
+                atom.SetNumRadicalElectrons(0)
+
+        repaired_mol = repaired.GetMol()
+        repaired_mol.ClearComputedProps()
+        repaired_mol.UpdatePropertyCache(strict=False)
+
+        # Full sanitization is now safe because the duplicate hydrogen counts
+        # and radical valences have been repaired.
+        Chem.SanitizeMol(repaired_mol)
+
+        return repaired_mol

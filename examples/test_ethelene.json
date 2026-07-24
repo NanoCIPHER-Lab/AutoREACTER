@@ -1,0 +1,20 @@
+{
+    "simulation_name": "Ethene_Test",
+    "loop": 9,
+    "simulations": [
+        {
+            "tag": "vinyl_test",
+            "temperature": 300,
+            "density": 1.0,
+            "monomer_counts": {
+                "ethene": 200
+            }
+        }
+    ],
+    "monomers": [
+        {
+            "name": "ethene",
+            "smiles": "C=C"
+        }
+    ]
+}

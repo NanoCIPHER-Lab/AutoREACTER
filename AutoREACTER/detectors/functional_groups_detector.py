@@ -112,7 +112,7 @@ from PIL.Image import Image
 from AutoREACTER.input_parser import MonomerEntry
 
 # Conditional import for FunctionalGroupsLibrary to support both installed and local usage.
-from .functional_groups_library import FunctionalGroupsLibrary
+from AutoREACTER.detectors.functional_groups_library.registry import FunctionalGroupsLibrary
 
 logger = logging.getLogger(__name__)  # Module-level logger for future diagnostics.
 if TYPE_CHECKING:
@@ -435,6 +435,7 @@ class FunctionalGroupsDetector:
         self,
         monomer_roles_in: list[MonomerRoleforIndexBasedFGDetection],
     ) -> list[MonomerRole] | bool:
+        """
         Detect functional groups across a list of monomers and categorize them into roles,
         restricted to a given set of atom indices per monomer.
 
@@ -512,9 +513,6 @@ class FunctionalGroupsDetector:
 
                     # Log detected functionality for debugging/user feedback.
                     # print(f"{monomer.smiles} has functionality: {functional_group['group_name']}") 
-
-                    if functional_group.get("comments"):
-                        print(f"Note: {monomer.smiles} - {functional_group['comments']}")
 
                     detected_functionalities.append(
                         FunctionalGroupInfo(

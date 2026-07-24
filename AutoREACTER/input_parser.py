@@ -2,6 +2,8 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from pathlib import Path
+import time
+
 from typing import Any, Literal, Optional
 
 from PIL.Image import Image
@@ -149,6 +151,8 @@ class SimulationSetup:
     density: list[float]
     force_field: str | None
     monomers: list[MonomerEntry]
+    loop : bool = True
+    max_loop_count: int | None = None
     simulations: list[Simulation] | None = None
     composition_method: CompositionMethodType | None = None
     composition: dict[str, Any] | None = None
@@ -203,6 +207,8 @@ class InputParser:
             inputs.get("force_field", None)
         )
 
+        loop, max_loop_count = self._validate_loop(inputs)
+
         return SimulationSetup(
             simulation_name=simulation_name,
             temperature=validated_simulations["temperatures"],
@@ -212,6 +218,8 @@ class InputParser:
             composition_method=composition_method,
             composition=validated_simulations,
             force_field=force_field,
+            loop=loop,
+            max_loop_count=max_loop_count
         )
 
     def molecule_representation_of_initial_molecules(
@@ -939,6 +947,43 @@ class InputParser:
             "systems": systems,
             "simulations": simulations,
         }
+    
+    def _validate_loop(self, inputs: dict) -> tuple[bool, int | None]:
+        """
+        Validate the ``loop`` input.
+
+        Returns:
+            A tuple containing:
+            - Whether looping is enabled.
+            - The maximum iteration count, or ``None`` when no limit is specified.
+
+        Raises:
+            InputSchemaError: If ``loop`` is not a boolean, a positive integer,
+                or a supported loop keyword.
+        """
+        loop_keywords = {"loop", "repeat", "iterations", "do_loop"}
+        loop_value = inputs.get("loop", True)
+
+        if isinstance(loop_value, bool):
+            return loop_value, None
+
+        if isinstance(loop_value, int):
+            if loop_value <= 0:
+                raise InputSchemaError("'loop' must be a positive integer.")
+
+            logger.info(
+                "Looping enabled with maximum iterations set to %s",
+                loop_value,
+            )
+            return True, loop_value
+
+        if isinstance(loop_value, str) and loop_value in loop_keywords:
+            return True, None
+
+        raise InputSchemaError(
+            "'loop' must be a boolean value, a positive integer, "
+            "or a supported loop keyword."
+        )
 
 
 if __name__ == "__main__":

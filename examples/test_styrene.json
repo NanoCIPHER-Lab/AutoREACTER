@@ -1,0 +1,19 @@
+{
+    "simulation_name": "Styrene_Test",
+    "simulations": [
+        {
+            "tag": "vinyl_test",
+            "temperature": 300,
+            "density": 1.0,
+            "monomer_counts": {
+                "styrene": 2000
+            }
+        }
+    ],
+    "monomers": [
+        {
+            "name": "styrene",
+            "smiles": "c1ccccc1C=C"
+        }
+    ]
+}
