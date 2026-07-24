@@ -1,23 +1,36 @@
 """Aggregate and validate all polymer-family reaction modules."""
+try:
+    from .polyesters import REACTIONS as POLYESTERS
+    # from .polyethers import REACTIONS as POLYETHERS
+    from .polyamides import REACTIONS as POLYAMIDES
+    from .polyanhydrides import REACTIONS as POLYANHYDRIDES
+    from .polythioesters import REACTIONS as POLYTHIOESTERS
+    from .polyurethanes import REACTIONS as POLYURETHANES
+    from .polyureas import REACTIONS as POLYUREAS
+    from .epoxy_polymers import REACTIONS as EPOXY_POLYMERS
+    from .vinyl_polymers import REACTIONS as VINYL_POLYMERS
+    from .polycarbonates import REACTIONS as POLYCARBONATES
+    # from .polyimides import REACTIONS as POLYIMIDES
+    # from .polybenzimidazoles import REACTIONS as POLYBENZIMIDAZOLES
+    # from .phenolic_resins import REACTIONS as PHENOLIC_RESINS
+    from .polysiloxanes import REACTIONS as POLYSILOXANES
+    # from .polysulfides import REACTIONS as POLYSULFIDES
+    from .thiol_ene_polymers import REACTIONS as THIOL_ENE_POLYMERS
+    # from .metathesis_polymers import REACTIONS as METATHESIS_POLYMERS
+    # from .cycloaddition_polymers import REACTIONS as CYCLOADDITION_POLYMERS
 
-from .polyesters import REACTIONS as POLYESTERS
-# from .polyethers import REACTIONS as POLYETHERS
-from .polyamides import REACTIONS as POLYAMIDES
-from .polyanhydrides import REACTIONS as POLYANHYDRIDES
-from .polythioesters import REACTIONS as POLYTHIOESTERS
-from .polyurethanes import REACTIONS as POLYURETHANES
-from .polyureas import REACTIONS as POLYUREAS
-from .epoxy_polymers import REACTIONS as EPOXY_POLYMERS
-from .vinyl_polymers import REACTIONS as VINYL_POLYMERS
-from .polycarbonates import REACTIONS as POLYCARBONATES
-# from .polyimides import REACTIONS as POLYIMIDES
-# from .polybenzimidazoles import REACTIONS as POLYBENZIMIDAZOLES
-# from .phenolic_resins import REACTIONS as PHENOLIC_RESINS
-from .polysiloxanes import REACTIONS as POLYSILOXANES
-# from .polysulfides import REACTIONS as POLYSULFIDES
-from .thiol_ene_polymers import REACTIONS as THIOL_ENE_POLYMERS
-# from .metathesis_polymers import REACTIONS as METATHESIS_POLYMERS
-# from .cycloaddition_polymers import REACTIONS as CYCLOADDITION_POLYMERS
+except ImportError as e:
+    from polyesters import REACTIONS as POLYESTERS
+    from polyamides import REACTIONS as POLYAMIDES
+    from polyanhydrides import REACTIONS as POLYANHYDRIDES
+    from polythioesters import REACTIONS as POLYTHIOESTERS
+    from polyurethanes import REACTIONS as POLYURETHANES
+    from polyureas import REACTIONS as POLYUREAS
+    from epoxy_polymers import REACTIONS as EPOXY_POLYMERS
+    from vinyl_polymers import REACTIONS as VINYL_POLYMERS
+    from polycarbonates import REACTIONS as POLYCARBONATES
+    from polysiloxanes import REACTIONS as POLYSILOXANES
+    from thiol_ene_polymers import REACTIONS as THIOL_ENE_POLYMERS
 
 _REACTION_MODULES = [
     POLYESTERS,
@@ -62,3 +75,11 @@ class ReactionLibrary:
 
     def __init__(self):
         self.reactions = load_reactions()
+
+
+if __name__ == "__main__":
+    REACTIONS = load_reactions()
+    num = 0
+    for reaction_name, reaction in REACTIONS.items():
+        num += 1
+        print(f"{num:3}. AutoREACTER can support the reaction: {reaction_name}")

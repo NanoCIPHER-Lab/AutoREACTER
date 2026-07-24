@@ -1,0 +1,19 @@
+{
+    "simulation_name": "TFE_Test",
+    "simulations": [
+        {
+            "tag": "tfe_test",
+            "temperature": 300,
+            "density": 1.5,
+            "monomer_counts": {
+                "tetrafluoroethylene": 200
+            }
+        }
+    ],
+    "monomers": [
+        {
+            "name": "tetrafluoroethylene",
+            "smiles": "C(=C(F)F)(F)F"
+        }
+    ]
+}

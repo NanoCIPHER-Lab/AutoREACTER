@@ -17,4 +17,10 @@ FUNCTIONAL_GROUPS = {
     #     'group_name': 'bis_alkene',
     #     'comments': None
     # }
+    'tetrafluoroethylene_monomer': {
+        'functionality_type': 'vinyl',
+        'smarts_1': '[CX3](-[F])(-[F])=[CX3](-[F])(-[F])',
+        'group_name': 'tetrafluoroethylene',
+        'comments': None
+    }
 }

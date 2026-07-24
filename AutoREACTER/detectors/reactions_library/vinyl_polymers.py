@@ -76,4 +76,24 @@ REACTIONS = {
     #     'reference': {'smarts': None, 'reaction_and_mechanism': None},
     #     'comments': None
     # }
+
+    'Tetrafluoroethylene Addition Polymerization Initiation': {
+        'same_reactants': True,
+        'reactant_1': 'tetrafluoroethylene',
+        'product': 'vinyl_chain_end_radical',
+        'delete_atom': False,
+        'reaction': '[CX3:1](-[F:5])(-[F:6])=[C;!R:3](-[F:7])(-[F:8]).[CX3:2](-[F:9])(-[F:10])=[C;!R:4](-[F:11])(-[F:12])>>[CX3:1](-[F:5])(-[F:6])(-[C:3](-[F:7])(-[F:8]))-[CX3:2](-[F:9])(-[F:10])-[C;!R;D3;v3:4](-[F:11])(-[F:12])',
+        'reference': {'smarts': None, 'reaction_and_mechanism': None},
+        'comments': 'Self-initiation cheat for TFE polymerization'
+    },
+    'Tetrafluoroethylene Addition Polymerization Propagation': {
+        'same_reactants': False,
+        'reactant_1': 'tetrafluoroethylene',
+        'reactant_2': 'vinyl_chain_end_radical',
+        'product': 'vinyl_chain_end_radical',
+        'delete_atom': False,
+        'reaction': '[CX3:2](-[F:5])(-[F:6])=[C;!R:3](-[F:7])(-[F:8]).[C;!R;D3;v3:1](-[F:9])(-[F:10])>>[C:1](-[F:9])(-[F:10])-[CX3:2](-[F:5])(-[F:6])-[C;!R;D3;v3:3](-[F:7])(-[F:8])',
+        'reference': {'smarts': None, 'reaction_and_mechanism': None},
+        'comments': 'Propagation step carrying the radical center forward for TFE'
+    }
 }
