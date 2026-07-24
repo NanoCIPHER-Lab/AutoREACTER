@@ -971,10 +971,10 @@ class InputParser:
             if loop_value <= 0:
                 raise InputSchemaError("'loop' must be a positive integer.")
 
-            print(
-                f"Reaction will be looped and maximum iterations set to {loop_value}"
+            logger.info(
+                "Looping enabled with maximum iterations set to %s",
+                loop_value,
             )
-            time.sleep(5)
             return True, loop_value
 
         if isinstance(loop_value, str) and loop_value in loop_keywords:
