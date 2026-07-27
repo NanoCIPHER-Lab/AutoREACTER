@@ -3,7 +3,7 @@ AutoREACTER
 
 AutoREACTER is a tool for automated reaction-based molecular system generation.
 """
-__version__ = "0.2.3"
+__version__ = "0.3"
 
 __title__ = "AutoREACTER"
 __author__ = "Janitha Mahanthe, Jacob Gissinger"

@@ -10,7 +10,6 @@ iteration cap and a pool-growth guard prevent unbounded execution.
 """
 
 from dataclasses import dataclass, field
-import time
 from typing import TYPE_CHECKING
 
 from rdkit import Chem

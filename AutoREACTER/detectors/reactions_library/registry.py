@@ -80,6 +80,11 @@ class ReactionLibrary:
 if __name__ == "__main__":
     REACTIONS = load_reactions()
     num = 0
-    for reaction_name, reaction in REACTIONS.items():
-        num += 1
-        print(f"{num:3}. AutoREACTER can support the reaction: {reaction_name}")
+    
+    with open("reactions.txt", "w") as f:
+        for reaction in REACTIONS.items():
+            f.write(str(reaction) + "\n")
+    reaction_len = len(REACTIONS)
+    import os
+    file_abs_path = os.path.abspath("reactions.txt")
+    print(f"reactions.txt has been written to {file_abs_path}, num reactions: {reaction_len}")

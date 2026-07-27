@@ -8,7 +8,6 @@ LAMMPS comparisons use atom type and bond type.
 """
 
 from __future__ import annotations
-
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -1016,6 +1015,7 @@ class DeduplicationDetector:
         # A normal carbon with an implicit hydrogen can have only three visible
         # graph bonds. Do not classify it as a radical.
         try:
+            atom.GetOwningMol().UpdatePropertyCache(strict=False)
             if atom.GetNumImplicitHs() > 0:
                 return False
         except RuntimeError:

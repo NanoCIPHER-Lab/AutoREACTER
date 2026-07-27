@@ -140,20 +140,26 @@ class RxnFirstStageWriter:
         lines.append("#------------Define Reaction Templates------------")
         rxn_commands: list[str] = []
 
-        for i, template in enumerate(rf.template_files, 1):
-            pre_id = f"mol_pre_{i}"
-            post_id = f"mol_post_{i}"
+        for template in (rf.template_files):
 
             # Extract filenames from the dataclass fields
             pre_file = template.pre_reaction_file.lmp_molecule_file.name
             post_file = template.post_reaction_file.lmp_molecule_file.name
             map_file = template.map_file.name
+            id = template.reaction_id
+            pre_id = f"mol_pre_{id}"
+            post_id = f"mol_post_{id}"
 
-            lines.append(f"{'molecule':<16} {pre_id} {pre_file}")
-            lines.append(f"{'molecule':<16} {post_id} {post_file}\n")
-
+            lines.append(f"{'molecule':<16} {pre_id:<16} {pre_file}")
+            lines.append(f"{'molecule':<16} {post_id:<16} {post_file}\n")
+            rxn_stp = f"rxn_stp_{id}"
             rxn_str = (
-                f"react rxn_stp_{i} all 1 0.0 3.5 {pre_id} {post_id} {map_file} "
+                f"react "
+                f"{rxn_stp:<15} "
+                f"all 1 0.0 3.5 "
+                f"{pre_id:<14} "
+                f"{post_id:<15} "
+                f"{map_file:<15} "
                 f"stabilize_steps 60 rescale_charges yes"
             )
             rxn_commands.append(rxn_str)
@@ -162,8 +168,8 @@ class RxnFirstStageWriter:
 
         lines.extend([
             "",
-            f"{'fix':<16} rxns all bond/react stabilization yes statted_grp 0.03 &",
-            f"{'':<16} {all_reactions}",
+            f"{'fix':<16}rxns all bond/react stabilization yes statted_grp 0.03 &",
+            f"{'':<16}{all_reactions}",
             "",
             "",
             "# Note: If atoms are being deleted during the reaction, ensure you use the correct Map file",
