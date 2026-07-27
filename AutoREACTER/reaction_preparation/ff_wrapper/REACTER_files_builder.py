@@ -26,6 +26,7 @@ from dataclasses import dataclass
 from typing import Optional
 import datetime
 import re
+from AutoREACTER.reaction_preparation.deduplication_detector import DeduplicationDetector
 from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper import FFFiles
 from AutoREACTER.reaction_preparation.ff_wrapper.modifiers_molecule_files import (
     modify_types, modify_charges, modify_coords,
@@ -92,7 +93,7 @@ class REACTERFilesBuilder:
         )
 
         self.force_field = self.updated_inputs_with_3d_mols.force_field
-            
+        
 
     def _get_ending_integer(self, s: str) -> int | None:
         """
@@ -782,5 +783,12 @@ Types
 
         session.reacter_files = reacter_files
 
-
+        
+        # print (session.reacter_files)
+        detector = DeduplicationDetector()
+        template_files = session.reacter_files.template_files
+        # print("Comparing LAMMPS templates for duplicates...")
+        session.reacter_files.template_files = detector.compare_lammps_templates(
+            template_files=template_files
+        )
         return None

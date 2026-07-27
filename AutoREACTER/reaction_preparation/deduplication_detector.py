@@ -18,6 +18,9 @@ if TYPE_CHECKING:
     from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import (
         ReactionMetadata,
     )
+    from AutoREACTER.reaction_preparation.ff_wrapper.REACTER_files_builder import (
+        TemplateFile,
+    )
 
 
 class DeduplicationDetector:
@@ -636,13 +639,77 @@ class DeduplicationDetector:
             file_path=file_path,
         )
 
-        print(
-            f"Graph created from {file_path.name}: "
-            f"{graph.number_of_nodes()} atoms and "
-            f"{graph.number_of_edges()} bonds."
-        )
+        # print(
+        #     f"Graph created from {file_path.name}: "
+        #     f"{graph.number_of_nodes()} atoms and "
+        #     f"{graph.number_of_edges()} bonds."
+        # )
 
         return graph
+
+    def compare_lammps_templates(
+        self,
+        template_files: list["TemplateFile"],
+    ) -> list["TemplateFile"]:
+        """
+        Compare LAMMPS pre/post molecule-template pairs.
+
+        Filters a list of TemplateFile objects by generating LAMMPS graphs
+        for their pre and post reaction files, detecting duplicates, and
+        returning a list containing only unique templates.
+        """
+        # Clear the cache for a fresh deduplication pass
+        self.clear_cache(self.LAMMPS_COMPARISON_GROUP)
+
+        unique_templates: list["TemplateFile"] = []
+
+        for template in template_files:
+            # Safely check if the template has both required files
+            if template.pre_reaction_file is None or template.post_reaction_file is None:
+                print(
+                    f"Skipping template ID {template.reaction_id}: "
+                    "Missing pre or post reaction file definitions."
+                )
+                continue
+
+            pre_file_path = template.pre_reaction_file.lmp_molecule_file
+            post_file_path = template.post_reaction_file.lmp_molecule_file
+
+            if not pre_file_path.is_file():
+                print(
+                    f"Skipping template ID {template.reaction_id}: "
+                    f"Pre-template file does not exist: {pre_file_path}"
+                )
+                continue
+
+            if not post_file_path.is_file():
+                print(
+                    f"Skipping template ID {template.reaction_id}: "
+                    f"Post-template file does not exist: {post_file_path}"
+                )
+                continue
+
+            # Convert to graphs
+            pre_graph = self.lammps_molecule_to_networkx(pre_file_path)
+            post_graph = self.lammps_molecule_to_networkx(post_file_path)
+
+            # Check if this pair has been seen before
+            duplicate = self.is_duplicate_pair(
+                pre_graph=pre_graph,
+                post_graph=post_graph,
+                comparison_group=self.LAMMPS_COMPARISON_GROUP,
+            )
+
+            # status = "Duplicate" if duplicate else "Unique"
+            # print(
+            #     f"{status} template ID {template.reaction_id}: "
+            #     f"{pre_file_path.name} -> {post_file_path.name}"
+            # )
+
+            if not duplicate:
+                unique_templates.append(template)
+
+        return unique_templates
 
     # ------------------------------------------------------------------
     # Reaction-index selection
