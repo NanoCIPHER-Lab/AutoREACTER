@@ -63,7 +63,6 @@ class EmptyReactionListError(Exception):
     This should be prevented by the reaction_selection method, but this error serves as a safeguard."""
     pass
 
-
 @dataclass(slots=True)
 class ReactionInstance:
     """
@@ -239,7 +238,16 @@ class ReactionDetector:
                                         functional_group_2=fg_2
                                     )
                                 )
-        session.reaction_instances = reaction_instances
+        if not reaction_instances:
+            raise EmptyReactionListError(
+                "\nNo reaction instances found for the specified monomer combination. "
+                "Please verify that your input monomer combinations are correct. "
+                "If you believe this represents a valid and standard reaction that AutoREACTER should support, "
+                "please submit an issue at https://github.com/NanoCIPHER-Lab/AutoREACTER/issues for consideration.\n"
+                "Thank you for helping improve AutoREACTER."
+            )
+        else:
+            session.reaction_instances = reaction_instances
 
 
     def index_based_reaction_detector(

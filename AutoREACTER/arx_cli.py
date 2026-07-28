@@ -30,6 +30,9 @@ from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper import FFWrapper
 from AutoREACTER.reaction_preparation.ff_wrapper.REACTER_files_builder import REACTERFilesBuilder
 from AutoREACTER.sim_setup.simulation_setup import SimulationSetupManager
 
+class NoReactionGenerated(Exception):
+    """Custom exception raised when no reaction is generated in the pipeline.""" 
+    pass
 
 class ErrorHandler:
     """
@@ -384,7 +387,10 @@ class ARXCLI:
         if img is None:
             if is_non_reactant:
                 return
-            raise ValueError("No image was generated. Cannot save molecule image.")
+            raise NoReactionGenerated(
+                "No reaction was generated. This is an error from AutoREACTER. "
+                "Please file an issue on https://github.com/NanoCIPHER-Lab/AutoREACTER/issues to improve the software."
+            )
 
         # Case 1: PIL image
         if hasattr(img, "save"):

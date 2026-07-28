@@ -1826,6 +1826,7 @@
  1.0  1   s     s_m     2.0559    197.6560   -196.1366    644.4103    # Duplicated from base parameter 's'
  1.0  1   s_m   s_m     2.0559    197.6560   -196.1366    644.4103    # Duplicated from base parameter 's'
  2.2  9   si    si      2.3384    114.2164   -140.4212     80.7084
+ 1.0  1   c_2   na      1.4570    365.8052   -699.6368    998.4842    # AutoREACTER addition; copied from base c na
 
 
 #quadratic_angle      cff91_auto
@@ -3275,7 +3276,45 @@
  1.0  1   cp    cp    cp    s_m      0.0000      0.0    4.8498      0.0    0.0000      0.0    # AutoREACTER addition; mapped from cp-cp-cp-o
  1.0  1   h     cp    cp    s_m      0.0000      0.0    1.7234      0.0    0.0000      0.0    # AutoREACTER addition; mapped from h-cp-cp-o
  1.0  1   hc    cp    cp    s_m      0.0000      0.0    1.7234      0.0    0.0000      0.0    # AutoREACTER addition; mapped from h-cp-cp-o
- 
+ 1.0  1   c=    c1    cp    cp       0.0000      0.0    0.5000      0.0    0.0000      0.0    # AutoREACTER addition; mapped from c= c=1 cp cp
+ 1.0  1   c2    c2    n=2   ct       0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero to pass validator
+ 1.0  1   c2    n=2   ct    o_1      0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero to pass validator
+ 1.0  1   hc    c2    n=2   ct       0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero to pass validator
+ 1.0  1   o_1   c=2   na    c2       0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero to pass validator
+ 1.0  1   o_1   c=2   na    hn       0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero to pass validator
+ 1.0  1   sc    c=2   na    c2       0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero to pass validator
+ 1.0  1   sc    c=2   na    hn       0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero to pass validator
+ 1.0  1   c2    c1    ct    nt       0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for linear nitrile
+ 1.0  1   c2    c=2   ct    nt       0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for linear nitrile
+ 1.0  1   c=    c1    ct    nt       0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for linear nitrile
+ 1.0  1   c=    c=1   ct    nt       0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for linear nitrile
+ 1.0  1   hc    c1    ct    nt       0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for linear nitrile
+ 1.0  1   hc    c=1   ct    nt       0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for linear nitrile
+ 1.0  1   hc    c=2   ct    nt       0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for linear nitrile
+ 1.0  1   c2    na    c_2   na       0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for c2-na-c_2-na
+ 1.0  1   c2    na    c_2   o_1      0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for c2-na-c_2-o_1
+ 1.0  1   hc    c2    na    c_2      0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for hc-c2-na-c_2
+ 1.0  1   hn    na    c_2   na       0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for hn-na-c_2-na
+ 1.0  1   hn    na    c_2   o_1      0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for hn-na-c_2-na
+ 1.0  1   o_1   c_1   c1    o_2      0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for validator
+ 1.0  1   o_1   c_1   c1    oh       0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for validator
+ 1.0  1   o_2   c_1   c1    o_2      0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for validator
+ 1.0  1   o_2   c_1   c1    oh       0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for validator
+ 1.0  1   c_1   c1    o_2   c_1      0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for validator
+ 1.0  1   c=    c1    o_2   c_1      0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for validator
+ 1.0  1   o_1   c_1   c2    o_2      0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for validator
+ 1.0  1   o_1   c_1   c2    oh       0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for validator
+ 1.0  1   o_2   c_1   c2    o_2      0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for validator
+ 1.0  1   o_2   c_1   c2    oh       0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for validator
+ 1.0  1   oh    c_1   c1    c3       0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for validator
+ 1.0  1   oh    c_1   c1    hc       0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for validator
+ 1.0  1   oh    c_1   c1    o_2      0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for validator
+ 1.0  1   oh    c_1   c1    oh       0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for validator
+ 1.0  1   oh    c_1   c2    o_2      0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for validator
+ 1.0  1   oh    c_1   c2    oh       0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for validator
+ 1.0  1   hn2   na    c_2   o_1      0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for validator
+ 1.0  1   hn2   na    c_2   na       0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for validator
+ 1.0  1   hn    na    c_2   o_1      0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for validator
  
 #wilson_out_of_plane  cff91
 

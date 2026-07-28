@@ -81,8 +81,9 @@ def write_bond_react_merge_input(
             reaction_pairs[rid]["post"] = r
 
     # Write pre/post pairs in order
-    rxn_counter = 1
+
     for rid in sorted(reaction_pairs):
+
         pair = reaction_pairs[rid]
 
         pre = pair.get("pre")
@@ -93,11 +94,13 @@ def write_bond_react_merge_input(
 
         pre_path = normalize_path(Path(cache_all2lmp) / pre.all2lmp_data_file)
         post_path = normalize_path(Path(cache_all2lmp) / post.all2lmp_data_file)
-
-        merge_files += f"{f'pre{rxn_counter}':<10}{pre_path:<150}# for rxn{rxn_counter}\n"
-        merge_files += f"{f'post{rxn_counter}':<10}{post_path:<150}# for rxn{rxn_counter}\n"
-
-        rxn_counter += 1
+        data_counter += 1
+        tag = f"data{data_counter}"
+        merge_files += f"{tag:<10}{pre_path:<150}{comment}\n"
+        data_counter += 1
+        tag = f"data{data_counter}"
+        merge_files += f"{tag:<10}{post_path:<150}{comment}\n"
+        data_counter += 1
 
     merge_files += f"\n# Specify the parent_directory of where to write results (optional)\n"
 
