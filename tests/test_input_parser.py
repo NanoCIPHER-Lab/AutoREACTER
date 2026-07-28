@@ -866,12 +866,12 @@ class TestValidateInputsWorkflow(InputParserTestCase):
         sleep_mock,
     ) -> None:
         inputs = self.counts_input()
-        inputs["loop"] = 3
+        inputs["loop"] = 10  # Triggers the warning and the sleep(5)
 
         result = self.parser.validate_inputs(inputs)
 
         self.assertTrue(result.loop)
-        self.assertEqual(result.max_loop_count, 3)
+        self.assertEqual(result.max_loop_count, 10)  # Matches the new input
         sleep_mock.assert_called_once_with(5)
 
     def test_validate_inputs_assigns_default_monomer_name(self) -> None:
