@@ -22,6 +22,30 @@ This serves two purposes:
     At release time, you can move the Unreleased section changes into a new release version section.
  -->
 
+## [0.3] - [2026-08-xx]
+### Added
+
+* **Reaction Progression:** Multi-stage reaction template generation to handle multi stage reaction progressions, copolymerizations and small molecules which needs few templates for the polymerization reactions.
+* **Looping Control:** A new loop control parameter in the input file to prevent the explosion of unnecessary reactions. Defaults to `5` loops, but can be optimized by setting `loop: <int>` or disabled entirely with `loop: False`.
+* **Advanced Detection:** Index-based functional group detection and index-based reaction detection to accurately identify reacting atoms post-first reaction.
+* **Pathway Deduplication:** NetworkX-based deduplication detection to actively filter redundant reaction pathways.
+* **Reaction Libraries:** Robust library modules for various polymer chemistries, including Epoxies, Polyamides, Polyesters, Polycarbonates, Polysiloxanes, Polyureas, Polyurethanes, and Vinyl polymers.
+* **Force Field Parameters:** PCFF force field additions, specifically including new `s_m` sulfone parameters.
+
+### Changed
+
+* **Library Organization:** Centralized the reaction libraries into dedicated modules to improve maintainability and expandability.
+* **Structure Generation:** Improved 3D molecule embedding to better handle highly congested polymer structures.
+
+### Removed
+
+* **Legacy Code:** Removed legacy compatibility shims (`_compat.py`).
+
+### Fixed
+
+* Addressed various stability and progression issues tracked in recent bug reports.
+* Improved Error handling when no reaction instances are found for the specified monomer combinations.
+
 ## [0.2.3] - [2026-06-24]
 
 ### Added
