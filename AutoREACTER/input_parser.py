@@ -152,6 +152,7 @@ class SimulationSetup:
     force_field: str | None
     monomers: list[MonomerEntry]
     loop : bool = True
+    input_json: dict | None = None
     max_loop_count: int | None = None
     simulations: list[Simulation] | None = None
     composition_method: CompositionMethodType | None = None
@@ -219,7 +220,8 @@ class InputParser:
             composition=validated_simulations,
             force_field=force_field,
             loop=loop,
-            max_loop_count=max_loop_count
+            max_loop_count=max_loop_count,
+            input_json=inputs,
         )
 
     def molecule_representation_of_initial_molecules(

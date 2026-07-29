@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 class DeduplicationDetector:
     """Detect duplicate pre/post-reaction graph pairs."""
-
+    DEEP_CHECK = False
     NODE_ATTRIBUTE = "atom_label"
     EDGE_ATTRIBUTE = "bond_label"
 
@@ -459,6 +459,68 @@ class DeduplicationDetector:
 
         return unique_reactions
 
+    @classmethod
+    def _one_neighbor_edge_environment_signature(
+        cls,
+        atom: Chem.Atom,
+        included_atom_indices: set[int],
+    ) -> tuple[tuple[str, int, bool, str, int, bool, str], ...]:
+        """
+        Return a one-bond external chemical-environment signature for
+        boundary atoms.
+
+        Only neighbors outside the restricted comparison graph are used.
+        This avoids walking into the next molecule or building a larger
+        shell. Internal atoms return an empty signature.
+
+        Each external-neighbor signature contains:
+            - neighbor element
+            - neighbor formal charge
+            - neighbor aromatic state
+            - neighbor hybridization
+            - neighbor total hydrogen count
+            - neighbor radical state
+            - bond type connecting edge atom to neighbor
+        """
+        external_neighbor_signatures = []
+
+        try:
+            atom.GetOwningMol().UpdatePropertyCache(strict=False)
+        except RuntimeError:
+            pass
+
+        for bond in atom.GetBonds():
+            neighbor = bond.GetOtherAtom(atom)
+
+            if neighbor.GetIdx() in included_atom_indices:
+                continue
+
+            external_neighbor_signatures.append(
+                (
+                    neighbor.GetSymbol(),
+                    neighbor.GetFormalCharge(),
+                    neighbor.GetIsAromatic(),
+                    str(neighbor.GetHybridization()),
+                    cls._safe_total_hydrogen_count(neighbor),
+                    cls._is_radical_atom(neighbor),
+                    str(bond.GetBondType()),
+                )
+            )
+
+        return tuple(sorted(external_neighbor_signatures))
+
+    @staticmethod
+    def _safe_total_hydrogen_count(atom: Chem.Atom) -> int:
+        """Return total hydrogen count without failing on unsanitized mols."""
+        try:
+            return atom.GetTotalNumHs()
+        except RuntimeError:
+            explicit_h_neighbors = sum(
+                neighbor.GetAtomicNum() == 1
+                for neighbor in atom.GetNeighbors()
+            )
+            return explicit_h_neighbors + atom.GetNumExplicitHs()
+        
     def clear_cache(
         self,
         comparison_group: str | None = None,
@@ -553,11 +615,20 @@ class DeduplicationDetector:
             )
 
             is_radical = self._is_radical_atom(atom)
-
-            atom_label = (
-                atom.GetSymbol(),
-                is_radical,
-            )
+            if not DEEP_CHECK:
+                atom_label = (
+                    atom.GetSymbol(),
+                    is_radical,
+                )
+            else:
+                atom_label = (
+                    atom.GetSymbol(),
+                    is_radical,
+                    self._one_neighbor_edge_environment_signature(
+                        atom=atom,
+                        included_atom_indices=included_atom_indices,
+                    ),
+                )
 
             graph.add_node(
                 node_id,

@@ -14,6 +14,7 @@ Classes:
 from contextlib import contextmanager
 import os
 from pathlib import Path
+import shutil
 import sys
 import threading
 from PIL import Image
@@ -101,7 +102,8 @@ class ARXCLI:
         self.img_dir = self.session.images_dir
         # with open(self.session.output_dir / "AutoREACTER.log", 'w') as f:
         #     f.write("--- Starting AutoREACTER Session ---\n")
-
+        # Save a copy of the input JSON to the output directory
+        self._save_input_json(abs_path)
         # Save an initial grid image of all monomers
         self._save_rdkit_img(
             InputParser().initial_molecules_image_grid(self.session),
@@ -317,6 +319,10 @@ class ARXCLI:
     # ------------------------------------------------------------------
     # Internal helpers – lazy detection & image saving
     # ------------------------------------------------------------------
+    def _save_input_json(self, abs_path: Path): 
+            destination_file = "input.json"
+            destination_path = self.session.output_dir / destination_file
+            shutil.copy(abs_path, destination_path)
 
     def _ensure_fg_detected(self):
         """
