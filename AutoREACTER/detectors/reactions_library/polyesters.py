@@ -93,20 +93,20 @@ REACTIONS = {
             },
             'comments': 'Fixed SMARTS to prevent RDKit explicit node valence crashes.'
         },
-    'Diol and Di-Carboxylic Ester Polycondensation(Transesterification)': 
-        {
-            'same_reactants': False,
-            'reactant_1': 'diol',
-            'reactant_2': 'di_carboxylic_ester',
-            'product': 'polyester_chain',
-            'delete_atom': True,
-            'reaction': '[OX2;!$([O][C,S]=*):1]-[H:3].[CX3:2](=[O:5])[OX2:4][#6:6]>>[OX2:1]-[CX3:2](=[O:5]).[OX2:4](-[H:3])-[#6:6]',
-            'reference': {
-                'smarts': None,
-                'reaction_and_mechanism': None
-            },
-            'comments': None
-        },
+    # 'Diol and Di-Carboxylic Ester Polycondensation(Transesterification)': 
+    #     {
+    #         'same_reactants': False,
+    #         'reactant_1': 'diol',
+    #         'reactant_2': 'di_carboxylic_ester',
+    #         'product': 'polyester_chain',
+    #         'delete_atom': True,
+    #         'reaction': '[OX2;!$([O][C,S]=*):1]-[H:3].[CX3:2](=[O:5])[OX2:4][#6:6]>>[OX2:1]-[CX3:2](=[O:5]).[OX2:4](-[H:3])-[#6:6]',
+    #         'reference': {
+    #             'smarts': None,
+    #             'reaction_and_mechanism': None
+    #         },
+    #         'comments': None
+    #     },
     # Skipped for later additinos after proper validations
     # 'Lactone Ring-Opening Polyesterification': 
     #     {

@@ -615,11 +615,16 @@ class DeduplicationDetector:
             )
 
             is_radical = self._is_radical_atom(atom)
-            if not DEEP_CHECK:
+
+            # Determine the atom label based on the DEEP_CHECK setting
+            # DEEP_CHECK should be able to change from input script
+            if not self.DEEP_CHECK:
                 atom_label = (
                     atom.GetSymbol(),
                     is_radical,
                 )
+
+            # If DEEP_CHECK is enabled, include the one-neighbor edge environment signature in the atom label.
             else:
                 atom_label = (
                     atom.GetSymbol(),
