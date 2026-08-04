@@ -313,6 +313,9 @@ class ReactionProgression:
                 continue
 
             product_mol = reaction.product_combined_RDmol
+            product_is_single_fragment = (
+                len(Chem.GetMolFrags(product_mol)) == 1
+            )
             indexes_in_template, product_mol = self._get_product_idxs(
                 reaction.template_reactant_to_product_mapping,
                 product_mol,
@@ -323,6 +326,19 @@ class ReactionProgression:
             # Record radical metadata when sanitization succeeds; otherwise
             # mark the product as non-radical.
             if success and sanitized_mol is not None:
+                # Keep the stage handoff molecule consistent. For
+                # non-deletion, single-fragment products, the sanitized
+                # molecule has the same atom indexing as the stored product
+                # and can safely become the source for both the current
+                # post-template and the next loop reactant.
+                if (
+                    not reaction.delete_atom
+                    and product_is_single_fragment
+                ):
+                    reaction.product_combined_RDmol = Chem.Mol(
+                        sanitized_mol
+                    )
+
                 self._set_reaction_radical_metadata(
                     reaction,
                     sanitized_mol,

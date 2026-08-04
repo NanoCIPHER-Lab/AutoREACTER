@@ -356,16 +356,16 @@ class PrepareReactions:
                         reaction.functional_group_2
                     )
 
-                mol_reactant_1 = Chem.AddHs(
-                    Chem.Mol(reaction.monomer_1.rdkit_mol)
+                mol_reactant_1 = self._copy_loop_reactant_mol(
+                    reaction.monomer_1
                 )
                 monomer_2 = (
                     reaction.monomer_1
                     if same_reactants
                     else reaction.monomer_2
                 )
-                mol_reactant_2 = Chem.AddHs(
-                    Chem.Mol(monomer_2.rdkit_mol)
+                mol_reactant_2 = self._copy_loop_reactant_mol(
+                    monomer_2
                 )
 
                 # The ReactionInstance already defines reactant-slot order.
@@ -399,6 +399,29 @@ class PrepareReactions:
             )
 
         return reaction_metadata
+
+    def _copy_loop_reactant_mol(self, monomer_role) -> Chem.Mol:
+        """Copy a loop-mode reactant without changing generated products.
+
+        Initial input monomers are stored as RDKit molecules without explicit
+        hydrogens before the loop starts, so they still need ``Chem.AddHs``.
+        Generated products already passed through reaction-progression
+        sanitization and may contain explicit hydrogens, radical electrons,
+        and no-implicit flags. Adding hydrogens to those products again can
+        change the representation that is later sent to LUNAR.
+        """
+        if monomer_role is None or monomer_role.rdkit_mol is None:
+            raise SMARTSParsingError(
+                "Loop-mode reactant is missing its RDKit molecule."
+            )
+
+        loop_mol = Chem.Mol(monomer_role.rdkit_mol)
+        loop_mol.UpdatePropertyCache(strict=False)
+
+        if getattr(monomer_role, "is_monomer", False):
+            return Chem.AddHs(loop_mol)
+
+        return loop_mol
 
     def _process_reaction_products(
         self,
@@ -1212,6 +1235,6 @@ class PrepareReactions:
             molsPerRow=2,
             highlightAtomLists=highlight_lists,
             highlightAtomColors=highlight_colors,
-            subImgSize=(400, 400),
+            subImgSize=(1000, 1000),
             useSVG=False,
         )

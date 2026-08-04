@@ -8,6 +8,8 @@ LAMMPS comparisons use atom type and bond type.
 """
 
 from __future__ import annotations
+
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -25,7 +27,9 @@ if TYPE_CHECKING:
 
 class DeduplicationDetector:
     """Detect duplicate pre/post-reaction graph pairs."""
-    DEEP_CHECK = False
+
+    DEEP_CHECK = True
+
     NODE_ATTRIBUTE = "atom_label"
     EDGE_ATTRIBUTE = "bond_label"
 
@@ -92,12 +96,31 @@ class DeduplicationDetector:
         The pre- and post-reaction graphs are coupled using atom
         correspondence edges. This requires one consistent atom mapping
         to satisfy both reaction phases.
+
+        This path is mainly used for RDKit molecules where pre and post
+        graphs have already been relabeled into the same atom-index space.
         """
         coupled_graph = self._couple_graphs(
             pre_template_graph=pre_template_graph,
             post_template_graph=post_template_graph,
         )
 
+        return self.is_duplicate_coupled_graph(
+            coupled_graph=coupled_graph,
+            comparison_group=comparison_group,
+        )
+
+    def is_duplicate_coupled_graph(
+        self,
+        coupled_graph: nx.Graph,
+        comparison_group: str,
+    ) -> bool:
+        """
+        Check whether an already-coupled pre/post graph was previously cached.
+
+        This is used for LAMMPS templates where atom correspondence comes from
+        the RXN_*.map Equivalences section instead of matching atom IDs.
+        """
         node_match = nx.algorithms.isomorphism.categorical_node_match(
             ["phase", self.NODE_ATTRIBUTE],
             [None, None],
@@ -114,9 +137,6 @@ class DeduplicationDetector:
         )
 
         for seen_graph in seen_graphs:
-            # The restricted template graph may not include every radical
-            # center in the complete molecule. Compare the full-molecule
-            # pre/post radical signature before checking graph isomorphism.
             if (
                 coupled_graph.graph.get(
                     self.RADICAL_SIGNATURE_ATTRIBUTE
@@ -149,6 +169,241 @@ class DeduplicationDetector:
 
         seen_graphs.append(coupled_graph.copy())
         return False
+
+    def is_duplicate_lammps_template_pair(
+        self,
+        pre_file_path: str | Path,
+        post_file_path: str | Path,
+        comparison_group: str | None = None,
+    ) -> bool:
+        """
+        Check LAMMPS template duplication using:
+            - template_pre_*.molecule
+            - template_post_*.molecule
+            - RXN_*.map Equivalences
+
+        This ignores coordinates, atom IDs, and bond IDs, but preserves
+        the pre-to-post atom correspondence from the LAMMPS map file.
+        """
+        pre_file_path = Path(pre_file_path)
+        post_file_path = Path(post_file_path)
+
+        if comparison_group is None:
+            comparison_group = self.LAMMPS_COMPARISON_GROUP
+
+        pre_graph = self.lammps_molecule_to_networkx(pre_file_path)
+        post_graph = self.lammps_molecule_to_networkx(post_file_path)
+
+        map_file_path = self._lammps_map_path_from_template_path(
+            pre_file_path
+        )
+
+        if not map_file_path.is_file():
+            return self.is_duplicate_pair(
+                pre_graph=pre_graph,
+                post_graph=post_graph,
+                comparison_group=comparison_group,
+            )
+
+        pre_to_post_mapping = self._read_lammps_equivalences(
+            map_file_path
+        )
+
+        if not pre_to_post_mapping:
+            raise ValueError(
+                f"No Equivalences mapping found in {map_file_path}."
+            )
+
+        coupled_graph = self._couple_lammps_graphs(
+            pre_graph=pre_graph,
+            post_graph=post_graph,
+            pre_to_post_mapping=pre_to_post_mapping,
+            source=map_file_path,
+        )
+
+        return self.is_duplicate_coupled_graph(
+            coupled_graph=coupled_graph,
+            comparison_group=comparison_group,
+        )
+
+    @staticmethod
+    def _lammps_reaction_id_from_template_path(
+        file_path: str | Path,
+    ) -> str:
+        """
+        Extract reaction ID from names like:
+            template_pre_22.molecule
+            template_post_22.molecule
+            template_pre_1_homo2.molecule
+        """
+        file_path = Path(file_path)
+
+        match = re.match(
+            r"template_(?:pre|post)_(.+)\.molecule$",
+            file_path.name,
+        )
+
+        if match is None:
+            raise ValueError(
+                f"Could not infer reaction ID from template file name: "
+                f"{file_path.name}"
+            )
+
+        return match.group(1)
+
+    def _lammps_map_path_from_template_path(
+        self,
+        file_path: str | Path,
+    ) -> Path:
+        """Return the RXN_*.map path matching a template molecule path."""
+        file_path = Path(file_path)
+        reaction_id = self._lammps_reaction_id_from_template_path(
+            file_path
+        )
+        return file_path.with_name(f"RXN_{reaction_id}.map")
+
+    @staticmethod
+    def _read_lammps_equivalences(
+        map_file_path: str | Path,
+    ) -> dict[int, int]:
+        """
+        Read pre-to-post atom equivalences from a LAMMPS bond/react map file.
+
+        Returns:
+            {pre_atom_id: post_atom_id}
+        """
+        map_file_path = Path(map_file_path)
+
+        section_headers = {
+            "InitiatorIDs",
+            "EdgeIDs",
+            "Equivalences",
+            "DeleteIDs",
+        }
+
+        current_section: str | None = None
+        mapping: dict[int, int] = {}
+
+        with map_file_path.open("r", encoding="utf-8") as file:
+            for raw_line in file:
+                line = raw_line.split("#", maxsplit=1)[0].strip()
+
+                if not line:
+                    continue
+
+                if line in section_headers:
+                    current_section = line
+                    continue
+
+                first_token = line.split()[0]
+
+                if first_token in section_headers:
+                    current_section = first_token
+                    continue
+
+                if current_section != "Equivalences":
+                    continue
+
+                parts = line.split()
+
+                if len(parts) < 2:
+                    continue
+
+                try:
+                    pre_atom_id = int(parts[0])
+                    post_atom_id = int(parts[1])
+                except ValueError:
+                    continue
+
+                if (
+                    pre_atom_id in mapping
+                    and mapping[pre_atom_id] != post_atom_id
+                ):
+                    raise ValueError(
+                        f"Conflicting Equivalences entry in "
+                        f"{map_file_path}: pre atom {pre_atom_id} maps to "
+                        f"both {mapping[pre_atom_id]} and {post_atom_id}."
+                    )
+
+                mapping[pre_atom_id] = post_atom_id
+
+        post_to_pre: dict[int, int] = {}
+
+        for pre_atom_id, post_atom_id in mapping.items():
+            if (
+                post_atom_id in post_to_pre
+                and post_to_pre[post_atom_id] != pre_atom_id
+            ):
+                raise ValueError(
+                    f"Non-bijective Equivalences section in "
+                    f"{map_file_path}: post atom {post_atom_id} is mapped "
+                    f"from both {post_to_pre[post_atom_id]} and "
+                    f"{pre_atom_id}."
+                )
+
+            post_to_pre[post_atom_id] = pre_atom_id
+
+        return mapping
+
+    def _couple_lammps_graphs(
+        self,
+        pre_graph: nx.Graph,
+        post_graph: nx.Graph,
+        pre_to_post_mapping: dict[int, int],
+        source: Path | str,
+    ) -> nx.Graph:
+        """
+        Couple LAMMPS pre/post template graphs using RXN_*.map equivalences.
+
+        Unlike the RDKit coupling path, this does not require matching atom IDs
+        in pre and post files. The map file defines correspondence.
+        """
+        coupled_graph = nx.Graph()
+
+        coupled_graph.graph[self.RADICAL_SIGNATURE_ATTRIBUTE] = (
+            pre_graph.graph.get(self.RADICAL_COUNT_ATTRIBUTE, 0),
+            post_graph.graph.get(self.RADICAL_COUNT_ATTRIBUTE, 0),
+            pre_graph.graph.get(self.RADICAL_PRESENT_ATTRIBUTE, False),
+            post_graph.graph.get(self.RADICAL_PRESENT_ATTRIBUTE, False),
+        )
+
+        self._add_phase_to_coupled_graph(
+            source_graph=pre_graph,
+            coupled_graph=coupled_graph,
+            phase=self._PRE_PHASE,
+        )
+
+        self._add_phase_to_coupled_graph(
+            source_graph=post_graph,
+            coupled_graph=coupled_graph,
+            phase=self._POST_PHASE,
+        )
+
+        for pre_atom_id, post_atom_id in pre_to_post_mapping.items():
+            if pre_atom_id not in pre_graph:
+                raise ValueError(
+                    f"Map file {source} references pre atom "
+                    f"{pre_atom_id}, but that atom is not in the "
+                    "pre-template graph."
+                )
+
+            if post_atom_id not in post_graph:
+                raise ValueError(
+                    f"Map file {source} references post atom "
+                    f"{post_atom_id}, but that atom is not in the "
+                    "post-template graph."
+                )
+
+            coupled_graph.add_edge(
+                (self._PRE_PHASE, pre_atom_id),
+                (self._POST_PHASE, post_atom_id),
+                relationship=self._ATOM_CORRESPONDENCE_RELATIONSHIP,
+                **{
+                    self.EDGE_ATTRIBUTE: None,
+                },
+            )
+
+        return coupled_graph
 
     def is_duplicate_pair(
         self,
@@ -266,17 +521,9 @@ class DeduplicationDetector:
                 )
                 continue
 
-            pre_graph = self.lammps_molecule_to_networkx(
-                pre_file_path
-            )
-
-            post_graph = self.lammps_molecule_to_networkx(
-                post_file_path
-            )
-
-            duplicate = self.is_duplicate_pair(
-                pre_graph=pre_graph,
-                post_graph=post_graph,
+            duplicate = self.is_duplicate_lammps_template_pair(
+                pre_file_path=pre_file_path,
+                post_file_path=post_file_path,
                 comparison_group=self.LAMMPS_COMPARISON_GROUP,
             )
 
@@ -312,28 +559,7 @@ class DeduplicationDetector:
         For distinct ReactionMetadata objects, the first unique reaction is
         retained. Later equivalent reactions are disabled by setting
         ``activity_stats`` to False and are excluded from the returned pool.
-
-        Args:
-            reaction_metadata_items:
-                Accumulated reaction metadata pool.
-
-            index_source:
-                Determines which atom indexes restrict the graph comparison.
-
-                ``template``:
-                    Use ``template_reactant_to_product_mapping``.
-
-                ``first_shell``:
-                    Use ``first_shell`` reactant indexes mapped through
-                    ``reactant_to_product_mapping``.
-
-        Returns:
-            A new list containing one active representative of each unique
-            reaction.
         """
-        # Each call is a complete deduplication pass over the current pool.
-        # Cached graphs from an earlier progression iteration must not be
-        # reused, or retained reactions will match their own old cache entry.
         self.clear_cache(self.RDKIT_COMPARISON_GROUP)
 
         unique_reactions: list["ReactionMetadata"] = []
@@ -343,15 +569,11 @@ class DeduplicationDetector:
             reaction_metadata_items,
             start=1,
         ):
-            # Inactive reactions do not participate in the active pool.
             if not reaction_metadata.activity_stats:
                 continue
 
             reaction_object_id = id(reaction_metadata)
 
-            # The accumulated progression pool can contain the exact same
-            # metadata object more than once. Do not mark that object inactive;
-            # simply keep its first occurrence.
             if reaction_object_id in retained_object_ids:
                 continue
 
@@ -383,9 +605,6 @@ class DeduplicationDetector:
                 reactant_to_product_mapping.values()
             )
 
-            # Relabel the product graph into reactant-index space so the
-            # coupled graph preserves atom correspondence across the
-            # pre- and post-reaction states.
             product_to_reactant_mapping = {
                 product_idx: reactant_idx
                 for reactant_idx, product_idx
@@ -411,11 +630,6 @@ class DeduplicationDetector:
                 idx_relabel=product_to_reactant_mapping,
             )
 
-            # Keep full-molecule radical information in addition to the
-            # atom-level radical labels inside the restricted template graph.
-            # Progression may explicitly mark the product as radical even when
-            # the original unsanitized RDKit product does not retain the
-            # radical-electron property cleanly.
             reactant_radical_count = self._count_radical_atoms(
                 reactant_mol
             )
@@ -451,12 +665,6 @@ class DeduplicationDetector:
             retained_object_ids.add(reaction_object_id)
             unique_reactions.append(reaction_metadata)
 
-            # Debugging: print unique reaction retention information.
-            # print(
-            #     f"Reaction {reaction_index}: "
-            #     "unique reaction retained."
-            # )
-
         return unique_reactions
 
     @classmethod
@@ -472,15 +680,6 @@ class DeduplicationDetector:
         Only neighbors outside the restricted comparison graph are used.
         This avoids walking into the next molecule or building a larger
         shell. Internal atoms return an empty signature.
-
-        Each external-neighbor signature contains:
-            - neighbor element
-            - neighbor formal charge
-            - neighbor aromatic state
-            - neighbor hybridization
-            - neighbor total hydrogen count
-            - neighbor radical state
-            - bond type connecting edge atom to neighbor
         """
         external_neighbor_signatures = []
 
@@ -520,7 +719,7 @@ class DeduplicationDetector:
                 for neighbor in atom.GetNeighbors()
             )
             return explicit_h_neighbors + atom.GetNumExplicitHs()
-        
+
     def clear_cache(
         self,
         comparison_group: str | None = None,
@@ -566,16 +765,7 @@ class DeduplicationDetector:
         Convert an RDKit molecule into a NetworkX graph.
 
         Coordinates are not read or stored.
-
-        Node attributes:
-            ``atom_label`` contains a tuple of:
-                - chemical element symbol
-                - whether the atom is a radical center
-
-        Edge attributes:
-            ``bond_label`` contains the RDKit bond type.
         """
-        
         if molecule is None:
             raise ValueError(
                 "Cannot create a graph from a None RDKit molecule."
@@ -616,15 +806,11 @@ class DeduplicationDetector:
 
             is_radical = self._is_radical_atom(atom)
 
-            # Determine the atom label based on the DEEP_CHECK setting
-            # DEEP_CHECK should be able to change from input script
             if not self.DEEP_CHECK:
                 atom_label = (
                     atom.GetSymbol(),
                     is_radical,
                 )
-
-            # If DEEP_CHECK is enabled, include the one-neighbor edge environment signature in the atom label.
             else:
                 atom_label = (
                     atom.GetSymbol(),
@@ -715,12 +901,6 @@ class DeduplicationDetector:
             file_path=file_path,
         )
 
-        # print(
-        #     f"Graph created from {file_path.name}: "
-        #     f"{graph.number_of_nodes()} atoms and "
-        #     f"{graph.number_of_edges()} bonds."
-        # )
-
         return graph
 
     def compare_lammps_templates(
@@ -734,14 +914,15 @@ class DeduplicationDetector:
         for their pre and post reaction files, detecting duplicates, and
         returning a list containing only unique templates.
         """
-        # Clear the cache for a fresh deduplication pass
         self.clear_cache(self.LAMMPS_COMPARISON_GROUP)
 
         unique_templates: list["TemplateFile"] = []
 
         for template in template_files:
-            # Safely check if the template has both required files
-            if template.pre_reaction_file is None or template.post_reaction_file is None:
+            if (
+                template.pre_reaction_file is None
+                or template.post_reaction_file is None
+            ):
                 print(
                     f"Skipping template ID {template.reaction_id}: "
                     "Missing pre or post reaction file definitions."
@@ -765,22 +946,11 @@ class DeduplicationDetector:
                 )
                 continue
 
-            # Convert to graphs
-            pre_graph = self.lammps_molecule_to_networkx(pre_file_path)
-            post_graph = self.lammps_molecule_to_networkx(post_file_path)
-
-            # Check if this pair has been seen before
-            duplicate = self.is_duplicate_pair(
-                pre_graph=pre_graph,
-                post_graph=post_graph,
+            duplicate = self.is_duplicate_lammps_template_pair(
+                pre_file_path=pre_file_path,
+                post_file_path=post_file_path,
                 comparison_group=self.LAMMPS_COMPARISON_GROUP,
             )
-
-            # status = "Duplicate" if duplicate else "Unique"
-            # print(
-            #     f"{status} template ID {template.reaction_id}: "
-            #     f"{pre_file_path.name} -> {post_file_path.name}"
-            # )
 
             if not duplicate:
                 unique_templates.append(template)
@@ -852,8 +1022,9 @@ class DeduplicationDetector:
         """
         Combine reactant and product graphs using atom-correspondence
         edges.
+
+        This RDKit path expects pre and post graph atom IDs to already match.
         """
-        
         pre_atom_ids = set(pre_template_graph.nodes)
         post_atom_ids = set(post_template_graph.nodes)
 
@@ -910,9 +1081,7 @@ class DeduplicationDetector:
             coupled_graph.add_edge(
                 (self._PRE_PHASE, atom_id),
                 (self._POST_PHASE, atom_id),
-                relationship=(
-                    self._ATOM_CORRESPONDENCE_RELATIONSHIP
-                ),
+                relationship=self._ATOM_CORRESPONDENCE_RELATIONSHIP,
                 **{
                     self.EDGE_ATTRIBUTE: None,
                 },
@@ -1115,7 +1284,7 @@ class DeduplicationDetector:
                 f"Bond {bond_id} references undefined atom IDs "
                 f"{undefined_atoms} in {source}."
             )
-        
+
     @classmethod
     def _count_radical_atoms(
         cls,
@@ -1139,13 +1308,9 @@ class DeduplicationDetector:
         The fallback is intentionally limited to neutral, non-aromatic carbon
         atoms used by the current vinyl-radical implementation.
         """
-
-        # Best source when progression or RDKit has explicitly assigned the
-        # radical electron.
         if atom.GetNumRadicalElectrons() > 0:
             return True
 
-        # Current vinyl implementation only needs neutral carbon radicals.
         if atom.GetAtomicNum() != 6:
             return False
 
@@ -1155,21 +1320,13 @@ class DeduplicationDetector:
         if atom.GetIsAromatic():
             return False
 
-        # A normal carbon with an implicit hydrogen can have only three visible
-        # graph bonds. Do not classify it as a radical.
         try:
             atom.GetOwningMol().UpdatePropertyCache(strict=False)
             if atom.GetNumImplicitHs() > 0:
                 return False
         except RuntimeError:
-            # Unsanitized reaction products may not have a complete property
-            # cache. Continue with the graph-based valence calculation.
             pass
 
-        # Count actual graph bonds, including explicit hydrogen atoms.
-        #
-        # Do not blindly add GetNumExplicitHs(): RunReactants may retain both
-        # real hydrogen atoms and a duplicate product-SMARTS hydrogen count.
         graph_bond_valence = sum(
             bond.GetBondTypeAsDouble()
             for bond in atom.GetBonds()
@@ -1180,17 +1337,11 @@ class DeduplicationDetector:
             for neighbor in atom.GetNeighbors()
         )
 
-        # When no real hydrogen atoms are attached, the explicit-H property is
-        # part of the atom's valence description and must be included. When
-        # real H atoms are already present, ignore the property to avoid
-        # double-counting the same hydrogens.
         effective_valence = graph_bond_valence
 
         if explicit_hydrogen_neighbors == 0:
             effective_valence += atom.GetNumExplicitHs()
 
-        # Neutral carbon with effective valence three and no available implicit
-        # hydrogen is the carbon-centered radical used by vinyl progression.
         return abs(effective_valence - 3.0) < 1.0e-6
 
 
