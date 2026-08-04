@@ -5,12 +5,12 @@ REACTIONS = {
         'reactant_2': 'water',
         'product': 'silanediol',
         'delete_atom': True,
-        'reaction': '[Si:1]-[Cl:2].[OX2H2:3](-[H:4])-[H:5]>>[Si:1]-[OX2:3]-[H:4].[Cl:2]-[H:5]',
+        'reaction': '[Si:1]-[Cl:3].[OX2H2:2](-[H:4])-[H:5]>>[Si:1]-[OX2:2]-[H:4].[Cl:3]-[H:5]',
         'reference': {
             'smarts': None,
             'reaction_and_mechanism': None
         },
-        'comments': None
+        'notes': 'Atom maps 1 and 2 are reserved as AutoREACTER/LAMMPS bond/react initiator atoms.'
     },
     'Silanediol Polycondensation(Polysiloxane Formation)': {
         'same_reactants': True,
@@ -22,7 +22,7 @@ REACTIONS = {
             'smarts': None,
             'reaction_and_mechanism': None
         },
-        'comments': None
+        'notes': None
     },
     'Silanediol and Silanediol Copolycondensation(Polysiloxane Formation)': {
         'same_reactants': False,
@@ -35,6 +35,6 @@ REACTIONS = {
             'smarts': None,
             'reaction_and_mechanism': None
         },
-        'comments': None
+        'notes': None
     }
 }
