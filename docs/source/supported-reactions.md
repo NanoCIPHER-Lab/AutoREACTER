@@ -18,7 +18,7 @@ These reactions form ester linkages (`-COO-`) and typically release water (`H₂
 * *Reactants:* `-OH` + `-COOH`
 
 
-* **Hydroxy Carboxylic and Hydroxy Carboxylic Polycondensation**
+* **Hydroxy Carboxylic Acid and Hydroxy Carboxylic Acid Polycondensation**
 * *Reactants:* `-OH` + `-COOH` (Intermolecular)
 
 
