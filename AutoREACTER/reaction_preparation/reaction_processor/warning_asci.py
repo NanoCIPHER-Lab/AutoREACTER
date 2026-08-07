@@ -1,6 +1,5 @@
 
-import time
-
+# (unused import removed)
 
 def ascii_art(message: str) -> None:
     message = message.upper()
