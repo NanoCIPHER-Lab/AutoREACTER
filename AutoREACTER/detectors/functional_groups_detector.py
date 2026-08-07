@@ -140,10 +140,10 @@ class FunctionalGroupInfo:
     fg_name: str
     fg_smarts_1: str
     fg_count_1: int
-    fg_1_indexes: Optional[Tuple[int, ...]] = None
+    fg_1_indexes: Optional[Tuple[Tuple[int, ...], ...]] = None
     fg_smarts_2: Optional[str] = None
     fg_count_2: Optional[int] = None
-    fg_2_indexes: Optional[Tuple[int, ...]] = None
+    fg_2_indexes: Optional[Tuple[Tuple[int, ...], ...]] = None
 
 
 @dataclass(slots=True)
