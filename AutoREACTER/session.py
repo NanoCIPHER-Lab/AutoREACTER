@@ -17,7 +17,6 @@ if TYPE_CHECKING:
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
 
 
 @dataclass(slots=True)
@@ -68,29 +67,6 @@ class Session:
     reacter_files:
         Final REACTER file bundle. This should contain run-level files plus the
         final monomer and reaction metadata lists used by LAMMPS writers.
-
-    Workflow options
-    ----------------
-    deep_search_enabled:
-        If True, AutoREACTER performs deeper functional-group/reaction searching
-        when supported by the detector logic.
-
-    reaction_iteration_depth:
-        Maximum reaction-progression depth. An integer limits the number of
-        progression iterations. The string "all" can be used for unlimited or
-        exhaustive progression if supported downstream.
-
-    use_wildcard_atom_types:
-        If True, generated templates may use wildcard atom typing behavior where
-        supported.
-
-    deduplicate_reaction_templates:
-        If True, duplicate LAMMPS pre/post reaction template pairs are detected
-        and disabled by setting ReactionMetadata.activity_stats = False.
-
-    write_second_reaction_stage:
-        If True, AutoREACTER writes the second reaction-stage LAMMPS input files.
-        If False, only the first-stage reaction input is written.
     """
 
     # Core run configuration
@@ -108,6 +84,13 @@ class Session:
     # File bundles generated later in the pipeline
     ff_files: FFFiles | None = None
     reacter_files: REACTERFiles | None = None
+
+    # Workflow options copied from SimulationSetup
+    deep_search: bool = True
+    reaction_iteration_depth: int = 5
+    wildcards: bool = True
+    deduplicate_reaction_templates: bool = True
+    write_second_reaction_stage: bool = True
 
 
 
@@ -138,19 +121,44 @@ def _clear_directory(path: Path):
         elif item.is_dir():
             shutil.rmtree(item) 
 
-def _normalize_output_dir(raw_output_dir: str, input_path: Path) -> Path:
+def _resolve_output_dir(
+    raw_output_dir: str | None,
+    input_path: Path,
+    simulation_name: str,
+) -> Path:
     """
-    Normalize output_dir from JSON.
+    Resolve the final AutoREACTER output directory.
 
-    Supports:
-    - Linux/WSL absolute paths: /mnt/c/...
-    - Windows paths: C:/Users/...
-    - Relative paths: AutoREACTER_outputs/run_name
+    Behavior:
+    - If output_dir is missing, None, or empty, use the default location beside
+      the input JSON:
+          input_json_folder / AutoREACTER_outputs / simulation_name
+
+    - If output_dir is relative, resolve it relative to the input JSON folder.
+
+    - If output_dir is a Linux/WSL absolute path, use it directly.
+
+    - If output_dir is a Windows-style path such as C:/Users/... or C:\\Users\\...,
+      convert it to the WSL form /mnt/c/Users/....
+
+    This function returns an absolute path. Directory creation/clearing happens
+    in read_input().
     """
+    if raw_output_dir is None or str(raw_output_dir).strip() == "":
+        return (
+            input_path.parent
+            / "AutoREACTER_outputs"
+            / simulation_name
+        ).resolve()
+
     raw_output_dir = str(raw_output_dir).strip()
 
-    # Handle Windows-style path when running in WSL/Linux.
-    if len(raw_output_dir) >= 3 and raw_output_dir[1] == ":" and raw_output_dir[2] in {"/", "\\"}:
+    # Windows path while running from WSL/Linux.
+    if (
+        len(raw_output_dir) >= 3
+        and raw_output_dir[1] == ":"
+        and raw_output_dir[2] in {"/", "\\"}
+    ):
         drive = raw_output_dir[0].lower()
         rest = raw_output_dir[3:].replace("\\", "/")
         return Path(f"/mnt/{drive}/{rest}").resolve()
@@ -197,12 +205,16 @@ def read_input(input_file_path: str, clear_staging: bool = True) -> Session:
 
     raw_output_dir = input_data.get("output_dir", None)
 
-    if raw_output_dir is not None:
-        output_dir = _normalize_output_dir(raw_output_dir, input_path)
+    output_dir = _resolve_output_dir(
+        raw_output_dir=raw_output_dir,
+        input_path=input_path,
+        simulation_name=sim_name,
+    )
 
-    else:
-        # Backward-compatible default behavior.
-        output_dir = input_path.parent / "AutoREACTER_outputs" / sim_name
+    if output_dir.exists() and not output_dir.is_dir():
+        raise ValueError(
+            f"Resolved output_dir exists but is not a directory: {output_dir}"
+        )
 
     if output_dir.exists():
         _clear_directory(output_dir)
@@ -210,14 +222,6 @@ def read_input(input_file_path: str, clear_staging: bool = True) -> Session:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     images_dir = output_dir / "images"
-    images_dir.mkdir(parents=True, exist_ok=True)
-
-    if output_dir.exists():
-        _clear_directory(output_dir)  # Only clear this specific run's old files
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    # Now create the images folder safely inside the simulation folder
-    images_dir = Path((output_dir) / "images")
     images_dir.mkdir(parents=True, exist_ok=True)
 
     # 6. Return the State Object
@@ -231,6 +235,6 @@ def read_input(input_file_path: str, clear_staging: bool = True) -> Session:
         inputs=validated_inputs,
         staging_dir=staging_dir,
         output_dir=output_dir,
-        images_dir=images_dir
+        images_dir=images_dir,
     )
 
