@@ -389,7 +389,7 @@ Types
         current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         # 2. Build the custom header
-        map_file = f"# This nominal superimpose file for the {self.force_field} forcefield was generated on {current_time} for {file_name}.\n\n"
+        map_file = f"# This nominal superimpose file for the {self.force_field} forcefield was generated on {current_time} for {file_name} by AutoREACTER.\n\n"
 
         # Write counts
         map_file += f"{len(edge_atoms)} edgeIDs\n"
@@ -816,23 +816,10 @@ Types
             detector = DeduplicationDetector()
             active_template_reactions = detector.compare_lammps_templates(
                 template_files=active_template_reactions,
+                wildcards=self.wildcards,
             )
         else:
             print("[INFO] Skipping LAMMPS reaction-template deduplication.")
-
-        if self.wildcards:
-            wildcard_template_reactions = [
-                reaction
-                for reaction in active_template_reactions
-                if reaction.activity_stats
-            ]
-
-            detector = DeduplicationDetector()
-            wildcard_template_reactions = detector.compare_lammps_templates(
-                template_files=wildcard_template_reactions,
-            )
-
-            active_template_reactions = wildcard_template_reactions
 
         reacter_files = REACTERFiles(
             force_field_data=force_field_data,
