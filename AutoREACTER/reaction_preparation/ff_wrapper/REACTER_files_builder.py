@@ -42,14 +42,37 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+
+
+@dataclass(slots=True)
+class LMPMoleculeFiles:
+    """Compatibility wrapper for one LAMMPS molecule/template file."""
+    lmp_molecule_file: Path
+
+
+@dataclass(slots=True)
+class MoleculeFile:
+    """Compatibility wrapper used by existing simulation writers."""
+    id: str
+    molecule_files: LMPMoleculeFiles
+
+
+@dataclass(slots=True)
+class TemplateFile:
+    """Compatibility wrapper used by existing reaction writers/deduplication."""
+    reaction_id: int | None
+    map_file: Path | None
+    pre_reaction_file: LMPMoleculeFiles | None
+    post_reaction_file: LMPMoleculeFiles | None
+
+
 @dataclass(slots=True)
 class REACTERFiles:
-    """
-    Complete collection of output files from the LUNAR workflow.
-    """
-    force_field_data: Path             # force_field.data (FF parameters)
-    in_file: Path                      # in.fix_bond_react.script (LAMMPS input)
-
+    """Run-level files plus compatibility lists for existing writers."""
+    force_field_data: Path
+    in_file: Path
+    molecule_files: list[MoleculeFile]
+    template_files: list[TemplateFile]
 
 class REACTERFilesBuilder:
     def __init__(
@@ -678,6 +701,25 @@ Types
 
 
 
+    def _copy_path_to_final(self, src: Path | str | None, final_dir: Path) -> Path | None:
+        """Copy one generated REACTER file to the final output directory."""
+        if src is None:
+            return None
+
+        src = Path(src)
+        if not src.is_file():
+            logger.warning("Skipping missing REACTER output file: %s", src)
+            return None
+
+        final_dir.mkdir(parents=True, exist_ok=True)
+        dest = final_dir / src.name
+
+        if src.resolve() != dest.resolve():
+            shutil.copy2(src, dest)
+
+        return dest
+
+
     def molecule_template_preparation(self, session: "Session") -> None:
         """
         Top-level orchestrator that loops over reactions and prepares template
@@ -745,27 +787,103 @@ Types
             current_rxn_metadata.pre_reaction_file = Path(pre_out)
             current_rxn_metadata.post_reaction_file = Path(post_out)
         
+        final_dir = Path(session.output_dir)
+
+        force_field_data = self._copy_path_to_final(force_field_data, final_dir)
+        in_file = self._copy_path_to_final(in_file, final_dir)
+
+        if force_field_data is None:
+            raise FileNotFoundError("force_field.data was not copied to final output.")
+        if in_file is None:
+            raise FileNotFoundError("LAMMPS input file was not copied to final output.")
+
+        # Keep squeezed data on MonomerEntry, but rebuild old molecule_files list
+        # because current simulation writers still consume session.reacter_files.molecule_files.
+        molecule_files: list[MoleculeFile] = []
+        for monomer_entry in session.inputs.monomers:
+            moved_molecule_file = self._copy_path_to_final(
+                monomer_entry.lmp_molecule_file,
+                final_dir,
+            )
+            monomer_entry.lmp_molecule_file = moved_molecule_file
+
+            if moved_molecule_file is None:
+                continue
+
+            molecule_id = (
+                monomer_entry.name
+                or monomer_entry.data_id
+                or str(monomer_entry.id)
+            )
+
+            molecule_files.append(
+                MoleculeFile(
+                    id=str(molecule_id),
+                    molecule_files=LMPMoleculeFiles(
+                        lmp_molecule_file=moved_molecule_file,
+                    ),
+                )
+            )
+
+        # Keep squeezed data on ReactionMetadata, but rebuild old template_files list
+        # because current writers/deduplication still consume template wrappers.
+        template_files: list[TemplateFile] = []
+        for reaction in session.reaction_metadata:
+            reaction.map_file = self._copy_path_to_final(
+                reaction.map_file,
+                final_dir,
+            )
+            reaction.map_file_with_delete_ids = self._copy_path_to_final(
+                reaction.map_file_with_delete_ids,
+                final_dir,
+            )
+            reaction.pre_reaction_file = self._copy_path_to_final(
+                reaction.pre_reaction_file,
+                final_dir,
+            )
+            reaction.post_reaction_file = self._copy_path_to_final(
+                reaction.post_reaction_file,
+                final_dir,
+            )
+
+            if (
+                reaction.map_file is None
+                and reaction.pre_reaction_file is None
+                and reaction.post_reaction_file is None
+            ):
+                continue
+
+            template_files.append(
+                TemplateFile(
+                    reaction_id=reaction.reaction_id,
+                    map_file=reaction.map_file,
+                    pre_reaction_file=(
+                        LMPMoleculeFiles(reaction.pre_reaction_file)
+                        if reaction.pre_reaction_file is not None
+                        else None
+                    ),
+                    post_reaction_file=(
+                        LMPMoleculeFiles(reaction.post_reaction_file)
+                        if reaction.post_reaction_file is not None
+                        else None
+                    ),
+                )
+            )
+
         reacter_files = REACTERFiles(
             force_field_data=force_field_data,
-            in_file=in_file
-        )
-        from AutoREACTER.cache import RunDirectoryManager # Import here to avoid circular dependency issues, since RunDirectoryManager also imports REACTERFilesBuilder
-        # Move generated files to final output directory using RunDirectoryManager
-        run_manager = RunDirectoryManager(session.output_dir.parent)
-        reacter_files = run_manager.move_reacter_files(
-            reacter_files,
-            staging_dir=session.staging_dir,
-            final_dir=session.output_dir
+            in_file=in_file,
+            molecule_files=molecule_files,
+            template_files=template_files,
         )
 
         session.reacter_files = reacter_files
 
-        
-        # print (session.reacter_files)
+        print(f"[OK] Moved files → {final_dir}")
+
         detector = DeduplicationDetector()
-        template_files = session.reacter_files.template_files
-        # print("Comparing LAMMPS templates for duplicates...")
         session.reacter_files.template_files = detector.compare_lammps_templates(
-            template_files=template_files
+            template_files=session.reacter_files.template_files,
         )
+
         return None
