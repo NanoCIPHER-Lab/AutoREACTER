@@ -41,26 +41,6 @@ now = datetime.datetime.now()
 import logging
 logger = logging.getLogger(__name__)
 
-@dataclass(slots=True)
-class LMPMoleculeFiles:
-    """Simple container for paired LAMMPS data and molecule files."""
-    lmp_molecule_file: Path     # Associated *.molecule molecule template
-
-@dataclass(slots=True)
-class MoleculeFile:
-    """Wrapper associating a molecule ID with its generated data files."""
-    id: str
-    molecule_files: Optional[LMPMoleculeFiles]
-
-@dataclass(slots=True)
-class TemplateFile:
-    """
-    Container for pre- and post-reaction template file pairs.
-    """
-    reaction_id: Optional[int]
-    map_file: Optional[Path]
-    pre_reaction_file: Optional[LMPMoleculeFiles]
-    post_reaction_file: Optional[LMPMoleculeFiles]
 
 @dataclass(slots=True)
 class REACTERFiles:
@@ -69,8 +49,7 @@ class REACTERFiles:
     """
     force_field_data: Path             # force_field.data (FF parameters)
     in_file: Path                      # in.fix_bond_react.script (LAMMPS input)
-    molecule_files: list[MoleculeFile]
-    template_files: list[TemplateFile]
+
 
 class REACTERFilesBuilder:
     def __init__(
@@ -683,10 +662,7 @@ Types
             src = mol.molecule_files.lmp_molecule_file
             dest = self.cache_dir / f"{mol.id}.molecule"
             shutil.copy2(src, dest)
-            molecule_files.append(MoleculeFile(
-                id=mol.id,
-                molecule_files=LMPMoleculeFiles(lmp_molecule_file=dest)
-            ))
+            monomer.lmp_molecule_file = dest
 
         return ff_dest, in_dest, molecule_files
 
@@ -755,16 +731,9 @@ Types
                 edge_atoms = edge_atoms,
                 delete_ids = delete_ids
             )
-            template_files.append(TemplateFile(
-                reaction_id = id,
-                map_file = Path(map_path),
-                pre_reaction_file = LMPMoleculeFiles(
-                    lmp_molecule_file = Path(pre_out)
-                ),
-                post_reaction_file = LMPMoleculeFiles(
-                    lmp_molecule_file = Path(post_out)
-                )
-            ))
+            current_rxn_metadata.map_file = Path(map_path)
+            current_rxn_metadata.pre_reaction_file = Path(pre_out)
+            current_rxn_metadata.post_reaction_file = Path(post_out)
         
         reacter_files = REACTERFiles(
             force_field_data=force_field_data,

@@ -76,20 +76,21 @@ class MonomerEntry:
         count: Dictionary mapping replica tags to integer counts in counts mode.
         ratio: Molar ratio of the monomer in ratio mode.
         rdkit_mol: RDKit Mol object corresponding to the monomer SMILES.
-        molecule_3Dmol_path: Optional file path to the 3D .mol representation.
+        molecule_3Dmol_path: Optional file path to the 3D .mol representation. Later stages will generate this file.
+        lmp_molecule_file: Optional file path to the LAMMPS molecule file. Later stages will generate this file.
         num_atoms: Number of atoms in the monomer with hydrogens included.
         molecular_weight: Molecular weight of the monomer from RDKit.
         status: Boolean indicating whether the monomer should be included.
     """
-
     id: int
     data_id: str
     name: str | None
     smiles: str
-    count: dict | None  # None only if ratio mode.
-    ratio: float | None  # None only if counts mode.
+    count: dict | None
+    ratio: float | None
     rdkit_mol: Chem.Mol | None = None
     molecule_3Dmol_path: Optional[Path] = None
+    lmp_molecule_file: Optional[Path] = None
     num_atoms: int | None = None
     molecular_weight: float | None = None
     status: bool = True
