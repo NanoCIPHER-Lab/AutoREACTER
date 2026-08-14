@@ -15,22 +15,106 @@ from AutoREACTER.reaction_preparation.ff_wrapper.REACTER_files_builder import RE
 if TYPE_CHECKING:
     from AutoREACTER.detectors.functional_groups_detector import MonomerRole
 
-@dataclass
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Literal
+
+
+@dataclass(slots=True)
 class Session:
     """
-    Holds the validated inputs and directory paths for a single AutoREACTER run.
-    This acts as the 'state object' passed through the pipeline.
+    Runtime state container for one AutoREACTER workflow.
+
+    A Session stores the validated input model, run directories, and all
+    intermediate/final objects generated as the pipeline progresses.
+
+    The object is intentionally passed through the full AutoREACTER pipeline so
+    each stage can attach its own outputs without requiring large return-value
+    chains.
+
+    Pipeline state
+    --------------
+    inputs:
+        Validated simulation setup parsed from the input JSON.
+
+    staging_dir:
+        Temporary working directory used for intermediate/cache files.
+
+    output_dir:
+        Final AutoREACTER output directory for this run.
+
+    images_dir:
+        Directory where molecule, functional-group, reaction, and template
+        visualization images are saved.
+
+    monomer_roles:
+        MonomerRole objects after functional-group classification.
+
+    reaction_instances:
+        Detected reaction candidates before full reaction preparation.
+
+    non_reactants:
+        MonomerRole objects selected as non-reactive species.
+
+    reaction_metadata:
+        Prepared reaction objects. Each ReactionMetadata object stores RDKit
+        mappings, template atoms, initiators, edge atoms, byproducts, generated
+        REACTER template files, map files, and activity status.
+
+    ff_files:
+        Raw force-field and LUNAR output files before REACTER-specific file
+        organization.
+
+    reacter_files:
+        Final REACTER file bundle. This should contain run-level files plus the
+        final monomer and reaction metadata lists used by LAMMPS writers.
+
+    Workflow options
+    ----------------
+    deep_search_enabled:
+        If True, AutoREACTER performs deeper functional-group/reaction searching
+        when supported by the detector logic.
+
+    reaction_iteration_depth:
+        Maximum reaction-progression depth. An integer limits the number of
+        progression iterations. The string "all" can be used for unlimited or
+        exhaustive progression if supported downstream.
+
+    use_wildcard_atom_types:
+        If True, generated templates may use wildcard atom typing behavior where
+        supported.
+
+    deduplicate_reaction_templates:
+        If True, duplicate LAMMPS pre/post reaction template pairs are detected
+        and disabled by setting ReactionMetadata.activity_stats = False.
+
+    write_second_reaction_stage:
+        If True, AutoREACTER writes the second reaction-stage LAMMPS input files.
+        If False, only the first-stage reaction input is written.
     """
+
+    # Core run configuration
     inputs: SimulationSetup
     staging_dir: Path
     output_dir: Path
     images_dir: Path
-    monomer_roles: list["MonomerRole"] = None
-    reaction_instances: list[ReactionInstance] = None
-    non_reactants: list["MonomerRole"] = None
-    reaction_metadata: list[ReactionMetadata] = None  # Placeholder for actual ReactionMetadata type
+
+    # Pipeline-generated state
+    monomer_roles: list["MonomerRole"] = field(default_factory=list)
+    reaction_instances: list[ReactionInstance] = field(default_factory=list)
+    non_reactants: list["MonomerRole"] = field(default_factory=list)
+    reaction_metadata: list[ReactionMetadata] = field(default_factory=list)
+
+    # File bundles generated later in the pipeline
     ff_files: FFFiles | None = None
-    reacter_files: REACTERFiles = None  # Placeholder for the actual REACTERFiles dataclass
+    reacter_files: REACTERFiles | None = None
+
+    # Workflow options
+    deep_search: bool = True
+    reaction_iteration_depth: int | Literal["all"] = 5
+    wildcards: bool = True
+    deduplicate_reaction_templates: bool = True
+    write_second_reaction_stage: bool = True
 
 def _resolve_input_path(input_file_path: str) -> Path:
     """

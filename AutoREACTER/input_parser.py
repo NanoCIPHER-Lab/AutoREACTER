@@ -144,6 +144,13 @@ class SimulationSetup:
         ratio: Optional mapping of monomer IDs to ratios.
         number_of_total_atoms: Optional list of total atom targets.
         box_estimates: Optional estimated box size placeholder.
+        deep_search: Enables deeper reaction/functional-group searching.
+        reaction_iteration_depth: Maximum reaction progression depth. Use an
+            integer or "all".
+        wildcards: Enables wildcard handling when supported downstream.
+        deduplicate_reaction_templates: Enables LAMMPS template deduplication.
+        write_second_reaction_stage: Enables writing the second reaction-stage
+            LAMMPS input files.
     """
 
     simulation_name: str
@@ -160,6 +167,11 @@ class SimulationSetup:
     ratio: dict[int, float] | None = None
     number_of_total_atoms: list[int] | None = None
     box_estimates: float | None = None
+    deep_search: bool = True
+    reaction_iteration_depth: int | Literal["all"] = 5
+    wildcards: bool = True
+    deduplicate_reaction_templates: bool = True
+    write_second_reaction_stage: bool = True
 
 
 class InputParser:
@@ -210,6 +222,30 @@ class InputParser:
 
         loop, max_loop_count = self._validate_loop(inputs)
 
+        deep_search = self._validate_bool_option(
+            inputs,
+            key="deep_search",
+            default=True,
+        )
+        reaction_iteration_depth = self._validate_reaction_iteration_depth(
+            inputs
+        )
+        wildcards = self._validate_bool_option(
+            inputs,
+            key="wildcards",
+            default=True,
+        )
+        deduplicate_reaction_templates = self._validate_bool_option(
+            inputs,
+            key="deduplicate_reaction_templates",
+            default=True,
+        )
+        write_second_reaction_stage = self._validate_bool_option(
+            inputs,
+            key="write_second_reaction_stage",
+            default=True,
+        )
+
         return SimulationSetup(
             simulation_name=simulation_name,
             temperature=validated_simulations["temperatures"],
@@ -222,6 +258,11 @@ class InputParser:
             loop=loop,
             max_loop_count=max_loop_count,
             input_json=inputs,
+            deep_search=deep_search,
+            reaction_iteration_depth=reaction_iteration_depth,
+            wildcards=wildcards,
+            deduplicate_reaction_templates=deduplicate_reaction_templates,
+            write_second_reaction_stage=write_second_reaction_stage,
         )
 
     def molecule_representation_of_initial_molecules(
