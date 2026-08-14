@@ -172,6 +172,7 @@ class DeduplicationDetector:
         pre_file_path: str | Path,
         post_file_path: str | Path,
         comparison_group: str | None = None,
+        wildcards: bool = False,
     ) -> bool:
         """
         Check LAMMPS template duplication using:
@@ -209,6 +210,16 @@ class DeduplicationDetector:
         if not pre_to_post_mapping:
             raise ValueError(
                 f"No Equivalences mapping found in {map_file_path}."
+            )
+
+        if wildcards:
+            pre_graph, post_graph, pre_to_post_mapping = (
+                self._apply_lammps_wildcards(
+                    pre_graph=pre_graph,
+                    post_graph=post_graph,
+                    pre_to_post_mapping=pre_to_post_mapping,
+                    map_file_path=map_file_path,
+                )
             )
 
         coupled_graph = self._couple_lammps_graphs(
@@ -341,6 +352,110 @@ class DeduplicationDetector:
             post_to_pre[post_atom_id] = pre_atom_id
 
         return mapping
+
+    @staticmethod
+    def _read_lammps_edge_ids(
+        map_file_path: str | Path,
+    ) -> list[int]:
+        """
+        Read pre-template EdgeIDs from a LAMMPS bond/react map file.
+        """
+        map_file_path = Path(map_file_path)
+
+        section_headers = {
+            "InitiatorIDs",
+            "EdgeIDs",
+            "Equivalences",
+            "DeleteIDs",
+        }
+
+        current_section: str | None = None
+        edge_ids: list[int] = []
+
+        with map_file_path.open("r", encoding="utf-8") as file:
+            for raw_line in file:
+                line = raw_line.split("#", maxsplit=1)[0].strip()
+
+                if not line:
+                    continue
+
+                first_token = line.split()[0]
+
+                if line in section_headers:
+                    current_section = line
+                    continue
+
+                if first_token in section_headers:
+                    current_section = first_token
+                    continue
+
+                if current_section != "EdgeIDs":
+                    continue
+
+                try:
+                    edge_ids.append(int(first_token))
+                except ValueError:
+                    continue
+
+        return edge_ids
+
+    @staticmethod
+    def _remove_nodes_if_present(
+        graph: nx.Graph,
+        node_ids: list[int],
+    ) -> nx.Graph:
+        """
+        Return a graph copy with selected nodes removed.
+        """
+        graph_copy = graph.copy()
+
+        graph_copy.remove_nodes_from(
+            node_id
+            for node_id in node_ids
+            if node_id in graph_copy
+        )
+
+        return graph_copy
+
+    def _apply_lammps_wildcards(
+        self,
+        pre_graph: nx.Graph,
+        post_graph: nx.Graph,
+        pre_to_post_mapping: dict[int, int],
+        map_file_path: Path,
+    ) -> tuple[nx.Graph, nx.Graph, dict[int, int]]:
+        """
+        Apply wildcard-style template comparison.
+
+        EdgeIDs are defined in pre-template atom ID space. Their equivalent
+        post-template atom IDs are obtained from the Equivalences section.
+        These atoms are removed before graph comparison.
+        """
+        pre_edge_ids = self._read_lammps_edge_ids(map_file_path)
+
+        post_edge_ids = [
+            pre_to_post_mapping[pre_atom_id]
+            for pre_atom_id in pre_edge_ids
+            if pre_atom_id in pre_to_post_mapping
+        ]
+
+        pre_graph = self._remove_nodes_if_present(
+            pre_graph,
+            pre_edge_ids,
+        )
+        post_graph = self._remove_nodes_if_present(
+            post_graph,
+            post_edge_ids,
+        )
+
+        pre_to_post_mapping = {
+            pre_atom_id: post_atom_id
+            for pre_atom_id, post_atom_id in pre_to_post_mapping.items()
+            if pre_atom_id not in pre_edge_ids
+            and post_atom_id not in post_edge_ids
+        }
+
+        return pre_graph, post_graph, pre_to_post_mapping
 
     def _couple_lammps_graphs(
         self,
@@ -522,6 +637,7 @@ class DeduplicationDetector:
                 pre_file_path=pre_file_path,
                 post_file_path=post_file_path,
                 comparison_group=self.LAMMPS_COMPARISON_GROUP,
+                wildcards=wildcards,
             )
 
             results[str(pre_file_path)] = duplicate
@@ -747,6 +863,7 @@ class DeduplicationDetector:
             comparison_group,
             [],
         ).clear()
+    
 
     # ------------------------------------------------------------------
     # RDKit graph conversion
@@ -903,6 +1020,7 @@ class DeduplicationDetector:
     def compare_lammps_templates(
         self,
         template_files: list["ReactionMetadata"],
+        wildcards: bool = False,
     ) -> list["ReactionMetadata"]:
         """
         Compare LAMMPS pre/post molecule-template pairs.
@@ -953,6 +1071,7 @@ class DeduplicationDetector:
                 pre_file_path=pre_file_path,
                 post_file_path=post_file_path,
                 comparison_group=self.LAMMPS_COMPARISON_GROUP,
+                wildcards=wildcards,
             )
 
             if duplicate:
