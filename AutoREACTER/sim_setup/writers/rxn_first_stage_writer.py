@@ -143,8 +143,8 @@ class RxnFirstStageWriter:
         for template in (rf.template_files):
 
             # Extract filenames from the dataclass fields
-            pre_file = template.pre_reaction_file.lmp_molecule_file.name
-            post_file = template.post_reaction_file.lmp_molecule_file.name
+            pre_file = template.pre_reaction_file.name
+            post_file = template.post_reaction_file.name
             map_file = template.map_file.name
             id = template.reaction_id
             pre_id = f"mol_pre_{id}"
@@ -217,8 +217,8 @@ class RxnFirstStageWriter:
         for template in rf.template_files:
             files: list[Path] = [
                 template.map_file,
-                template.pre_reaction_file.lmp_molecule_file,
-                template.post_reaction_file.lmp_molecule_file,
+                template.pre_reaction_file,
+                template.post_reaction_file,
             ]
 
             for file in files:

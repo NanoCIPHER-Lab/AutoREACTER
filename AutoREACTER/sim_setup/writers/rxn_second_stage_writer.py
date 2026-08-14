@@ -139,8 +139,8 @@ class RxnSecondStageWriter:
             post_id = f"mol_post_{i}"
             
             # Extract molecule and mapping file names from template objects
-            pre_file = template.pre_reaction_file.lmp_molecule_file.name
-            post_file = template.post_reaction_file.lmp_molecule_file.name
+            pre_file = template.pre_reaction_file.name
+            post_file = template.post_reaction_file.name
             map_file = template.map_file.name
             
             # Register molecule templates in LAMMPS
@@ -208,8 +208,8 @@ class RxnSecondStageWriter:
             # Collect all files associated with this reaction template
             files = [
                 template.map_file,
-                template.pre_reaction_file.lmp_molecule_file,
-                template.post_reaction_file.lmp_molecule_file
+                template.pre_reaction_file,
+                template.post_reaction_file
             ]
             
             # Copy each file to the destination, preserving metadata
