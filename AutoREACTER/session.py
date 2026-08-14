@@ -96,8 +96,8 @@ class Session:
     # Core run configuration
     inputs: SimulationSetup
     staging_dir: Path
-    output_dir: Path
-    images_dir: Path
+    output_dir: Path # coustem output dir yet to implement
+    images_dir: Path 
 
     # Pipeline-generated state
     monomer_roles: list["MonomerRole"] = field(default_factory=list)
@@ -109,12 +109,7 @@ class Session:
     ff_files: FFFiles | None = None
     reacter_files: REACTERFiles | None = None
 
-    # Workflow options
-    deep_search: bool = True
-    reaction_iteration_depth: int | Literal["all"] = 5
-    wildcards: bool = True
-    deduplicate_reaction_templates: bool = True
-    write_second_reaction_stage: bool = True
+
 
 def _resolve_input_path(input_file_path: str) -> Path:
     """

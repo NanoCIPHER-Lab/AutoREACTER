@@ -168,11 +168,11 @@ class SimulationSetup:
     ratio: dict[int, float] | None = None
     number_of_total_atoms: list[int] | None = None
     box_estimates: float | None = None
-    deep_search: bool = True
-    reaction_iteration_depth: int = 5
-    wildcards: bool = True
-    deduplicate_reaction_templates: bool = True
-    write_second_reaction_stage: bool = True
+    deep_search: bool = True # yet to implement
+    reaction_iteration_depth: int = 5 # yet to implement
+    wildcards: bool = True # yet to implement
+    deduplicate_reaction_templates: bool = True # yet to implement
+    write_second_reaction_stage: bool = True # yet to implement
 
 
 class InputParser:
