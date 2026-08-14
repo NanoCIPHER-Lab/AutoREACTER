@@ -44,9 +44,11 @@ logger = logging.getLogger(__name__)
 
 @dataclass(slots=True)
 class REACTERFiles:
-    """Run-level files plus compatibility lists for existing writers."""
+    """Run-level files plus final monomer/reaction metadata lists."""
     force_field_data: Path
     in_file: Path
+    molecule_files: list
+    template_files: list
 
 class REACTERFilesBuilder:
     def __init__(
@@ -771,37 +773,14 @@ Types
         if in_file is None:
             raise FileNotFoundError("LAMMPS input file was not copied to final output.")
 
-        # Keep squeezed data on MonomerEntry, but rebuild old molecule_files list
-        # because current simulation writers still consume session.reacter_files.molecule_files.
-        molecule_files: list[MoleculeFile] = []
+        # Store final monomer molecule paths directly on MonomerEntry.
         for monomer_entry in session.inputs.monomers:
-            moved_molecule_file = self._copy_path_to_final(
+            monomer_entry.lmp_molecule_file = self._copy_path_to_final(
                 monomer_entry.lmp_molecule_file,
                 final_dir,
             )
-            monomer_entry.lmp_molecule_file = moved_molecule_file
 
-            if moved_molecule_file is None:
-                continue
-
-            molecule_id = (
-                monomer_entry.name
-                or monomer_entry.data_id
-                or str(monomer_entry.id)
-            )
-
-            molecule_files.append(
-                MoleculeFile(
-                    id=str(molecule_id),
-                    molecule_files=LMPMoleculeFiles(
-                        lmp_molecule_file=moved_molecule_file,
-                    ),
-                )
-            )
-
-        # Keep squeezed data on ReactionMetadata, but rebuild old template_files list
-        # because current writers/deduplication still consume template wrappers.
-        template_files: list[TemplateFile] = []
+        # Store final reaction template/map paths directly on ReactionMetadata.
         for reaction in session.reaction_metadata:
             reaction.map_file = self._copy_path_to_final(
                 reaction.map_file,
@@ -820,44 +799,15 @@ Types
                 final_dir,
             )
 
-            if (
-                reaction.map_file is None
-                and reaction.pre_reaction_file is None
-                and reaction.post_reaction_file is None
-            ):
-                continue
-
-            template_files.append(
-                TemplateFile(
-                    reaction_id=reaction.reaction_id,
-                    map_file=reaction.map_file,
-                    pre_reaction_file=(
-                        LMPMoleculeFiles(reaction.pre_reaction_file)
-                        if reaction.pre_reaction_file is not None
-                        else None
-                    ),
-                    post_reaction_file=(
-                        LMPMoleculeFiles(reaction.post_reaction_file)
-                        if reaction.post_reaction_file is not None
-                        else None
-                    ),
-                )
-            )
-
         reacter_files = REACTERFiles(
             force_field_data=force_field_data,
             in_file=in_file,
-            molecule_files=molecule_files,
-            template_files=template_files,
+            molecule_files=list(session.inputs.monomers),
+            template_files=list(session.reaction_metadata),
         )
 
         session.reacter_files = reacter_files
 
         print(f"[OK] Moved files → {final_dir}")
-
-        detector = DeduplicationDetector()
-        session.reacter_files.template_files = detector.compare_lammps_templates(
-            template_files=session.reacter_files.template_files,
-        )
 
         return None
