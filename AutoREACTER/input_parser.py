@@ -159,7 +159,6 @@ class SimulationSetup:
     density: list[float]
     force_field: str | None
     monomers: list[MonomerEntry]
-    loop : bool = True
     input_json: dict | None = None
     max_loop_count: int | None = None
     simulations: list[Simulation] | None = None
@@ -169,6 +168,7 @@ class SimulationSetup:
     number_of_total_atoms: list[int] | None = None
     box_estimates: float | None = None
     deep_search: bool = True # yet to implement
+    loop : bool = True
     reaction_iteration_depth: int = 5 # yet to implement
     wildcards: bool = True # yet to implement
     deduplicate_reaction_templates: bool = True # yet to implement
@@ -224,8 +224,13 @@ class InputParser:
         reaction_iteration_depth = self._validate_reaction_iteration_depth(
             inputs
         )
-        loop = reaction_iteration_depth > 0
-        max_loop_count = reaction_iteration_depth if loop else None
+
+        if reaction_iteration_depth == 0:
+            loop = False
+            max_loop_count = None
+        else:
+            loop = True
+            max_loop_count = reaction_iteration_depth
 
         deep_search = self._validate_bool_option(
             inputs,

@@ -72,7 +72,7 @@ class Session:
     # Core run configuration
     inputs: SimulationSetup
     staging_dir: Path
-    output_dir: Path # coustem output dir yet to implement
+    output_dir: Path
     images_dir: Path 
 
     # Pipeline-generated state
@@ -84,6 +84,10 @@ class Session:
     # File bundles generated later in the pipeline
     ff_files: FFFiles | None = None
     reacter_files: REACTERFiles | None = None
+
+    # Runtime counters / sub-sessions attached during reaction preparation
+    reaction_id_counter: int = 0
+    reaction_progression_session: object | None = None
 
     # Workflow options copied from SimulationSetup
     deep_search: bool = True
