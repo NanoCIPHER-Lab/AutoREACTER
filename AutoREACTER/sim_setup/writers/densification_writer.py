@@ -323,7 +323,7 @@ class DensificationWriter:
             shutil.copy2(rf.force_field_data, dest_dir / rf.force_field_data.name)
         
         for mol in rf.molecule_files:
-            if (mol.molecule_files and 
+            if (mol.lmp_molecule_file and 
                 mol.lmp_molecule_file and 
                 mol.lmp_molecule_file.exists()):
                 src = mol.lmp_molecule_file
