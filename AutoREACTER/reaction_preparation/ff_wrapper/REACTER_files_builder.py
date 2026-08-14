@@ -71,6 +71,10 @@ class REACTERFilesBuilder:
         )
 
         self.force_field = self.updated_inputs_with_3d_mols.force_field
+        self.wildcards = self.updated_inputs_with_3d_mols.wildcards
+        self.deduplicate_reaction_templates = (
+            self.updated_inputs_with_3d_mols.deduplicate_reaction_templates
+        )
         
 
     def _get_ending_integer(self, s: str) -> int | None:
@@ -808,10 +812,27 @@ Types
             and reaction.post_reaction_file is not None
         ]
 
-        detector = DeduplicationDetector()
-        active_template_reactions = detector.compare_lammps_templates(
-            template_files=active_template_reactions,
-        )
+        if self.deduplicate_reaction_templates:
+            detector = DeduplicationDetector()
+            active_template_reactions = detector.compare_lammps_templates(
+                template_files=active_template_reactions,
+            )
+        else:
+            print("[INFO] Skipping LAMMPS reaction-template deduplication.")
+
+        if self.wildcards:
+            wildcard_template_reactions = [
+                reaction
+                for reaction in active_template_reactions
+                if reaction.activity_stats
+            ]
+
+            detector = DeduplicationDetector()
+            wildcard_template_reactions = detector.compare_lammps_templates(
+                template_files=wildcard_template_reactions,
+            )
+
+            active_template_reactions = wildcard_template_reactions
 
         reacter_files = REACTERFiles(
             force_field_data=force_field_data,

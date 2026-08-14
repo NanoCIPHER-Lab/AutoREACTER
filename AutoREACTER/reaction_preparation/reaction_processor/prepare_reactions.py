@@ -190,7 +190,7 @@ class PrepareReactions:
         prepared_reactions = self._prepare_reactions_stage(session)
         session.reaction_metadata = prepared_reactions
 
-        if session.inputs.loop:
+        if session.inputs.deep_search and session.inputs.loop:
             progression = ReactionProgression(session, preparer=self)
             final_reactions = progression.reaction_progression()
             session.reaction_metadata = final_reactions
