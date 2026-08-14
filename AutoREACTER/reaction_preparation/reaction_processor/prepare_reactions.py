@@ -23,9 +23,8 @@ from AutoREACTER.detectors.reaction_detector import (
     FunctionalGroupInfo,
     ReactionInstance,
 )
-from AutoREACTER.reaction_preparation.ff_wrapper.REACTER_files_builder import (
-    logger,
-)
+import logging
+logger = logging.getLogger(__name__)
 from AutoREACTER.reaction_preparation.reaction_processor.reaction_progression import (
     ReactionProgression,
 )

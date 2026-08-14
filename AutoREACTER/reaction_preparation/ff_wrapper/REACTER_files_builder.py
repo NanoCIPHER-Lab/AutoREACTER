@@ -624,29 +624,21 @@ Types
 
                 return pre_out, post_out, map_path
     
-    def _copy_lunar_files_to_cache(self, ff_files: FFFiles) -> tuple[Path, Path, list[MoleculeFile]]:
+    def _copy_lunar_files_to_cache(self, ff_files: FFFiles) -> tuple[Path, Path]:
         """
-        Copy all LUNAR output files into cache_dir.
-        
-        Copies force_field.data, in_file, and all molecule files (.lmpmol -> .molecule).
+        Copy LUNAR output files into cache_dir.
 
-        Parameters
-        ----------
-        ff_files : FFFiles
-
-        Returns
-        -------
-        tuple[Path, Path, list[MoleculeFile]]
-            - force_field_data destination path
-            - in_file destination path  
-            - list of MoleculeFile with updated cache paths
+        The run-level files are returned directly. Monomer-level molecule
+        files are attached to the existing MonomerEntry objects on
+        session.inputs.monomers.
         """
         ff_dest = self.cache_dir / ff_files.force_field_data.name
         try:
             shutil.copy2(ff_files.force_field_data, ff_dest)
         except Exception as e:
             raise FileNotFoundError(
-                f"Failed to copy force field data from '{ff_files.force_field_data}' to '{ff_dest}'."
+                f"Failed to copy force field data from "
+                f"'{ff_files.force_field_data}' to '{ff_dest}'."
             ) from e
 
         if not ff_dest.is_file():
@@ -657,14 +649,33 @@ Types
         in_dest = self.cache_dir / ff_files.in_file.name
         shutil.copy2(ff_files.in_file, in_dest)
 
-        molecule_files: list[MoleculeFile] = []
-        for mol in ff_files.molecule_files:
-            src = mol.molecule_files.lmp_molecule_file
-            dest = self.cache_dir / f"{mol.id}.molecule"
-            shutil.copy2(src, dest)
-            monomer.lmp_molecule_file = dest
+        monomers_by_key = {}
+        for monomer_entry in self.session.inputs.monomers:
+            monomers_by_key[str(monomer_entry.id)] = monomer_entry
+            monomers_by_key[str(monomer_entry.data_id)] = monomer_entry
+            if monomer_entry.name is not None:
+                monomers_by_key[str(monomer_entry.name)] = monomer_entry
 
-        return ff_dest, in_dest, molecule_files
+        for mol_file in ff_files.molecule_files:
+            src = mol_file.molecule_files.lmp_molecule_file
+            mol_id = str(mol_file.id)
+            dest = self.cache_dir / f"{mol_id}.molecule"
+            shutil.copy2(src, dest)
+
+            monomer_entry = monomers_by_key.get(mol_id)
+            if monomer_entry is None:
+                logger.warning(
+                    "Could not attach copied molecule file %s to a MonomerEntry "
+                    "using molecule id %s.",
+                    dest,
+                    mol_id,
+                )
+                continue
+
+            monomer_entry.lmp_molecule_file = dest
+
+        return ff_dest, in_dest
+
 
 
     def molecule_template_preparation(self, session: "Session") -> None:
@@ -686,9 +697,8 @@ Types
         """
         ff_files = session.ff_files
         prepared_reactions_with_3d_mols = session.reaction_metadata # <--- CHANGED FROM session.inputs
-        template_files = []
         pre_and_post_files = ff_files.template_files
-        force_field_data, in_file, molecule_files = self._copy_lunar_files_to_cache(ff_files)
+        force_field_data, in_file = self._copy_lunar_files_to_cache(ff_files)
         updated_inputs_with_3d_mols= session.inputs
         # Iterate each reaction entry and build templates for that single reaction only.
         for rxn in pre_and_post_files:
@@ -737,9 +747,7 @@ Types
         
         reacter_files = REACTERFiles(
             force_field_data=force_field_data,
-            in_file=in_file,
-            molecule_files=molecule_files,
-            template_files=template_files
+            in_file=in_file
         )
         from AutoREACTER.cache import RunDirectoryManager # Import here to avoid circular dependency issues, since RunDirectoryManager also imports REACTERFilesBuilder
         # Move generated files to final output directory using RunDirectoryManager
