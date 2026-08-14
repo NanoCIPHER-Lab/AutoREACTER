@@ -42,37 +42,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-
-
-@dataclass(slots=True)
-class LMPMoleculeFiles:
-    """Compatibility wrapper for one LAMMPS molecule/template file."""
-    lmp_molecule_file: Path
-
-
-@dataclass(slots=True)
-class MoleculeFile:
-    """Compatibility wrapper used by existing simulation writers."""
-    id: str
-    molecule_files: LMPMoleculeFiles
-
-
-@dataclass(slots=True)
-class TemplateFile:
-    """Compatibility wrapper used by existing reaction writers/deduplication."""
-    reaction_id: int | None
-    map_file: Path | None
-    pre_reaction_file: LMPMoleculeFiles | None
-    post_reaction_file: LMPMoleculeFiles | None
-
-
 @dataclass(slots=True)
 class REACTERFiles:
     """Run-level files plus compatibility lists for existing writers."""
     force_field_data: Path
     in_file: Path
-    molecule_files: list[MoleculeFile]
-    template_files: list[TemplateFile]
 
 class REACTERFilesBuilder:
     def __init__(
