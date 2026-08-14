@@ -140,7 +140,10 @@ class RxnFirstStageWriter:
         lines.append("#------------Define Reaction Templates------------")
         rxn_commands: list[str] = []
 
-        for template in (rf.template_files):
+        for template in [
+            t for t in rf.template_files
+            if getattr(t, "activity_stats", True)
+        ]:
 
             # Extract filenames from the dataclass fields
             pre_file = template.pre_reaction_file.name
@@ -214,7 +217,10 @@ class RxnFirstStageWriter:
         """
         rf = self.reacter_files
 
-        for template in rf.template_files:
+        for template in [
+            t for t in rf.template_files
+            if getattr(t, "activity_stats", True)
+        ]:
             files: list[Path] = [
                 template.map_file,
                 template.pre_reaction_file,

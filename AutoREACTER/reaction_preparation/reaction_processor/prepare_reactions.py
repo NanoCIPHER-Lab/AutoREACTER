@@ -1154,6 +1154,9 @@ class PrepareReactions:
         names = []
 
         for metadata in metadata_list:
+            if not metadata.activity_stats:
+                continue
+
             reactant = Chem.RWMol(metadata.reactant_combined_RDmol)
             product = Chem.RWMol(metadata.product_combined_RDmol)
             names.extend(
@@ -1235,6 +1238,9 @@ class PrepareReactions:
             highlight_colors.extend(
                 [reactant_color_map, product_color_map]
             )
+
+        if not mols:
+            return None
 
         return Draw.MolsToGridImage(
             mols,

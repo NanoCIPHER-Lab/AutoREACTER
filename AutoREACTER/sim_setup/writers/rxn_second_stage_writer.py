@@ -133,7 +133,11 @@ class RxnSecondStageWriter:
         # Define reaction templates and build reaction fix commands
         lines.append("#------------Define Reaction Templates------------")
         rxn_commands = []
-        for i, template in enumerate(rf.template_files, 1):
+        for template in [
+            t for t in rf.template_files
+            if getattr(t, "activity_stats", True)
+        ]:
+            i = template.reaction_id
             # Create unique identifiers for pre- and post-reaction molecule templates
             pre_id = f"mol_pre_{i}"
             post_id = f"mol_post_{i}"
@@ -204,7 +208,10 @@ class RxnSecondStageWriter:
             FileNotFoundError: If any required reaction file is missing or cannot be accessed
         """
         rf = self.reacter_files
-        for template in rf.template_files:
+        for template in [
+            t for t in rf.template_files
+            if getattr(t, "activity_stats", True)
+        ]:
             # Collect all files associated with this reaction template
             files = [
                 template.map_file,

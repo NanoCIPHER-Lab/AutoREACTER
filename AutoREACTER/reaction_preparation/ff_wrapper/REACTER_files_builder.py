@@ -799,11 +799,25 @@ Types
                 final_dir,
             )
 
+        active_template_reactions = [
+            reaction
+            for reaction in session.reaction_metadata
+            if reaction.activity_stats
+            and reaction.map_file is not None
+            and reaction.pre_reaction_file is not None
+            and reaction.post_reaction_file is not None
+        ]
+
+        detector = DeduplicationDetector()
+        active_template_reactions = detector.compare_lammps_templates(
+            template_files=active_template_reactions,
+        )
+
         reacter_files = REACTERFiles(
             force_field_data=force_field_data,
             in_file=in_file,
             molecule_files=list(session.inputs.monomers),
-            template_files=list(session.reaction_metadata),
+            template_files=active_template_reactions,
         )
 
         session.reacter_files = reacter_files
