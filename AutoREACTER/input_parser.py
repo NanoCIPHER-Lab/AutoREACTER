@@ -151,6 +151,13 @@ class SimulationSetup:
         deduplicate_reaction_templates: Enables LAMMPS template deduplication.
         write_second_reaction_stage: Enables writing the second reaction-stage
             LAMMPS input files.
+        deep_search: Enables deeper reaction/functional-group searching.
+        reaction_iteration_depth: Maximum reaction progression depth. Use an
+            integer or "all".
+        wildcards: Enables wildcard handling when supported downstream.
+        deduplicate_reaction_templates: Enables LAMMPS template deduplication.
+        write_second_reaction_stage: Enables writing the second reaction-stage
+            LAMMPS input files.
     """
 
     simulation_name: str
@@ -167,6 +174,11 @@ class SimulationSetup:
     ratio: dict[int, float] | None = None
     number_of_total_atoms: list[int] | None = None
     box_estimates: float | None = None
+    deep_search: bool = True
+    reaction_iteration_depth: int | Literal["all"] = 5
+    wildcards: bool = True
+    deduplicate_reaction_templates: bool = True
+    write_second_reaction_stage: bool = True
     deep_search: bool = True
     reaction_iteration_depth: int | Literal["all"] = 5
     wildcards: bool = True
