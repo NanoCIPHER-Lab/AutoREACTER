@@ -145,72 +145,75 @@ REACTIONS = {
 
     'reference': {'smarts': None, 'reaction_and_mechanism': None},
     'comments': None,
-    'notes': (
-        'Forced H-T copolymerization initiation between a rare branchable '
-        'vinyl/crosslinker vinyl and a normal vinyl monomer. The branchable '
-        'vinyl is placed into the initial chain segment, while the active '
-        'radical is carried forward on the normal vinyl head atom map 4. '
-        'Maps 1 and 2 form the new bond. Use this reaction with separate '
-        'time control or max_rxn limits so the low-count crosslinker is not '
-        'over-consumed at the beginning.'
-    ),
-},
-
-    # ---- kept commented, unchanged ----
-    # 'Vinyl Addition Polymerization': {
-    #     'same_reactants': True,
-    #     'reactant_1': 'vinyl',
-    #     'product': 'polyvinyl_chain',
-    #     'delete_atom': False,
-    #     'reaction': '[CH2:1]=[CH;H1,H0;!R:2].[CH2:3]=[CH;H1,H0;!R:4]>>[CH2:1]-[CH:2]-[CH2:3]-[CH:4]',
-    #     'reference': {'smarts': None, 'reaction_and_mechanism': None},
-    #     'comments': None
-    # },
-    # 'Vinyl Copolymerization': {
-    #     'same_reactants': False,
-    #     'reactant_1': 'vinyl',
-    #     'reactant_2': 'vinyl',
-    #     'product': 'copolyvinyl_chain',
-    #     'delete_atom': False,
-    #     'reaction': '[CH2:1]=[CH;H1,H0;!R:2].[CH2:3]=[CH;H1,H0;!R:4]>>[CH2:1]-[CH:2]-[CH2:3]-[CH:4]',
-    #     'reference': {'smarts': None, 'reaction_and_mechanism': None},
-    #     'comments': None
-    # },
-    # 'Cyclic Olefin Addition Polymerization': {
-    #     'same_reactants': True,
-    #     'reactant_1': 'cyclic_olefin',
-    #     'product': 'polycyclic_chain',
-    #     'delete_atom': False,
-    #     'reaction': '[CX3;R:1]=[CX3;R:2].[CX3;R:3]=[CX3;R:4]>>[CX4:1]-[CX4:2]-[CX4:3]-[CX4:4]',
-    #     'reference': {'smarts': None, 'reaction_and_mechanism': None},
-    #     'comments': None
-    # },
-    # 'Cyclic Olefin and Vinyl Copolymerization': {
-    #     'same_reactants': False,
-    #     'reactant_1': 'vinyl',
-    #     'reactant_2': 'cyclic_olefin',
-    #     'product': 'copolycyclicvinyl_chain',
-    #     'delete_atom': False,
-    #     'reaction': '[CH2:1]=[C;!R:2].[C;R:3]=[C;R:4]>>[C:1]-[C:2]-[C:3]-[C:4]',
-    #     'reference': {'smarts': None, 'reaction_and_mechanism': None},
-    #     'comments': None
-    # },
-    # 'Cyclic Olefin Copolymerization': {
-    #     'same_reactants': False,
-    #     'reactant_1': 'cyclic_olefin',
-    #     'reactant_2': 'cyclic_olefin',
-    #     'product': 'copolycyclic_chain',
-    #     'delete_atom': False,
-    #     'reaction': '[CX3;R:1]=[CX3;R:2].[CX3;R:3]=[CX3;R:4]>>[CX4:1]-[CX4:2]-[CX4:3]-[CX4:4]',
-    #     'reference': {'smarts': None, 'reaction_and_mechanism': None},
-    #     'comments': None
-    # },
+    # Disabled until branchable_vinyl functional-group detection
+    # or explicit reactant ordering is implemented.
+# 
+    # 'notes': (
+    #     'Forced H-T copolymerization initiation between a rare branchable '
+    #     'vinyl/crosslinker vinyl and a normal vinyl monomer. The branchable '
+    #     'vinyl is placed into the initial chain segment, while the active '
+    #     'radical is carried forward on the normal vinyl head atom map 4. '
+    #     'Maps 1 and 2 form the new bond. Use this reaction with separate '
+    #     'time control or max_rxn limits so the low-count crosslinker is not '
+    #     'over-consumed at the beginning.'
+    # ),
+# },
+# 
+    # # ---- kept commented, unchanged ----
+    # # 'Vinyl Addition Polymerization': {
+    # #     'same_reactants': True,
+    # #     'reactant_1': 'vinyl',
+    # #     'product': 'polyvinyl_chain',
+    # #     'delete_atom': False,
+    # #     'reaction': '[CH2:1]=[CH;H1,H0;!R:2].[CH2:3]=[CH;H1,H0;!R:4]>>[CH2:1]-[CH:2]-[CH2:3]-[CH:4]',
+    # #     'reference': {'smarts': None, 'reaction_and_mechanism': None},
+    # #     'comments': None
+    # # },
+    # # 'Vinyl Copolymerization': {
+    # #     'same_reactants': False,
+    # #     'reactant_1': 'vinyl',
+    # #     'reactant_2': 'vinyl',
+    # #     'product': 'copolyvinyl_chain',
+    # #     'delete_atom': False,
+    # #     'reaction': '[CH2:1]=[CH;H1,H0;!R:2].[CH2:3]=[CH;H1,H0;!R:4]>>[CH2:1]-[CH:2]-[CH2:3]-[CH:4]',
+    # #     'reference': {'smarts': None, 'reaction_and_mechanism': None},
+    # #     'comments': None
+    # # },
+    # # 'Cyclic Olefin Addition Polymerization': {
+    # #     'same_reactants': True,
+    # #     'reactant_1': 'cyclic_olefin',
+    # #     'product': 'polycyclic_chain',
+    # #     'delete_atom': False,
+    # #     'reaction': '[CX3;R:1]=[CX3;R:2].[CX3;R:3]=[CX3;R:4]>>[CX4:1]-[CX4:2]-[CX4:3]-[CX4:4]',
+    # #     'reference': {'smarts': None, 'reaction_and_mechanism': None},
+    # #     'comments': None
+    # # },
+    # # 'Cyclic Olefin and Vinyl Copolymerization': {
+    # #     'same_reactants': False,
+    # #     'reactant_1': 'vinyl',
+    # #     'reactant_2': 'cyclic_olefin',
+    # #     'product': 'copolycyclicvinyl_chain',
+    # #     'delete_atom': False,
+    # #     'reaction': '[CH2:1]=[C;!R:2].[C;R:3]=[C;R:4]>>[C:1]-[C:2]-[C:3]-[C:4]',
+    # #     'reference': {'smarts': None, 'reaction_and_mechanism': None},
+    # #     'comments': None
+    # # },
+    # # 'Cyclic Olefin Copolymerization': {
+    # #     'same_reactants': False,
+    # #     'reactant_1': 'cyclic_olefin',
+    # #     'reactant_2': 'cyclic_olefin',
+    # #     'product': 'copolycyclic_chain',
+    # #     'delete_atom': False,
+    # #     'reaction': '[CX3;R:1]=[CX3;R:2].[CX3;R:3]=[CX3;R:4]>>[CX4:1]-[CX4:2]-[CX4:3]-[CX4:4]',
+    # #     'reference': {'smarts': None, 'reaction_and_mechanism': None},
+    # #     'comments': None
+    # # },
 
     'Tetrafluoroethylene Initiation': {
         'same_reactants': False,
-        'reactant_1': 'initiator_radical',
+        'reactant_1': 'tetrafluoroethylene',
         'reactant_2': 'tetrafluoroethylene',
-        'product': 'ptfe_active_center',
+        'product': 'vinyl_chain_end_radical',
         'delete_atom': False,
         'reaction': (
             '[*:1].'
@@ -227,9 +230,9 @@ REACTIONS = {
 
     'Tetrafluoroethylene Propagation': {
         'same_reactants': False,
-        'reactant_1': 'ptfe_active_center',
+        'reactant_1': 'vinyl_chain_end_radical',
         'reactant_2': 'tetrafluoroethylene',
-        'product': 'ptfe_active_center',
+        'product': 'vinyl_chain_end_radical',
         'delete_atom': False,
         'reaction': (
             '[*:1]-[CX4:2](-[F:4])(-[F:5]).'
@@ -247,7 +250,7 @@ REACTIONS = {
 
     # 'Tetrafluoroethylene Termination (Recombination)': {
     #     'same_reactants': True,
-    #     'reactant_1': 'ptfe_active_center',
+    #     'reactant_1': 'vinyl_chain_end_radical',
     #     'product': 'ptfe_chain',
     #     'delete_atom': False,
     #     # Two growing chains meet and recombine at their active CX4 centers

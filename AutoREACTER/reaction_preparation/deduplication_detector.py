@@ -1261,6 +1261,42 @@ class DeduplicationDetector:
 
         return graph
 
+    def write_wildcard_maps(
+        self,
+        template_files: list["ReactionMetadata"],
+    ) -> list["ReactionMetadata"]:
+        """
+        Write Wildcards sections for active LAMMPS templates without
+        performing duplicate filtering.
+        """
+        active_templates: list["ReactionMetadata"] = []
+
+        for template in template_files:
+            if not template.activity_stats:
+                continue
+
+            if template.map_file is None:
+                template.activity_stats = False
+                continue
+
+            map_file_path = Path(template.map_file)
+
+            if not map_file_path.is_file():
+                template.activity_stats = False
+                continue
+
+            wildcard_ids = self._read_lammps_edge_ids(map_file_path)
+
+            self._write_lammps_wildcard_map_file(
+                map_file_path=map_file_path,
+                wildcard_ids=wildcard_ids,
+            )
+
+            template.map_file = map_file_path
+            active_templates.append(template)
+
+        return active_templates
+
     def compare_lammps_templates(
         self,
         template_files: list["ReactionMetadata"],

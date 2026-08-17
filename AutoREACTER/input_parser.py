@@ -1024,6 +1024,24 @@ class InputParser:
             "simulations": simulations,
         }
     
+    def _validate_loop(
+        self,
+        inputs: dict,
+    ) -> tuple[bool, int | None]:
+        """
+        Backward-compatible wrapper for older loop validation tests.
+
+        New logic is handled by _validate_reaction_iteration_depth.
+        """
+        reaction_iteration_depth = self._validate_reaction_iteration_depth(
+            inputs
+        )
+
+        if reaction_iteration_depth == 0:
+            return False, None
+
+        return True, reaction_iteration_depth
+
     def _normalized_option_key(self, key: str) -> str:
         """
         Normalize workflow option keys so common spellings are accepted.

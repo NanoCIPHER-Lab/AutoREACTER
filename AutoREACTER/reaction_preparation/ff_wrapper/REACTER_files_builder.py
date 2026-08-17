@@ -790,6 +790,17 @@ Types
                 reaction.map_file,
                 final_dir,
             )
+            if (
+                reaction.map_file_with_delete_ids is None
+                and reaction.map_file is not None
+                and reaction.reaction_id is not None
+            ):
+                delete_map_path = Path(reaction.map_file).with_name(
+                    f"RXN_{reaction.reaction_id}_with_delete_ids.map"
+                )
+                if delete_map_path.is_file():
+                    reaction.map_file_with_delete_ids = delete_map_path
+
             reaction.map_file_with_delete_ids = self._copy_path_to_final(
                 reaction.map_file_with_delete_ids,
                 final_dir,
@@ -812,14 +823,20 @@ Types
             and reaction.post_reaction_file is not None
         ]
 
+        detector = DeduplicationDetector()
+
         if self.deduplicate_reaction_templates:
-            detector = DeduplicationDetector()
             active_template_reactions = detector.compare_lammps_templates(
                 template_files=active_template_reactions,
                 wildcards=self.wildcards,
             )
         else:
             print("[INFO] Skipping LAMMPS reaction-template deduplication.")
+
+            if self.wildcards:
+                active_template_reactions = detector.write_wildcard_maps(
+                    template_files=active_template_reactions,
+                )
 
         reacter_files = REACTERFiles(
             force_field_data=force_field_data,

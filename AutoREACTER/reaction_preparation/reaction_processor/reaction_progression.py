@@ -147,13 +147,13 @@ class ReactionProgression:
             Prepared and deduplicated reaction metadata accumulated across
             all iterations.
         """
-        # Respect the validated reaction progression depth from input_parser.
-        reaction_iteration_depth = self.session.inputs.reaction_iteration_depth
+        # Respect the validated reaction progression depth from input_parser
+        # unless the caller explicitly supplies a loop limit.
+        if max_loop is None:
+            max_loop = self.session.inputs.reaction_iteration_depth
 
-        if reaction_iteration_depth <= 0:
+        if max_loop <= 0:
             return list(self.session.reaction_metadata)
-
-        max_loop = reaction_iteration_depth
         print(
             f"Using reaction_iteration_depth={max_loop} for "
             "reaction progression."

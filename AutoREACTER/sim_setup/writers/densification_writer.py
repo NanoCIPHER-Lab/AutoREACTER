@@ -164,7 +164,8 @@ class DensificationWriter:
         mol_ids = {}
         for i, mol in enumerate(rf.molecule_files, 1):
             m_id = f"mol_{i}"
-            mol_ids[mol.id] = m_id
+            mol_name = mol.name or mol.data_id
+            mol_ids[mol_name] = m_id
             lines.append(f"{'molecule':<16} {m_id} {mol.lmp_molecule_file.name}")
 
         lines.append("\n#------------Randomly Insert Molecules------------")
