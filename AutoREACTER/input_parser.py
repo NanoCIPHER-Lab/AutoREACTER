@@ -76,20 +76,21 @@ class MonomerEntry:
         count: Dictionary mapping replica tags to integer counts in counts mode.
         ratio: Molar ratio of the monomer in ratio mode.
         rdkit_mol: RDKit Mol object corresponding to the monomer SMILES.
-        molecule_3Dmol_path: Optional file path to the 3D .mol representation.
+        molecule_3Dmol_path: Optional file path to the 3D .mol representation. Later stages will generate this file.
+        lmp_molecule_file: Optional file path to the LAMMPS molecule file. Later stages will generate this file.
         num_atoms: Number of atoms in the monomer with hydrogens included.
         molecular_weight: Molecular weight of the monomer from RDKit.
         status: Boolean indicating whether the monomer should be included.
     """
-
     id: int
     data_id: str
     name: str | None
     smiles: str
-    count: dict | None  # None only if ratio mode.
-    ratio: float | None  # None only if counts mode.
+    count: dict | None
+    ratio: float | None
     rdkit_mol: Chem.Mol | None = None
     molecule_3Dmol_path: Optional[Path] = None
+    lmp_molecule_file: Optional[Path] = None
     num_atoms: int | None = None
     molecular_weight: float | None = None
     status: bool = True
@@ -143,6 +144,14 @@ class SimulationSetup:
         ratio: Optional mapping of monomer IDs to ratios.
         number_of_total_atoms: Optional list of total atom targets.
         box_estimates: Optional estimated box size placeholder.
+        deep_search: Enables deeper reaction/functional-group searching.
+        reaction_iteration_depth: Maximum reaction progression depth. Defaults
+            to 5 when omitted. A value of 0 disables looping. Values greater
+            than 0 enable looping for that many iterations.
+        wildcards: Enables wildcard handling when supported downstream.
+        deduplicate_reaction_templates: Enables LAMMPS template deduplication.
+        write_second_reaction_stage: Enables writing the second reaction-stage
+            LAMMPS input files.
     """
 
     simulation_name: str
@@ -150,7 +159,6 @@ class SimulationSetup:
     density: list[float]
     force_field: str | None
     monomers: list[MonomerEntry]
-    loop : bool = True
     input_json: dict | None = None
     max_loop_count: int | None = None
     simulations: list[Simulation] | None = None
@@ -159,6 +167,12 @@ class SimulationSetup:
     ratio: dict[int, float] | None = None
     number_of_total_atoms: list[int] | None = None
     box_estimates: float | None = None
+    deep_search: bool = True
+    loop : bool = True
+    reaction_iteration_depth: int = 5 
+    wildcards: bool = True 
+    deduplicate_reaction_templates: bool = True 
+    write_second_reaction_stage: bool = True 
 
 
 class InputParser:
@@ -207,7 +221,63 @@ class InputParser:
             inputs.get("force_field", None)
         )
 
-        loop, max_loop_count = self._validate_loop(inputs)
+        reaction_iteration_depth = self._validate_reaction_iteration_depth(
+            inputs
+        )
+
+        if reaction_iteration_depth == 0:
+            loop = False
+            max_loop_count = None
+        else:
+            loop = True
+            max_loop_count = reaction_iteration_depth
+
+        deep_search = self._validate_bool_option(
+            inputs,
+            key="deep_search",
+            default=True,
+            aliases=[
+                "deepsearch",
+                "deep_search",
+                "deep-search",
+                "DEEP_SEARCH",
+            ],
+        )
+        wildcards = self._validate_bool_option(
+            inputs,
+            key="wildcards",
+            default=True,
+            aliases=[
+                "wildcard",
+                "wildcards",
+                "use_wildcards",
+                "use-wildcards",
+            ],
+        )
+        deduplicate_reaction_templates = self._validate_bool_option(
+            inputs,
+            key="deduplicate_reaction_templates",
+            default=True,
+            aliases=[
+                "deduplicate_reaction_templates",
+                "deduplicate-templates",
+                "template_deduplication",
+                "template_dedup",
+                "dedup_templates",
+            ],
+        )
+        write_second_reaction_stage = self._validate_bool_option(
+            inputs,
+            key="write_second_reaction_stage",
+            default=True,
+            aliases=[
+                "write_second_reaction_stage",
+                "write-second-reaction-stage",
+                "second_stage",
+                "write_stage_2",
+                "stage_2",
+            ],
+        )
 
         return SimulationSetup(
             simulation_name=simulation_name,
@@ -221,6 +291,11 @@ class InputParser:
             loop=loop,
             max_loop_count=max_loop_count,
             input_json=inputs,
+            deep_search=deep_search,
+            reaction_iteration_depth=reaction_iteration_depth,
+            wildcards=wildcards,
+            deduplicate_reaction_templates=deduplicate_reaction_templates,
+            write_second_reaction_stage=write_second_reaction_stage,
         )
 
     def molecule_representation_of_initial_molecules(
@@ -949,42 +1024,181 @@ class InputParser:
             "simulations": simulations,
         }
     
-    def _validate_loop(self, inputs: dict) -> tuple[bool, int | None]:
+    def _validate_loop(
+        self,
+        inputs: dict,
+    ) -> tuple[bool, int | None]:
         """
-        Validate the ``loop`` input.
+        Backward-compatible wrapper for older loop validation tests.
 
-        Returns:
-            A tuple containing:
-            - Whether looping is enabled.
-            - The maximum iteration count, or ``None`` when no limit is specified.
-
-        Raises:
-            InputSchemaError: If ``loop`` is not a boolean, a positive integer,
-                or a supported loop keyword.
+        New logic is handled by _validate_reaction_iteration_depth.
         """
-        loop_keywords = {"loop", "repeat", "iterations", "do_loop"}
-        loop_value = inputs.get("loop", True)
+        reaction_iteration_depth = self._validate_reaction_iteration_depth(
+            inputs
+        )
 
-        if isinstance(loop_value, bool):
-            return loop_value, None
+        if reaction_iteration_depth == 0:
+            return False, None
 
-        if isinstance(loop_value, int):
-            if loop_value <= 0:
-                raise InputSchemaError("'loop' must be a positive integer.")
+        return True, reaction_iteration_depth
 
-            logger.info(
-                "Looping enabled with maximum iterations set to %s",
-                loop_value,
-            )
-            return True, loop_value
+    def _normalized_option_key(self, key: str) -> str:
+        """
+        Normalize workflow option keys so common spellings are accepted.
 
-        if isinstance(loop_value, str) and loop_value in loop_keywords:
-            return True, None
+        This is intentionally used only for optional workflow switches, not for
+        the core input schema.
+        """
+        return key.strip().lower().replace("_", "").replace("-", "").replace(" ", "")
+
+    def _get_workflow_option(
+        self,
+        inputs: dict,
+        key: str,
+        default: Any,
+        aliases: list[str] | None = None,
+    ) -> Any:
+        """
+        Read an optional workflow setting using a canonical key plus aliases.
+
+        The lookup is case-insensitive and ignores underscores, hyphens, and
+        spaces. If multiple aliases are provided with conflicting values, the
+        input is rejected.
+        """
+        aliases = aliases or []
+        accepted_keys = [key, *aliases]
+        accepted_normalized = {
+            self._normalized_option_key(option_key)
+            for option_key in accepted_keys
+        }
+
+        matches = []
+        for input_key, value in inputs.items():
+            if self._normalized_option_key(str(input_key)) in accepted_normalized:
+                matches.append((input_key, value))
+
+        if not matches:
+            return default
+
+        first_value = matches[0][1]
+        for input_key, value in matches[1:]:
+            if value != first_value:
+                raise InputConflictError(
+                    f"Conflicting values were provided for workflow option "
+                    f"'{key}': {matches!r}"
+                )
+
+        return first_value
+
+    def _validate_bool_option(
+        self,
+        inputs: dict,
+        key: str,
+        default: bool,
+        aliases: list[str] | None = None,
+    ) -> bool:
+        """
+        Validate an optional boolean workflow switch.
+
+        Only the new workflow options use this relaxed alias/lowercase lookup.
+        Core schema keys such as simulations and monomers remain strict.
+        """
+        value = self._get_workflow_option(
+            inputs=inputs,
+            key=key,
+            default=default,
+            aliases=aliases,
+        )
+
+        if isinstance(value, bool):
+            return value
+
+        if isinstance(value, str):
+            normalized_value = value.strip().lower()
+            if normalized_value in {"true", "yes", "y", "on", "1"}:
+                return True
+            if normalized_value in {"false", "no", "n", "off", "0"}:
+                return False
 
         raise InputSchemaError(
-            "'loop' must be a boolean value, a positive integer, "
-            "or a supported loop keyword."
+            f"'{key}' must be a boolean value. Got: {value!r}"
         )
+
+    def _validate_reaction_iteration_depth(
+        self,
+        inputs: dict,
+    ) -> int:
+        """
+        Validate the reaction-iteration depth option.
+
+        Accepted keys include:
+            - reaction_iteration_depth
+            - rxn_iteration_depth
+            - reaction_depth
+            - loop
+            - max_loop_count
+            - iterations
+
+        Accepted values:
+            - missing key: defaults to 5
+            - positive integer: enables looping for that many iterations
+            - 0: disables looping
+            - False or false-like strings: disables looping
+
+        Raises:
+            InputSchemaError: If the value is negative, non-integer, or invalid.
+        """
+        value = self._get_workflow_option(
+            inputs=inputs,
+            key="reaction_iteration_depth",
+            default=5,
+            aliases=[
+                "rxn_iteration_depth",
+                "reaction_depth",
+                "iteration_depth",
+                "max_loop_count",
+                "max_iterations",
+                "iterations",
+                "loop",
+            ],
+        )
+
+        if isinstance(value, bool):
+            return 5 if value else 0
+
+        if isinstance(value, str):
+            normalized_value = value.strip().lower()
+
+            if normalized_value in {"false", "no", "n", "off", "0", "none"}:
+                return 0
+
+            if normalized_value in {"true", "yes", "y", "on"}:
+                return 5
+
+            try:
+                value = int(normalized_value)
+            except ValueError as error:
+                raise InputSchemaError(
+                    "'reaction_iteration_depth' must be an integer greater "
+                    "than or equal to 0, or a boolean value. "
+                    f"Got: {value!r}"
+                ) from error
+
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise InputSchemaError(
+                "'reaction_iteration_depth' must be an integer greater "
+                f"than or equal to 0, or a boolean value. Got: {value!r}"
+            )
+
+        if value < 0:
+            raise InputSchemaError(
+                "'reaction_iteration_depth' must be greater than or equal to 0. "
+                f"Got: {value!r}"
+            )
+
+        return value
+
+
 
 
 if __name__ == "__main__":

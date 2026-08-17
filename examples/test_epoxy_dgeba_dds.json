@@ -4,21 +4,22 @@
         {
             "tag": "epoxy_test",
             "temperature": 300,
-            "density": 1.0,
-            "monomer_counts": {
-                "di_epoxy": 200,
-                "primary_diamine": 100
+            "density": 0.5,
+            "total_atoms": 25000,
+            "monomer_ratios": {
+                "dgeba_epoxy": 2.0,
+                "DDS_diamine": 1.0
             }
         }
     ],
     "monomers": [
         {
-            "name": "di_epoxy",
+            "name": "dgeba_epoxy",
             "smiles": "CC(C)(c1ccc(OCC2CO2)cc1)c1ccc(OCC2CO2)cc1"
         },
         {
-            "name": "primary_diamine",
-            "smiles": "NCCCCCN"
+            "name": "DDS_diamine",
+            "smiles": "[S](=O)(=O)(c2ccc(cc2)N)c1ccc(cc1)N"
         }
     ]
 }

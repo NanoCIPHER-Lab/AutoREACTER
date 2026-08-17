@@ -1,0 +1,21 @@
+{
+    "simulation_name": "DGEBA_MMA_ED900_TEGDMA_IPN_homo1",
+    "force_field": "PCFF",
+    "simulations": [
+        {
+            "tag": "ipn_10k_298K",
+            "temperature": 298.15,
+            "density": 1.23,
+            "total_atoms": 10000,
+            "monomer_ratios": {
+                "tegdma": 0.7
+            }
+        }
+    ],
+    "monomers": [
+        {
+            "name": "tegdma",
+            "smiles": "CC(=C)C(=O)OCCOCCOCCOC(=O)C(=C)C"
+        }
+    ]
+}

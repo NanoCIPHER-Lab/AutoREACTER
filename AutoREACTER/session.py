@@ -15,22 +15,88 @@ from AutoREACTER.reaction_preparation.ff_wrapper.REACTER_files_builder import RE
 if TYPE_CHECKING:
     from AutoREACTER.detectors.functional_groups_detector import MonomerRole
 
-@dataclass
+from dataclasses import dataclass, field
+from pathlib import Path
+
+
+@dataclass(slots=True)
 class Session:
     """
-    Holds the validated inputs and directory paths for a single AutoREACTER run.
-    This acts as the 'state object' passed through the pipeline.
+    Runtime state container for one AutoREACTER workflow.
+
+    A Session stores the validated input model, run directories, and all
+    intermediate/final objects generated as the pipeline progresses.
+
+    The object is intentionally passed through the full AutoREACTER pipeline so
+    each stage can attach its own outputs without requiring large return-value
+    chains.
+
+    Pipeline state
+    --------------
+    inputs:
+        Validated simulation setup parsed from the input JSON.
+
+    staging_dir:
+        Temporary working directory used for intermediate/cache files.
+
+    output_dir:
+        Final AutoREACTER output directory for this run.
+
+    images_dir:
+        Directory where molecule, functional-group, reaction, and template
+        visualization images are saved.
+
+    monomer_roles:
+        MonomerRole objects after functional-group classification.
+
+    reaction_instances:
+        Detected reaction candidates before full reaction preparation.
+
+    non_reactants:
+        MonomerRole objects selected as non-reactive species.
+
+    reaction_metadata:
+        Prepared reaction objects. Each ReactionMetadata object stores RDKit
+        mappings, template atoms, initiators, edge atoms, byproducts, generated
+        REACTER template files, map files, and activity status.
+
+    ff_files:
+        Raw force-field and LUNAR output files before REACTER-specific file
+        organization.
+
+    reacter_files:
+        Final REACTER file bundle. This should contain run-level files plus the
+        final monomer and reaction metadata lists used by LAMMPS writers.
     """
+
+    # Core run configuration
     inputs: SimulationSetup
     staging_dir: Path
     output_dir: Path
-    images_dir: Path
-    monomer_roles: list["MonomerRole"] = None
-    reaction_instances: list[ReactionInstance] = None
-    non_reactants: list["MonomerRole"] = None
-    reaction_metadata: list[ReactionMetadata] = None  # Placeholder for actual ReactionMetadata type
+    images_dir: Path 
+
+    # Pipeline-generated state
+    monomer_roles: list["MonomerRole"] = field(default_factory=list)
+    reaction_instances: list[ReactionInstance] = field(default_factory=list)
+    non_reactants: list["MonomerRole"] = field(default_factory=list)
+    reaction_metadata: list[ReactionMetadata] = field(default_factory=list)
+
+    # File bundles generated later in the pipeline
     ff_files: FFFiles | None = None
-    reacter_files: REACTERFiles = None  # Placeholder for the actual REACTERFiles dataclass
+    reacter_files: REACTERFiles | None = None
+
+    # Runtime counters / sub-sessions attached during reaction preparation
+    reaction_id_counter: int = 0
+    reaction_progression_session: object | None = None
+
+    # Workflow options copied from SimulationSetup
+    deep_search: bool = True
+    reaction_iteration_depth: int = 5
+    wildcards: bool = True
+    deduplicate_reaction_templates: bool = True
+    write_second_reaction_stage: bool = True
+
+
 
 def _resolve_input_path(input_file_path: str) -> Path:
     """
@@ -59,19 +125,44 @@ def _clear_directory(path: Path):
         elif item.is_dir():
             shutil.rmtree(item) 
 
-def _normalize_output_dir(raw_output_dir: str, input_path: Path) -> Path:
+def _resolve_output_dir(
+    raw_output_dir: str | None,
+    input_path: Path,
+    simulation_name: str,
+) -> Path:
     """
-    Normalize output_dir from JSON.
+    Resolve the final AutoREACTER output directory.
 
-    Supports:
-    - Linux/WSL absolute paths: /mnt/c/...
-    - Windows paths: C:/Users/...
-    - Relative paths: AutoREACTER_outputs/run_name
+    Behavior:
+    - If output_dir is missing, None, or empty, use the default location beside
+      the input JSON:
+          input_json_folder / AutoREACTER_outputs / simulation_name
+
+    - If output_dir is relative, resolve it relative to the input JSON folder.
+
+    - If output_dir is a Linux/WSL absolute path, use it directly.
+
+    - If output_dir is a Windows-style path such as C:/Users/... or C:\\Users\\...,
+      convert it to the WSL form /mnt/c/Users/....
+
+    This function returns an absolute path. Directory creation/clearing happens
+    in read_input().
     """
+    if raw_output_dir is None or str(raw_output_dir).strip() == "":
+        return (
+            input_path.parent
+            / "AutoREACTER_outputs"
+            / simulation_name
+        ).resolve()
+
     raw_output_dir = str(raw_output_dir).strip()
 
-    # Handle Windows-style path when running in WSL/Linux.
-    if len(raw_output_dir) >= 3 and raw_output_dir[1] == ":" and raw_output_dir[2] in {"/", "\\"}:
+    # Windows path while running from WSL/Linux.
+    if (
+        len(raw_output_dir) >= 3
+        and raw_output_dir[1] == ":"
+        and raw_output_dir[2] in {"/", "\\"}
+    ):
         drive = raw_output_dir[0].lower()
         rest = raw_output_dir[3:].replace("\\", "/")
         return Path(f"/mnt/{drive}/{rest}").resolve()
@@ -118,12 +209,16 @@ def read_input(input_file_path: str, clear_staging: bool = True) -> Session:
 
     raw_output_dir = input_data.get("output_dir", None)
 
-    if raw_output_dir is not None:
-        output_dir = _normalize_output_dir(raw_output_dir, input_path)
+    output_dir = _resolve_output_dir(
+        raw_output_dir=raw_output_dir,
+        input_path=input_path,
+        simulation_name=sim_name,
+    )
 
-    else:
-        # Backward-compatible default behavior.
-        output_dir = input_path.parent / "AutoREACTER_outputs" / sim_name
+    if output_dir.exists() and not output_dir.is_dir():
+        raise ValueError(
+            f"Resolved output_dir exists but is not a directory: {output_dir}"
+        )
 
     if output_dir.exists():
         _clear_directory(output_dir)
@@ -131,14 +226,6 @@ def read_input(input_file_path: str, clear_staging: bool = True) -> Session:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     images_dir = output_dir / "images"
-    images_dir.mkdir(parents=True, exist_ok=True)
-
-    if output_dir.exists():
-        _clear_directory(output_dir)  # Only clear this specific run's old files
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    # Now create the images folder safely inside the simulation folder
-    images_dir = Path((output_dir) / "images")
     images_dir.mkdir(parents=True, exist_ok=True)
 
     # 6. Return the State Object
@@ -152,6 +239,6 @@ def read_input(input_file_path: str, clear_staging: bool = True) -> Session:
         inputs=validated_inputs,
         staging_dir=staging_dir,
         output_dir=output_dir,
-        images_dir=images_dir
+        images_dir=images_dir,
     )
 

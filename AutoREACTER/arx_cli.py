@@ -246,14 +246,6 @@ class ARXCLI:
         """
         PrepareReactions(self.session).prepare_reactions(self.session)
         self.error_handler["process"] = True
-        highlight_types = ["template", "edge", "initiators", "delete"]
-        for highlight_type in highlight_types:
-            img = PrepareReactions(self.session).reaction_templates_highlighted_image_grid(
-                self.session, highlight_type=highlight_type
-            )
-            self._save_rdkit_img(
-                img, self.img_dir / f"templates_{highlight_type}.png"
-            )
         return None
 
     def show_reaction_templates(self, highlight_type: str = "template") -> Image:
@@ -315,6 +307,17 @@ class ARXCLI:
             REACTERFilesBuilder(self.session).molecule_template_preparation(self.session)
 
             SimulationSetupManager().setup_and_write_simulation(self.session)
+
+            highlight_types = ["template", "edge", "initiators", "delete"]
+            for highlight_type in highlight_types:
+                img = PrepareReactions(self.session).reaction_templates_highlighted_image_grid(
+                    self.session, highlight_type=highlight_type
+                )
+                self._save_rdkit_img(
+                    img, self.img_dir / f"templates_{highlight_type}.png"
+                )
+
+            self.error_handler["process"] = True
 
     # ------------------------------------------------------------------
     # Internal helpers – lazy detection & image saving

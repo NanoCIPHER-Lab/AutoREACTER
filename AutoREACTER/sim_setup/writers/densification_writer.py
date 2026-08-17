@@ -164,8 +164,9 @@ class DensificationWriter:
         mol_ids = {}
         for i, mol in enumerate(rf.molecule_files, 1):
             m_id = f"mol_{i}"
-            mol_ids[mol.id] = m_id
-            lines.append(f"{'molecule':<16} {m_id} {mol.molecule_files.lmp_molecule_file.name}")
+            mol_name = mol.name or mol.data_id
+            mol_ids[mol_name] = m_id
+            lines.append(f"{'molecule':<16} {m_id} {mol.lmp_molecule_file.name}")
 
         lines.append("\n#------------Randomly Insert Molecules------------")
         for m_name, count in simulation.monomer_counts.items():
@@ -323,8 +324,8 @@ class DensificationWriter:
             shutil.copy2(rf.force_field_data, dest_dir / rf.force_field_data.name)
         
         for mol in rf.molecule_files:
-            if (mol.molecule_files and 
-                mol.molecule_files.lmp_molecule_file and 
-                mol.molecule_files.lmp_molecule_file.exists()):
-                src = mol.molecule_files.lmp_molecule_file
+            if (mol.lmp_molecule_file and 
+                mol.lmp_molecule_file and 
+                mol.lmp_molecule_file.exists()):
+                src = mol.lmp_molecule_file
                 shutil.copy2(src, dest_dir / src.name)

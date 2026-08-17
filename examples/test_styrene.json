@@ -1,19 +1,92 @@
 {
-    "simulation_name": "Styrene_Test",
+    "simulation_name": "Styrene2",
+    "force_field": "PCFF",
     "simulations": [
         {
-            "tag": "vinyl_test",
-            "temperature": 300,
-            "density": 1.0,
-            "monomer_counts": {
-                "styrene": 2000
-            }
+            "tag": "styrene_10k_298K",
+            "temperature": 298.15,
+            "density": 1.05,
+            "total_atoms": 10000,
+            "monomer_ratios": {
+                "styrene": 1.0
+            },
+            "comment": "Room-temperature reference system. The 10k system is intended for rapid testing, workflow validation, and establishing baseline structural and reaction behavior at ambient conditions."
+        },
+        {
+            "tag": "styrene_100k_298K",
+            "temperature": 298.15,
+            "density": 1.05,
+            "total_atoms": 100000,
+            "monomer_ratios": {
+                "styrene": 1.0
+            },
+            "comment": "Large room-temperature reference system. It is used to evaluate finite-size effects and obtain more statistically representative structural and reaction data than the 10k system."
+        },
+        {
+            "tag": "styrene_10k_373K",
+            "temperature": 373.15,
+            "density": 1.05,
+            "total_atoms": 10000,
+            "monomer_ratios": {
+                "styrene": 1.0
+            },
+            "comment": "Approximately 100 degrees Celsius. This small system probes accelerated polymerization behavior near a temperature where uncontrolled self-heating and runaway risks may become important, depending on initiators, inhibitors, and heat removal."
+        },
+        {
+            "tag": "styrene_100k_373K",
+            "temperature": 373.15,
+            "density": 1.05,
+            "total_atoms": 100000,
+            "monomer_ratios": {
+                "styrene": 1.0
+            },
+            "comment": "Large system at approximately 100 degrees Celsius. It is included to examine system-size effects, heat-sensitive reaction behavior, and network development near the upper region of common styrene polymerization temperatures."
+        },
+        {
+            "tag": "styrene_10k_523K",
+            "temperature": 523.15,
+            "density": 1.05,
+            "total_atoms": 10000,
+            "monomer_ratios": {
+                "styrene": 1.0
+            },
+            "comment": "Approximately 250 degrees Celsius. This system probes the transition toward strong thermal initiation, radical formation, oligomerization, and possible thermal degradation rather than normal controlled polystyrene production."
+        },
+        {
+            "tag": "styrene_100k_523K",
+            "temperature": 523.15,
+            "density": 1.05,
+            "total_atoms": 100000,
+            "monomer_ratios": {
+                "styrene": 1.0
+            },
+            "comment": "Large system at approximately 250 degrees Celsius. It is intended to capture larger-scale thermal decomposition, branching, fragmentation, and spatially heterogeneous reaction behavior."
+        },
+        {
+            "tag": "styrene_10k_800K",
+            "temperature": 800.0,
+            "density": 1.05,
+            "total_atoms": 10000,
+            "monomer_ratios": {
+                "styrene": 1.0
+            },
+            "comment": "High-temperature screening system at 800 K, equivalent to approximately 526.85 degrees Celsius. It probes extreme thermal chemistry and decomposition behavior and is not a conventional styrene polymerization condition."
+        },
+        {
+            "tag": "styrene_100k_800K",
+            "temperature": 800.0,
+            "density": 1.05,
+            "total_atoms": 100000,
+            "monomer_ratios": {
+                "styrene": 1.0
+            },
+            "comment": "Large high-temperature system at 800 K. It is used to investigate finite-size effects and statistically significant reaction pathways under extreme thermal conditions."
         }
     ],
     "monomers": [
         {
             "name": "styrene",
-            "smiles": "c1ccccc1C=C"
+            "smiles": "C=Cc1ccccc1"
         }
     ]
 }

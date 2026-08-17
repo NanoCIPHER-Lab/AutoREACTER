@@ -147,14 +147,17 @@ class ReactionProgression:
             Prepared and deduplicated reaction metadata accumulated across
             all iterations.
         """
-        # Respect a user-supplied global loop limit if one was configured.
-        if self.session.inputs.max_loop_count is not None:
-            max_loop = self.session.inputs.max_loop_count
-            print(
-                f"Overriding default max_loop of {MAX_LOOP} with "
-                f"user-specified max_loop_count of {max_loop}."
-            )
-            # Avoid sleeping in library code; callers control pacing.
+        # Respect the validated reaction progression depth from input_parser
+        # unless the caller explicitly supplies a loop limit.
+        if max_loop is None:
+            max_loop = self.session.inputs.reaction_iteration_depth
+
+        if max_loop <= 0:
+            return list(self.session.reaction_metadata)
+        print(
+            f"Using reaction_iteration_depth={max_loop} for "
+            "reaction progression."
+        )
 
         iteration = 0
         # Start from the monomer roles already present in the session.
