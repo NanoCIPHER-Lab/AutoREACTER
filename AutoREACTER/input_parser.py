@@ -278,7 +278,6 @@ class InputParser:
                 "stage_2",
             ],
         )
-
         return SimulationSetup(
             simulation_name=simulation_name,
             temperature=validated_simulations["temperatures"],

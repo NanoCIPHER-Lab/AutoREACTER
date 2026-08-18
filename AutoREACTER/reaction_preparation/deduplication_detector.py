@@ -900,7 +900,10 @@ class DeduplicationDetector:
         self,
         reaction_metadata_items: list["ReactionMetadata"],
         index_source: str = "template",
+        deep_check: bool = True,
     ) -> list["ReactionMetadata"]:
+        
+        
         """
         Detect duplicate reactions using in-memory RDKit molecules.
 
@@ -980,12 +983,14 @@ class DeduplicationDetector:
             pre_graph = self.rdkit_mol_to_networkx(
                 molecule=reactant_mol,
                 atom_idxs=reactant_indices,
+                deep_check=deep_check,
             )
 
             post_graph = self.rdkit_mol_to_networkx(
                 molecule=product_mol,
                 atom_idxs=product_indices,
                 idx_relabel=product_to_reactant_mapping,
+                deep_check=deep_check
             )
 
             reactant_radical_count = self._count_radical_atoms(
@@ -1118,6 +1123,7 @@ class DeduplicationDetector:
         molecule: Chem.Mol,
         atom_idxs: set[int] | None = None,
         idx_relabel: dict[int, int] | None = None,
+        deep_check: bool = True,
     ) -> nx.Graph:
         """
         Convert an RDKit molecule into a NetworkX graph.
@@ -1164,7 +1170,8 @@ class DeduplicationDetector:
 
             is_radical = self._is_radical_atom(atom)
 
-            if not self.DEEP_CHECK:
+            
+            if not deep_check:
                 atom_label = (
                     atom.GetSymbol(),
                     is_radical,

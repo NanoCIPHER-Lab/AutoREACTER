@@ -1,0 +1,34 @@
+{
+    "simulation_name": "Epoxy_Test_Primary_Diamine_Diepoxy",
+    "deep_search": false,
+    "reaction_iteration_depth": 5,
+    "wildcards": false,
+    "deduplicate_reaction_templates": true,
+    "write_second_reaction_stage": true,
+    "simulations": [
+        {
+            "tag": "epoxy_test",
+            "temperature": 300,
+            "density": 1.0,
+            "monomer_counts": {
+                "di_epoxy": 200,
+                "primary_diamine": 100,
+                "primary_diamine_2": 50
+            }
+        }
+    ],
+    "monomers": [
+        {
+            "name": "di_epoxy",
+            "smiles": "CC(C)(c1ccc(OCC2CO2)cc1)c1ccc(OCC2CO2)cc1"
+        },
+        {
+            "name": "primary_diamine",
+            "smiles": "NCCCCCN"
+        },
+        {
+            "name": "primary_diamine_2",
+            "smiles": "CC(CCN)CCN"
+        }
+    ]
+}
