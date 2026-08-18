@@ -28,6 +28,9 @@ logger = logging.getLogger(__name__)
 from AutoREACTER.reaction_preparation.reaction_processor.reaction_progression import (
     ReactionProgression,
 )
+from AutoREACTER.reaction_preparation.deduplication_detector import (
+    DeduplicationDetector,
+)
 from AutoREACTER.reaction_preparation.reaction_processor.utils import (
     add_column_safe,
     add_dict_as_new_columns,
@@ -198,6 +201,14 @@ class PrepareReactions:
             self._zero_active_reactions_error(final_reactions)
         else:
             self._zero_active_reactions_error(prepared_reactions)
+            self.deduplication_detector = DeduplicationDetector()
+            session.reaction_metadata = (
+                self.deduplication_detector.compare_graphs_mol(
+                    session.reaction_metadata,     
+                    deep_check=self.session.inputs.deep_search,
+                )
+            )
+                    
 
         return session
 
@@ -595,7 +606,6 @@ class PrepareReactions:
                         activity_stats=True,
                     )
                 )
-
         return reaction_metadata
 
     def _detect_duplicates(

@@ -167,4 +167,12 @@ Each monomer (or molecule) must include:
 
 **<u>IMPORTANT</u>**: The `monomers` section must remain consistent with the `monomer_counts` defined in each simulation. All name tags must match exactly, and every monomer listed must have a corresponding count in each simulation otherwise AutoREACTER will **raise an error** before proceeding with the chemistry.
 
+For advanced workflow controls such as reaction iteration depth, deep-search deduplication, wildcard template generation, duplicate-template removal, and optional second-stage reaction writing, see the {doc}`advanced_options` page.
+
+```{toctree}
+:hidden:
+
+advanced_options
+```
+
 **Note:** You can use [SMILES Generator / Checker](https://www.cheminfo.org/flavor/malaria/Utilities/SMILES_generator___checker/index.html) to generate valid SMILES strings. If SMILES strings are incorrect AutoREACTER will **raise an error** before proceeding.
