@@ -125,8 +125,7 @@ class ReactionProgression:
         self.rxn_detector = ReactionDetector()
         self.deduplication_detector = DeduplicationDetector()
 
-        # Display the runtime warning banner (e.g. about experimental
-        # progression behavior or licensing).
+        # Loop warnings are printed only once per session, so that users are not overwhelmed by repeated messages.
         print_warning()
 
     def reaction_progression(
@@ -149,6 +148,7 @@ class ReactionProgression:
         """
         # Respect the validated reaction progression depth from input_parser
         # unless the caller explicitly supplies a loop limit.
+        
         if max_loop is None:
             max_loop = self.session.inputs.reaction_iteration_depth
 
@@ -253,7 +253,8 @@ class ReactionProgression:
             # paths, so deduplication occurs after preparation.
             all_prepared_reactions = (
                 self.deduplication_detector.compare_graphs_mol(
-                    all_prepared_reactions
+                    all_prepared_reactions,     
+                    deep_check=self.session.inputs.deep_search,
                 )
             )
             self.session.reaction_metadata = all_prepared_reactions

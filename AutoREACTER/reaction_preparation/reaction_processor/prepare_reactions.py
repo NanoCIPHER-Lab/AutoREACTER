@@ -473,10 +473,10 @@ class PrepareReactions:
 
             products = rxn.RunReactants((r1, r2))
             if not products:
-                print(
-                    "Reaction failed in default order, "
-                    "trying reverse order..."
-                )
+                # print(
+                #     "Reaction failed in default order, "
+                #     "trying reverse order..."
+                # ) # this was a debug print, not needed in normal operation
                 products = rxn.RunReactants((r2, r1))
 
             if not products:
