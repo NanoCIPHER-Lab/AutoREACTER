@@ -200,7 +200,7 @@ def test_simulation_setup_workflow_defaults():
 
     assert (
         setup.write_second_reaction_stage
-        is True
+        is False
     )
 
 

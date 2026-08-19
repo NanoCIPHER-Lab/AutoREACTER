@@ -129,6 +129,7 @@ class RxnSecondStageWriter:
         # Add optional neighbor list settings if specified.
         if s.neighbor:
             lines.append(f"{'neighbor':<16} {s.neighbor}")
+
         if s.neigh_modify:
             lines.append(f"{'neigh_modify':<16} {s.neigh_modify}")
 
@@ -166,15 +167,24 @@ class RxnSecondStageWriter:
             # Extract molecule and mapping file names from template objects.
             pre_file = template.pre_reaction_file.name
             post_file = template.post_reaction_file.name
+
+            # AutoREACTER always uses the standard map by default.
+            # The optional *_with_delete_ids.map file is only provided to the user.
             map_file = template.map_file.name
 
             # Register molecule templates in LAMMPS.
-            lines.append(f"{'molecule':<16} {pre_id:<16} {pre_file}")
-            lines.append(f"{'molecule':<16} {post_id:<16} {post_file}\n")
+            lines.append(
+                f"{'molecule':<16} {pre_id:<16} {pre_file}"
+            )
+
+            lines.append(
+                f"{'molecule':<16} {post_id:<16} {post_file}\n"
+            )
 
             # Build reaction command with cutoff at 5.0 Angstroms for inter-molecular reactions.
             # stabilize_steps: equilibration steps after reaction to prevent explosion.
             rxn_stp = f"rxn_stp_{reaction_id}"
+
             rxn_str = (
                 f"react "
                 f"{rxn_stp:<15} "
@@ -184,6 +194,7 @@ class RxnSecondStageWriter:
                 f"{map_file:<15} "
                 f"stabilize_steps 200 rescale_charges yes"
             )
+
             rxn_commands.append(rxn_str)
 
         # Combine all reaction commands with line continuation.
@@ -192,7 +203,10 @@ class RxnSecondStageWriter:
         # Use explicit f_rxns[i] fields because some LAMMPS builds do not accept f_rxns[*].
         rxn_thermo_values = " ".join(
             f"f_rxns[{position}]"
-            for position in range(1, len(rxn_commands) + 1)
+            for position in range(
+                1,
+                len(rxn_commands) + 1
+            )
         )
 
         # Configure bond/react fix with stabilization groups and define fixes for simulation.
@@ -221,11 +235,14 @@ class RxnSecondStageWriter:
 
         # ----- Write the .in file --------------------------------------
         in_file_path = rxn_dir / f"in.{tag}_reaction_stage_2"
+
         with open(in_file_path, "w") as f:
             f.write("\n".join(lines))
 
         # ----- Copy auxiliary files into the reaction directory ---------
-        self._copy_required_files(dest_dir=rxn_dir)
+        self._copy_required_files(
+            dest_dir=rxn_dir
+        )
 
         return in_file_path.name
 
@@ -233,8 +250,12 @@ class RxnSecondStageWriter:
         """
         Copy reaction template and molecule definition files to the output directory.
 
-        Copies pre-reaction molecules, post-reaction molecules, and atom mapping files
-        required by LAMMPS to the simulation directory for execution.
+        The standard RXN_N.map file is always copied and remains the map used
+        by AutoREACTER's generated LAMMPS input script.
+
+        If an optional RXN_N_with_delete_ids.map file exists, it is also copied
+        into the stage directory for the user. AutoREACTER does not automatically
+        use the supplementary DeleteIDs map.
 
         Args:
             dest_dir (Path): Destination directory for copied files.
@@ -248,12 +269,24 @@ class RxnSecondStageWriter:
             t for t in rf.template_files
             if getattr(t, "activity_stats", True)
         ]:
-            # Collect all files associated with this reaction template.
+            # Standard files required by the generated LAMMPS script.
             files: list[Path] = [
                 template.map_file,
                 template.pre_reaction_file,
                 template.post_reaction_file,
             ]
+
+            # Optional supplementary DeleteIDs map.
+            map_file_with_delete_ids = getattr(
+                template,
+                "map_file_with_delete_ids",
+                None,
+            )
+
+            if map_file_with_delete_ids is not None:
+                files.append(
+                    map_file_with_delete_ids
+                )
 
             # Copy each file to the destination, preserving metadata.
             for file in files:
@@ -261,4 +294,8 @@ class RxnSecondStageWriter:
                     raise FileNotFoundError(
                         f"Required reaction file not found: {file}"
                     )
-                shutil.copy2(file, dest_dir / file.name)
+
+                shutil.copy2(
+                    file,
+                    dest_dir / file.name,
+                )

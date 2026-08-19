@@ -174,7 +174,7 @@ class SimulationSetup:
     reaction_iteration_depth: int = 5
     wildcards: bool = True
     deduplicate_reaction_templates: bool = True
-    write_second_reaction_stage: bool = True
+    write_second_reaction_stage: bool = False
 
 
 class InputParser:
