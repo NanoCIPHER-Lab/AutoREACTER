@@ -445,59 +445,160 @@ class ARXCLI:
         self.session.output_dir.mkdir(parents=True, exist_ok=True)
         log_path = self.session.output_dir / filename
 
-        # 1. Save the original OS-level terminal output
+        # Save both Python's stdout object and the original OS-level stdout.
+        #
+        # These are not always the same destination. For example, pytest,
+        # Jupyter, and other environments may replace sys.stdout with their
+        # own wrapper while file descriptor 1 still exists separately.
+        original_stdout = sys.stdout
         original_stdout_fd = os.dup(1)
 
-        # 2. Create an OS-level pipe (a temporary tunnel for our data)
+        # Create an OS-level pipe. Both Python print() output and raw fd-1
+        # output will be redirected into this pipe.
         pipe_read_fd, pipe_write_fd = os.pipe()
 
+        redirected_stdout = None
+
+        def write_to_original_stdout(data: bytes) -> None:
+            """
+            Forward captured output back to the original visible stdout.
+
+            If the original Python stdout directly represents fd 1, write to
+            the saved duplicate of fd 1. Otherwise, use the original Python
+            stdout object so capture systems such as pytest/Jupyter still see
+            the output.
+            """
+            try:
+                original_fileno = original_stdout.fileno()
+            except (AttributeError, OSError, ValueError):
+                original_fileno = None
+
+            if original_fileno == 1:
+                os.write(original_stdout_fd, data)
+                return
+
+            text = data.decode(
+                "utf-8",
+                errors="replace",
+            )
+
+            original_stdout.write(text)
+            original_stdout.flush()
+
         def tee_thread():
-            """Background worker that reads the pipe and writes to both destinations."""
-            with open(log_path, 'a') as log_file:
+            """
+            Background worker that reads the pipe and writes to both
+            the original output destination and the log file.
+            """
+            with open(
+                log_path,
+                "a",
+                encoding="utf-8",
+            ) as log_file:
                 while True:
                     # Read incoming data from the pipe
-                    data = os.read(pipe_read_fd, 1024)
-                    
+                    data = os.read(
+                        pipe_read_fd,
+                        1024,
+                    )
+
                     # If the pipe is closed, stop the thread
                     if not data:
                         break
-                        
-                    # Write to the actual terminal
-                    os.write(original_stdout_fd, data)
-                    
+
+                    # Write to the original terminal / stdout capture
+                    write_to_original_stdout(
+                        data
+                    )
+
                     # Write to the log file
-                    log_file.write(data.decode('utf-8', errors='replace'))
+                    log_file.write(
+                        data.decode(
+                            "utf-8",
+                            errors="replace",
+                        )
+                    )
                     log_file.flush()
 
-        # 3. Start the background thread
-        thread = threading.Thread(target=tee_thread)
+        # Start the background tee worker
+        thread = threading.Thread(
+            target=tee_thread
+        )
         thread.start()
 
-        # Flush Python's buffers before we switch the tracks
-        sys.stdout.flush()
+        # Flush Python's current stdout before changing destinations
+        original_stdout.flush()
 
         try:
-            # 4. Redirect all OS-level output to the write-end of our pipe
-            os.dup2(pipe_write_fd, 1)
-            yield
-            
-        finally:
-            # Flush Python buffers one last time
-            sys.stdout.flush()
-            
-            # 5. Restore the original terminal output
-            os.dup2(original_stdout_fd, 1)
-            
-            # 6. Close the write end of the pipe (this tells the thread to stop)
-            os.close(pipe_write_fd)
-            
-            # 7. Wait for the thread to finish processing the last bits of data
-            thread.join()
-            
-            # 8. Clean up remaining file descriptors
-            os.close(pipe_read_fd)
-            os.close(original_stdout_fd)
+            # Redirect OS-level stdout (fd 1) into the pipe.
+            #
+            # This captures subprocess output, os.write(1, ...), native
+            # library output, and anything else that writes directly to
+            # standard output.
+            os.dup2(
+                pipe_write_fd,
+                1,
+            )
 
+            # Redirect Python's sys.stdout explicitly as well.
+            #
+            # This is necessary because environments such as pytest and
+            # Jupyter can replace sys.stdout with an object that does not
+            # automatically follow changes made to file descriptor 1.
+            redirected_stdout = os.fdopen(
+                os.dup(1),
+                "w",
+                buffering=1,
+                encoding=getattr(
+                    original_stdout,
+                    "encoding",
+                    None,
+                )
+                or "utf-8",
+                errors="replace",
+            )
+
+            sys.stdout = redirected_stdout
+
+            yield
+
+        finally:
+            # Flush all pending Python output into the pipe
+            if redirected_stdout is not None:
+                redirected_stdout.flush()
+
+            # Restore Python's original stdout object first
+            sys.stdout = original_stdout
+
+            # Close the duplicated Python pipe writer
+            if redirected_stdout is not None:
+                redirected_stdout.close()
+
+            # Restore OS-level stdout
+            os.dup2(
+                original_stdout_fd,
+                1,
+            )
+
+            # Close the original pipe write descriptor.
+            #
+            # Once every write descriptor pointing at the pipe is closed,
+            # the background thread receives EOF and exits.
+            os.close(
+                pipe_write_fd
+            )
+
+            # Wait until the final buffered output has been copied
+            thread.join()
+
+            # Clean up remaining file descriptors
+            os.close(
+                pipe_read_fd
+            )
+
+            os.close(
+                original_stdout_fd
+            )
     # ------------------------------------------------------------------
     # Magic Methods
     # ------------------------------------------------------------------
