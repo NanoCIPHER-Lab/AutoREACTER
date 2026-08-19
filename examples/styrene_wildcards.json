@@ -1,0 +1,28 @@
+{
+  "simulation_name": "Styrene_Wildcards",
+  "force_field": "PCFF",
+
+  "deep_search": true,
+  "reaction_iteration_depth": 5,
+  "wildcards": true,
+  "deduplicate_reaction_templates": true,
+  "write_second_reaction_stage": false,
+
+  "simulations": [
+    {
+      "tag": "10k_298K",
+      "temperature": 298,
+      "density": 0.95,
+      "monomer_counts": {
+        "styrene": 1000
+      }
+    }
+  ],
+
+  "monomers": [
+    {
+      "name": "styrene",
+      "smiles": "C=CC1=CC=CC=C1"
+    }
+  ]
+}

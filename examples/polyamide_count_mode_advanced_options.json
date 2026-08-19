@@ -1,12 +1,12 @@
 {
-  "simulation_name": "Trimesoyl_Chloride_m_Phenylenediamine",
+  "simulation_name": "Polyamide_Count_Mode_Advanced",
   "force_field": "PCFF",
 
   "deep_search": true,
   "reaction_iteration_depth": 5,
   "wildcards": true,
   "deduplicate_reaction_templates": true,
-  "write_second_reaction_stage": true,
+  "write_second_reaction_stage": false,
 
   "simulations": [
     {
@@ -14,17 +14,17 @@
       "temperature": 300,
       "density": 0.8,
       "monomer_counts": {
-        "trimesoyl_chloride": 238,
-        "m_phenylenediamine": 357
+        "trimesoyl_chloride": 220,
+        "m_phenylenediamine": 330
       }
     },
     {
-      "tag": "100k_300K",
-      "temperature": 300,
+      "tag": "100k_400K",
+      "temperature": 400,
       "density": 0.8,
       "monomer_counts": {
-        "trimesoyl_chloride": 2380,
-        "m_phenylenediamine": 3570
+        "trimesoyl_chloride": 2200,
+        "m_phenylenediamine": 3300
       }
     }
   ],

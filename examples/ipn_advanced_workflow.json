@@ -1,0 +1,43 @@
+{
+  "simulation_name": "DGEBA_MMA_TEGDMA_IPN_Advanced_Workflow",
+  "force_field": "PCFF",
+
+  "deep_search": true,
+  "reaction_iteration_depth": 5,
+  "wildcards": true,
+  "deduplicate_reaction_templates": true,
+  "write_second_reaction_stage": true,
+
+  "simulations": [
+    {
+      "tag": "100k_500K",
+      "temperature": 500,
+      "density": 1.23,
+      "monomer_counts": {
+        "bisphenol_A_diglycidyl_ether": 450,
+        "1_5_diaminopentane": 225,
+        "methyl_methacrylate": 3000,
+        "triethylene_glycol_dimethacrylate": 150
+      }
+    }
+  ],
+
+  "monomers": [
+    {
+      "name": "bisphenol_A_diglycidyl_ether",
+      "smiles": "CC(C)(c1ccc(OCC2CO2)cc1)c1ccc(OCC2CO2)cc1"
+    },
+    {
+      "name": "1_5_diaminopentane",
+      "smiles": "NCCCCCN"
+    },
+    {
+      "name": "methyl_methacrylate",
+      "smiles": "COC(=O)C(C)=C"
+    },
+    {
+      "name": "triethylene_glycol_dimethacrylate",
+      "smiles": "C=C(C)C(=O)OCCOCCOCCOC(=O)C(C)=C"
+    }
+  ]
+}
