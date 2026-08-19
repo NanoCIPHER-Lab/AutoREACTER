@@ -304,6 +304,7 @@ __all__ = [
     "__authors__",
     "__license__",
     "run",
+    "session",
     "show_molecules",
     "show_functional_groups",
     "show_reactions",

@@ -889,11 +889,18 @@ class PrepareReactions:
                 "Mapping validation error: duplicate idxs found in "
                 "product mapping."
             )
-        if any(idx >= reactant.GetNumAtoms() for idx in r_idxs):
+        if any(
+            idx < 0 or idx >= reactant.GetNumAtoms()
+            for idx in r_idxs
+        ):
             raise MappingError(
                 "Mapping validation error: reactant idx out of bounds."
             )
-        if any(idx >= product.GetNumAtoms() for idx in p_idxs):
+
+        if any(
+            idx < 0 or idx >= product.GetNumAtoms()
+            for idx in p_idxs
+        ):
             raise MappingError(
                 "Mapping validation error: product idx out of bounds."
             )
