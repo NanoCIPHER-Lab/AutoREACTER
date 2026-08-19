@@ -2,8 +2,8 @@ from __future__ import annotations  # 1. Must be the first line
 from typing import TYPE_CHECKING
 import json
 import shutil
+from dataclasses import dataclass, field
 from pathlib import Path
-from dataclasses import dataclass
 
 # Import internal modules
 from AutoREACTER.initialization import Initialization
@@ -14,10 +14,6 @@ from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper import FFFiles
 from AutoREACTER.reaction_preparation.ff_wrapper.REACTER_files_builder import REACTERFiles
 if TYPE_CHECKING:
     from AutoREACTER.detectors.functional_groups_detector import MonomerRole
-
-from dataclasses import dataclass, field
-from pathlib import Path
-
 
 @dataclass(slots=True)
 class Session:
