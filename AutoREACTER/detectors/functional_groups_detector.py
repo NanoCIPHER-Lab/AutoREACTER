@@ -229,7 +229,7 @@ class FunctionalGroupsDetector:
         # Convert SMILES to RDKit molecule object for substructure matching.
         
         if mol is None:
-            logger.warning(f"Invalid SMILES: {smiles}")
+            logger.warning("Invalid or missing RDKit molecule.")
             return 0, None, None, None
 
         # Create pattern from primary SMARTS and validate.
