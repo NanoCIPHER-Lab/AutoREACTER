@@ -21,7 +21,9 @@ class GetCacheDir:
         # generate a unique staging directory for this run to prevent concurrent conflicts
         self.staging_dir = Path(tempfile.gettempdir()) / f"AutoREACTER_staging"
         self.staging_dir.mkdir(parents=True, exist_ok=True)
-        self.clear_staging_dir()
+
+        if clear_staging:
+            self.clear_staging_dir()
 
     def clear_staging_dir(self) -> None:
         """
