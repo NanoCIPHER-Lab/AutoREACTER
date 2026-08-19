@@ -44,7 +44,9 @@ class RxnFirstStageWriter:
         self.out_dir = out_dir
         self.sim_name = sim_name
         self.reacter_files = reacter_files
-        self.first_stage_file_name = self.write_first_stage_reaction_files(simulation=simulation)
+        self.first_stage_file_name = self.write_first_stage_reaction_files(
+            simulation=simulation
+        )
 
 
     #  Public API
@@ -148,13 +150,19 @@ class RxnFirstStageWriter:
             # Extract filenames from the dataclass fields
             pre_file = template.pre_reaction_file.name
             post_file = template.post_reaction_file.name
+
+            # The standard map is always used by AutoREACTER.
+            # A supplementary DeleteIDs map may also be provided to the user,
+            # but AutoREACTER does not automatically select it.
             map_file = template.map_file.name
+
             id = template.reaction_id
             pre_id = f"mol_pre_{id}"
             post_id = f"mol_post_{id}"
 
             lines.append(f"{'molecule':<16} {pre_id:<16} {pre_file}")
             lines.append(f"{'molecule':<16} {post_id:<16} {post_file}\n")
+
             rxn_stp = f"rxn_stp_{id}"
             rxn_str = (
                 f"react "
@@ -205,6 +213,13 @@ class RxnFirstStageWriter:
     def _copy_required_files(self, dest_dir: Path) -> None:
         """Copy every map and molecule file referenced by the reaction templates.
 
+        The standard RXN_N.map file is always copied and is the map used by
+        AutoREACTER's generated LAMMPS script.
+
+        When an optional RXN_N_with_delete_ids.map file is available, it is
+        also copied into the reaction directory for the user. AutoREACTER does
+        not automatically use the supplementary DeleteIDs map.
+
         Parameters
         ----------
         dest_dir : Path
@@ -213,7 +228,7 @@ class RxnFirstStageWriter:
         Raises
         ------
         FileNotFoundError
-            If any referenced file does not exist on disk.
+            If any required standard reaction file does not exist on disk.
         """
         rf = self.reacter_files
 
@@ -227,7 +242,25 @@ class RxnFirstStageWriter:
                 template.post_reaction_file,
             ]
 
+            # Supplementary DeleteIDs map is optional.
+            map_file_with_delete_ids = getattr(
+                template,
+                "map_file_with_delete_ids",
+                None,
+            )
+
+            if map_file_with_delete_ids is not None:
+                files.append(
+                    map_file_with_delete_ids
+                )
+
             for file in files:
                 if file is None or not file.exists():
-                    raise FileNotFoundError(f"Required reaction file not found: {file}")
-                shutil.copy2(file, dest_dir / file.name)
+                    raise FileNotFoundError(
+                        f"Required reaction file not found: {file}"
+                    )
+
+                shutil.copy2(
+                    file,
+                    dest_dir / file.name,
+                )
