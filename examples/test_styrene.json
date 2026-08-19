@@ -1,6 +1,7 @@
 {
     "simulation_name": "Styrene2",
     "force_field": "PCFF",
+    "wildcards": false,
     "simulations": [
         {
             "tag": "styrene_10k_298K",

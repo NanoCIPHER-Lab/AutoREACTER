@@ -1,0 +1,39 @@
+{
+  "simulation_name": "TMC_MPD_edge_case",
+  "force_field": "PCFF",
+
+  "deep_search": true,
+  "reaction_iteration_depth": false,
+  "wildcards": false,
+  "deduplicate_reaction_templates": true,
+  "write_second_reaction_stage": true,
+
+  "simulations": [
+    {
+      "tag": "100k_300K",
+      "temperature": 300,
+      "density": 0.8,
+      "monomer_counts": {
+        "alkenyl_branched_diacid_chloride": 2380,
+        "m-phenylenediamine": 3570,
+        "extended_alkenyl_branched_diacid_chloride": 100
+      }
+    }
+  ],
+  "monomers": [
+      {
+        "name": "alkenyl_branched_diacid_chloride",
+        "smiles": "C=CCC(CCCCCCC(CC=C)C(=O)Cl)C(=O)Cl"
+      },
+       {
+        "name": "extended_alkenyl_branched_diacid_chloride",
+        "smiles": "C/C=C/CC(CCCCCCC(C/C=C/C)C(=O)Cl)C(=O)Cl"
+      },
+      {
+        "name": "m-phenylenediamine",
+        "smiles": "C1=CC(=CC(=C1)N)N"
+      }
+     
+    ]
+  }
+  

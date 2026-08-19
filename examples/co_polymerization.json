@@ -1,0 +1,35 @@
+{
+  "simulation_name": "Methyl_Methacrylate_Triethylene_Glycol_Dimethacrylate_Copolymerization_100k_500K_with_wildcards",
+
+  "force_field": "PCFF",
+
+  "wildcards": true,
+
+  "simulations": [
+    {
+      "tag": "MMA_TEGDMA_100k_500K",
+
+      "temperature": 500.0,
+
+      "density": 1.23,
+
+      "total_atoms": 100000,
+
+      "monomer_ratios": {
+        "methyl_methacrylate": 14.0,
+        "styrene": 0.7
+      }
+    }
+  ],
+
+  "monomers": [
+    {
+      "name": "methyl_methacrylate",
+      "smiles": "COC(=O)C(C)=C"
+    },
+    {
+      "name": "styrene",
+      "smiles": "C=CC1=CC=CC=C1"
+    }
+  ]
+}
