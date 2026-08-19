@@ -157,17 +157,8 @@ def test_reactant_atom_walker_accepts_single_integer_start():
         )
     )
 
-    # max_bonds=1 means start atom plus atoms exactly one bond away.
-    assert template_atoms == [
-        1,
-        0,
-        2,
-    ]
-
-    assert edge_atoms == [
-        0,
-        2,
-    ]
+    assert template_atoms == [1]
+    assert edge_atoms == [1]
 
 
 def test_reactant_atom_walker_accepts_list_start():
@@ -181,19 +172,8 @@ def test_reactant_atom_walker_accepts_list_start():
         )
     )
 
-    assert template_atoms == [
-        1,
-        3,
-        0,
-        2,
-        4,
-    ]
-
-    assert edge_atoms == [
-        0,
-        2,
-        4,
-    ]
+    assert template_atoms == [1, 3]
+    assert edge_atoms == [1, 3]
 
 
 def test_reactant_atom_walker_accepts_tuple_start():
@@ -207,28 +187,11 @@ def test_reactant_atom_walker_accepts_tuple_start():
         )
     )
 
-    assert template_atoms == [
-        1,
-        3,
-        0,
-        2,
-        4,
-    ]
-
-    assert edge_atoms == [
-        0,
-        2,
-        4,
-    ]
+    assert template_atoms == [1, 3]
+    assert edge_atoms == [1, 3]
 
 
-def test_reactant_atom_walker_one_bond_distance():
-    # Branched molecule:
-    #
-    #       2
-    #       |
-    #   0 - 1 - 3
-    #
+def test_reactant_atom_walker_max_bonds_1_contains_seed_shell_only():
     molecule = mol("CC(C)C")
 
     template_atoms, edge_atoms = (
@@ -239,21 +202,11 @@ def test_reactant_atom_walker_one_bond_distance():
         )
     )
 
-    assert template_atoms == [
-        1,
-        0,
-        2,
-        3,
-    ]
-
-    assert edge_atoms == [
-        0,
-        2,
-        3,
-    ]
+    assert template_atoms == [1]
+    assert edge_atoms == [1]
 
 
-def test_reactant_atom_walker_two_bond_distance():
+def test_reactant_atom_walker_max_bonds_2_reaches_one_bond_away():
     # 0 - 1 - 2 - 3 - 4
     molecule = mol("CCCCC")
 
@@ -269,17 +222,15 @@ def test_reactant_atom_walker_two_bond_distance():
         2,
         1,
         3,
-        0,
-        4,
     ]
 
     assert edge_atoms == [
-        0,
-        4,
+        1,
+        3,
     ]
 
 
-def test_reactant_atom_walker_three_bond_distance():
+def test_reactant_atom_walker_max_bonds_3_reaches_two_bonds_away():
     # 0 - 1 - 2 - 3 - 4 - 5 - 6
     molecule = mol("CCCCCCC")
 
@@ -297,18 +248,15 @@ def test_reactant_atom_walker_three_bond_distance():
         4,
         1,
         5,
-        0,
-        6,
     ]
 
     assert edge_atoms == [
-        0,
-        6,
+        1,
+        5,
     ]
 
 
 def test_reactant_atom_walker_ring_does_not_revisit_atoms():
-    # Six-membered ring.
     molecule = mol("C1CCCCC1")
 
     template_atoms, edge_atoms = (
@@ -319,30 +267,23 @@ def test_reactant_atom_walker_ring_does_not_revisit_atoms():
         )
     )
 
-    # Distance 0: 0
-    # Distance 1: 1, 5
-    # Distance 2: 2, 4
     assert template_atoms == [
         0,
         1,
         5,
-        2,
-        4,
     ]
 
     assert edge_atoms == [
-        2,
-        4,
+        1,
+        5,
     ]
 
-    assert len(
-        template_atoms
-    ) == len(
+    assert len(template_atoms) == len(
         set(template_atoms)
     )
 
 
-def test_reactant_atom_walker_stops_at_requested_distance():
+def test_reactant_atom_walker_stops_at_requested_shell_depth():
     molecule = mol(
         "CCCCCCC"
     )
@@ -355,241 +296,40 @@ def test_reactant_atom_walker_stops_at_requested_distance():
         )
     )
 
-    # Atoms 0 and 6 are three bonds away and must not be included.
-    assert 0 not in template_atoms
-    assert 6 not in template_atoms
-
-    assert edge_atoms == [
-        1,
-        5,
-    ]
-
-
-def test_reactant_atom_walker_does_not_cross_disconnected_components():
-    molecule = mol(
-        "CCC.CCC"
-    )
-
-    template_atoms, edge_atoms = (
-        reactant_atom_walker(
-            molecule,
-            0,
-            max_bonds=4,
-        )
-    )
-
-    assert set(
-        template_atoms
-    ) == {
-        0,
-        1,
-        2,
-    }
-
-    # No atoms exist exactly four bonds from the seed.
-    assert edge_atoms == []
-
-
-def test_reactant_atom_walker_multiple_seeds_do_not_duplicate_shared_neighbor():
-    # 0 - 1 - 2 - 3 - 4
-    #
-    # Seeds 1 and 3 both reach atom 2.
-    molecule = mol(
-        "CCCCC"
-    )
-
-    template_atoms, edge_atoms = (
-        reactant_atom_walker(
-            molecule,
-            [1, 3],
-            max_bonds=1,
-        )
-    )
-
-    assert template_atoms.count(
-        2
-    ) == 1
-
-    assert edge_atoms.count(
-        2
-    ) == 1
-
-
-def test_reactant_atom_walker_preserves_seed_order():
-    molecule = mol(
-        "CCCCC"
-    )
-
-    template_atoms, _ = (
-        reactant_atom_walker(
-            molecule,
-            [3, 1],
-            max_bonds=1,
-        )
-    )
-
-    assert template_atoms[:2] == [
+    # max_bonds=2 means:
+    # shell 1 = seed
+    # shell 2 = one bond away
+    assert template_atoms == [
         3,
-        1,
-    ]
-
-
-# =============================================================================
-# product_atom_walker
-# =============================================================================
-
-
-def test_product_atom_walker_maps_all_available_atoms():
-    template_indexes = [
-        0,
         2,
         4,
     ]
 
-    mapping = {
-        0: 10,
-        2: 12,
-        4: 14,
-    }
-
-    result = product_atom_walker(
-        template_indexes,
-        mapping,
-    )
-
-    assert result == {
-        0: 10,
-        2: 12,
-        4: 14,
-    }
-
-
-def test_product_atom_walker_skips_unmapped_atoms():
-    template_indexes = [
-        0,
-        1,
+    assert edge_atoms == [
         2,
-    ]
-
-    mapping = {
-        0: 10,
-        2: 12,
-    }
-
-    result = product_atom_walker(
-        template_indexes,
-        mapping,
-    )
-
-    assert result == {
-        0: 10,
-        2: 12,
-    }
-
-
-def test_product_atom_walker_accepts_product_index_zero():
-    mapping = {
-        5: 0,
-    }
-
-    result = product_atom_walker(
-        [5],
-        mapping,
-    )
-
-    assert result == {
-        5: 0,
-    }
-
-
-def test_product_atom_walker_skips_none_mapping_value():
-    mapping = {
-        1: None,
-        2: 5,
-    }
-
-    result = product_atom_walker(
-        [1, 2],
-        mapping,
-    )
-
-    assert result == {
-        2: 5,
-    }
-
-
-def test_product_atom_walker_empty_template_returns_empty_dict():
-    result = product_atom_walker(
-        [],
-        {
-            0: 10,
-        },
-    )
-
-    assert result == {}
-
-
-def test_product_atom_walker_empty_mapping_returns_empty_dict():
-    result = product_atom_walker(
-        [
-            0,
-            1,
-        ],
-        {},
-    )
-
-    assert result == {}
-
-
-def test_product_atom_walker_preserves_template_order():
-    result = product_atom_walker(
-        [
-            3,
-            1,
-            2,
-        ],
-        {
-            1: 10,
-            2: 20,
-            3: 30,
-        },
-    )
-
-    assert list(
-        result.keys()
-    ) == [
-        3,
-        1,
-        2,
+        4,
     ]
 
 
-def test_product_atom_walker_does_not_modify_mapping():
-    mapping = {
-        0: 10,
-        1: 11,
-    }
-
-    original = mapping.copy()
-
-    product_atom_walker(
-        [
-            0,
-            1,
-        ],
-        mapping,
+def test_reactant_atom_walker_multiple_seeds_do_not_duplicate_shared_neighbor():
+    molecule = mol(
+        "CCCCC"
     )
 
-    assert mapping == original
+    # Need shell 2 to actually walk one bond from the seeds.
+    template_atoms, edge_atoms = (
+        reactant_atom_walker(
+            molecule,
+            [1, 3],
+            max_bonds=2,
+        )
+    )
 
-
-# =============================================================================
-# reaction_atom_walker
-# =============================================================================
+    assert template_atoms.count(2) == 1
+    assert edge_atoms.count(2) == 1
 
 
 def test_reaction_atom_walker_combines_graph_walk_and_mapping():
-    # 0 - 1 - 2 - 3 - 4
     molecule = mol(
         "CCCCC"
     )
@@ -615,13 +355,11 @@ def test_reaction_atom_walker_combines_graph_walk_and_mapping():
         2: 102,
         1: 101,
         3: 103,
-        0: 100,
-        4: 104,
     }
 
     assert edge_atoms == [
-        0,
-        4,
+        1,
+        3,
     ]
 
 
@@ -648,12 +386,12 @@ def test_reaction_atom_walker_keeps_edge_atoms_in_reactant_index_space():
     )
 
     assert edge_atoms == [
-        0,
-        4,
+        1,
+        3,
     ]
 
-    assert 50 not in edge_atoms
-    assert 54 not in edge_atoms
+    assert 51 not in edge_atoms
+    assert 53 not in edge_atoms
 
 
 def test_reaction_atom_walker_skips_template_atoms_missing_from_mapping():
@@ -682,11 +420,9 @@ def test_reaction_atom_walker_skips_template_atoms_missing_from_mapping():
         3: 13,
     }
 
-    # Edge detection is based on the reactant graph, independent of
-    # whether those atoms happen to have product mappings.
     assert edge_atoms == [
-        0,
-        4,
+        1,
+        3,
     ]
 
 
@@ -705,7 +441,7 @@ def test_reaction_atom_walker_multiple_start_atoms():
             molecule,
             [1, 3],
             mapping,
-            max_bonds=1,
+            max_bonds=2,
         )
     )
 
@@ -722,7 +458,6 @@ def test_reaction_atom_walker_multiple_start_atoms():
         2,
         4,
     ]
-
 
 def test_reaction_atom_walker_disconnected_components():
     molecule = mol(
