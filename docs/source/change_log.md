@@ -22,29 +22,61 @@ This serves two purposes:
     At release time, you can move the Unreleased section changes into a new release version section.
  -->
 
-## [0.3] - [2026-08-xx]
+# Change Log
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
+## [0.3.0] - 2026-08-21
+
 ### Added
 
-* **Reaction Progression:** Multi-stage reaction template generation to handle multi stage reaction progressions, copolymerizations and small molecules which needs few templates for the polymerization reactions.
-* **Looping Control:** A new loop control parameter in the input file to prevent the explosion of unnecessary reactions. Defaults to `5` loops, but can be optimized by setting `loop: <int>` or disabled entirely with `loop: False`.
-* **Advanced Detection:** Index-based functional group detection and index-based reaction detection to accurately identify reacting atoms post-first reaction.
-* **Pathway Deduplication:** NetworkX-based deduplication detection to actively filter redundant reaction pathways.
-* **Reaction Libraries:** Robust library modules for various polymer chemistries, including Epoxies, Polyamides, Polyesters, Polycarbonates, Polysiloxanes, Polyureas, Polyurethanes, and Vinyl polymers.
-* **Force Field Parameters:** PCFF force field additions, specifically including new `s_m` sulfone parameters.
+- **Reaction progression workflow:** Added iterative reaction-product generation so AutoREACTER can generate templates from products formed in earlier reaction steps. This improves support for multistage reactions, copolymerizations, and small-molecule systems where the initial monomers alone are not sufficient to generate all required polymerization templates.
+- **Reaction iteration control:** Added `reaction_iteration_depth` to control how many reaction-product iterations are attempted. The default value is `5`, and the loop can be disabled by setting `reaction_iteration_depth` to `false`.
+- **Index-based functional-group detection:** Added index-based functional-group detection to track reactive atom positions more accurately during reaction progression.
+- **Index-based reaction detection:** Added index-based reaction detection so products generated in earlier reaction steps can be checked for additional valid reactions.
+- **RDKit/NetworkX reaction deduplication:** Added graph-based reaction deduplication to reduce redundant reaction pathways during reaction progression.
+- **LAMMPS template deduplication:** Added NetworkX-based LAMMPS template deduplication using generated pre-reaction templates, post-reaction templates, and map files.
+- **Wildcard template support:** Added support for LAMMPS wildcard map generation to reduce duplicate edge-template cases when using supported LAMMPS versions.
+- **Expanded reaction libraries:** Added and reorganized polymer reaction libraries for epoxy-amine, polyamide, polyester, polycarbonate, polysiloxane, polyurea, polyurethane, vinyl, and related polymerization chemistries.
+- **Expanded functional-group libraries:** Added modular functional-group libraries for nitrogen, oxygen, carboxyl/carbonyl, vinyl/alkene, sulfur, silicon, ring, active-center, and mixed AB-type groups.
+- **TFE/vinyl support:** Added support for tetrafluoroethylene and additional vinyl polymerization workflows.
+- **Public API session access:** Added `arx.session()` to expose the active AutoREACTER session for workflow inspection.
+- **Unit tests:** Added broader unit-test coverage for input parsing, ARX CLI behavior, reaction preparation, LUNAR client utilities, force-field wrapper components, walkers, and LAMMPS writers.
+- **Documentation pages:** Added new documentation pages for advanced options and template deduplication.
 
 ### Changed
 
-* **Library Organization:** Centralized the reaction libraries into dedicated modules to improve maintainability and expandability.
-* **Structure Generation:** Improved 3D molecule embedding to better handle highly congested polymer structures.
-
-### Removed
-
-* **Legacy Code:** Removed legacy compatibility shims (`_compat.py`).
+- **Input parser:** Refactored input parsing and validation, including cleaner handling of workflow options, simulation setup fields, force-field aliases, and input schema checks.
+- **Reaction-library organization:** Refactored reaction libraries into dedicated modules and registries instead of relying on one monolithic reaction-library file.
+- **Functional-group organization:** Refactored functional-group definitions into modular registry-based libraries.
+- **Reaction preparation:** Refactored reaction preparation to support reaction progression, deduplication, inactive-template filtering, and clearer error handling.
+- **REACTER file handling:** Simplified REACTER file metadata storage by storing LAMMPS molecule paths directly on monomer entries and template/map paths directly on reaction metadata.
+- **LAMMPS writers:** Updated LAMMPS input writers to use the refactored REACTER metadata and filter inactive reaction templates.
+- **3D molecule preparation:** Improved 3D embedding and repair handling for congested or difficult polymer structures.
+- **Examples:** Replaced older test-style example JSON files with cleaner v0.3 example inputs.
+- **Documentation structure:** Reorganized documentation into clearer user-facing and developer-facing pages.
 
 ### Fixed
 
-* Addressed various stability and progression issues tracked in recent bug reports.
-* Improved Error handling when no reaction instances are found for the specified monomer combinations.
+- Fixed reaction progression issues where products from earlier steps were not correctly reused for later reaction detection.
+- Fixed index-alignment issues during functional-group and reaction detection.
+- Fixed radical handling for vinyl polymerization products and reaction deduplication.
+- Fixed duplicate-template detection behavior for both RDKit-level reaction metadata and LAMMPS-level template files.
+- Fixed handling of inactive or duplicate reaction templates so they are skipped in later workflow stages.
+- Fixed empty-reaction cases so AutoREACTER raises clearer errors when no valid reaction instances are found.
+- Fixed LAMMPS molecule/template file path handling after the REACTER metadata refactor.
+- Fixed cache staging behavior during output directory preparation.
+- Fixed documentation heading and toctree issues for cleaner Sphinx builds.
+
+### Removed
+
+- Removed legacy compatibility shims.
+- Removed unused placeholder detector, fragment-comparison, and legacy library files.
+- Removed older cluttered example JSON files in favor of focused v0.3 examples.
 
 ## [0.2.3] - [2026-06-24]
 
