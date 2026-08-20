@@ -1,4 +1,4 @@
-## Supported Reactions
+# Supported Reactions
 
 AutoREACTER is currently in **v{{ autoreacter_version }}**. At this stage of development, the reaction library supports a broad range of step-growth and chain-growth polymerization reactions, including **polycondensation**, **transesterification**, **polyaddition**, **hydrolysis initiation**, and **addition polymerization**.
 
@@ -10,7 +10,7 @@ The core `Detector` module automatically identifies the following functional gro
 
 ---
 
-### 1. Polyesterification
+## 1. Polyesterification
 
 These reactions form ester linkages (`-COO-`) and typically release water (`H₂O`), alcohols (`R-OH`), or hydrogen halides (e.g., `HCl`) as byproducts.
 
@@ -45,7 +45,7 @@ These reactions form ester linkages (`-COO-`) and typically release water (`H₂
 
 ---
 
-### 2. Polyamidation
+## 2. Polyamidation
 
 These reactions form amide linkages (`-CONH-`) and typically release water (`H₂O`) or hydrogen halides (e.g., `HCl`) as byproducts.
 
@@ -72,7 +72,7 @@ These reactions form amide linkages (`-CONH-`) and typically release water (`H�
 
 ---
 
-### 3. Polyanhydride Formation
+## 3. Polyanhydride Formation
 
 These reactions form anhydride linkages (`-CO-O-CO-`) and typically release hydrogen halides (e.g., `HCl`) as byproducts.
 
@@ -87,7 +87,7 @@ These reactions form anhydride linkages (`-CO-O-CO-`) and typically release hydr
 
 ---
 
-### 4. Polythioesterification
+## 4. Polythioesterification
 
 These reactions form thioester linkages (`-COS-`) and typically release water (`H₂O`) or hydrogen halides (e.g., `HCl`) as byproducts.
 
@@ -102,7 +102,7 @@ These reactions form thioester linkages (`-COS-`) and typically release water (`
 
 ---
 
-### 5. Mixed Polyester/Polythioester Formation
+## 5. Mixed Polyester/Polythioester Formation
 
 These reactions are supported for hydroxy–thiol monomers reacting with acid halides. Depending on the reacting group, either an ester or thioester linkage can be formed.
 
@@ -117,7 +117,7 @@ These reactions are supported for hydroxy–thiol monomers reacting with acid ha
 
 ---
 
-### 6. Polyurethane, Polythiourethane, and Polyurea Formation
+## 6. Polyurethane, Polythiourethane, and Polyurea Formation
 
 These reactions form urethane, thiourethane, or urea linkages via **polyaddition** pathways.
 
@@ -136,7 +136,7 @@ These reactions form urethane, thiourethane, or urea linkages via **polyaddition
 
 ---
 
-### 7. Epoxy-Amine Addition and Crosslinking
+## 7. Epoxy-Amine Addition and Crosslinking
 
 These reactions model step-growth/network formation between amine curing agents and epoxy rings.
 
@@ -151,7 +151,7 @@ These reactions model step-growth/network formation between amine curing agents 
 
 ---
 
-### 8. Vinyl and Fluoropolymer Addition Polymerization
+## 8. Vinyl and Fluoropolymer Addition Polymerization
 
 These chain-growth pathways model radical initiation, propagation, and copolymerization of vinyl and fluorinated monomers.
 
@@ -178,7 +178,7 @@ These chain-growth pathways model radical initiation, propagation, and copolymer
 
 ---
 
-### 9. Polycarbonate Formation
+## 9. Polycarbonate Formation
 
 These reactions build carbonate linkages via condensation or transcarbonation.
 
@@ -193,7 +193,7 @@ These reactions build carbonate linkages via condensation or transcarbonation.
 
 ---
 
-### 10. Polysiloxane Formation
+## 10. Polysiloxane Formation
 
 These pathways handle hydrolysis of chlorosilanes and condensation of silanols into silicone chains.
 
@@ -212,7 +212,7 @@ These pathways handle hydrolysis of chlorosilanes and condensation of silanols i
 
 ---
 
-### 11. Thiol-Ene Click Polymerization
+## 11. Thiol-Ene Click Polymerization
 
 * **Dithiol and Diene Thiol-Ene Click Polymerization**
 * *Reactants:* Dithiol (`-SH`) + Diene (`-C=C-`)

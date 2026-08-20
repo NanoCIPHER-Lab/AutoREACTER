@@ -1,4 +1,4 @@
-## Contact us
+# Contact us
 
 For questions, suggestions, or bug reports:
 

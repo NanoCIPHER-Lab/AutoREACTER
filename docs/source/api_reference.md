@@ -8,7 +8,7 @@ AutoREACTER accepts an input file path, initializes the session, and exposes met
 
 ---
 
-### Import AutoREACTER
+## Import AutoREACTER
 
 ```python
 import AutoREACTER as arx

@@ -11,3 +11,12 @@ Use this guide if you want to clone the AutoREACTER GitHub repository, install t
 ## {doc}`Getting Started - Pip Installation Guide <getting_started_pip_installation>`
 
 Use this guide if you want to install AutoREACTER directly from PyPI and run your first workflow.
+
+
+```{toctree}
+:hidden:
+
+getting_started_pip_installation
+getting_started_source_installation
+```
+
