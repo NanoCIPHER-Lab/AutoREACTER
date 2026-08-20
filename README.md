@@ -2,7 +2,7 @@
   <img src="https://raw.githubusercontent.com/NanoCIPHER-Lab/AutoREACTER/main/docs/source/_static/logo.png" alt="AutoREACTER logo" width="220">
 </p>
 
-<p align="center"><b>Automated generation of LAMMPS/REACTER-ready reaction-template workflows.*</b></p>
+<p align="center"><b>Automated generation of LAMMPS/REACTER-ready reaction-template workflows.</b></p>
 
 > **Status:** AutoREACTER is currently in **v0.2.3** and under active development. APIs, configuration schemas, reaction libraries, and core functionality may change without notice.
 > Please refer to the [changelog](https://autoreacter.org/change_log.html) for the latest updates.
