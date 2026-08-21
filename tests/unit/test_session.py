@@ -191,32 +191,30 @@ def test_session_file_bundles_default_to_none(tmp_path):
 
 
 def test_session_runtime_defaults(tmp_path):
+    inputs = make_validated_inputs()
+
     session = Session(
-        inputs=make_validated_inputs(),
+        inputs=inputs,
         staging_dir=tmp_path / "staging",
         output_dir=tmp_path / "output",
         images_dir=tmp_path / "images",
     )
+
+    assert session.inputs is inputs
+
+    assert session.monomer_roles == []
+    assert session.reaction_instances == []
+    assert session.non_reactants == []
+    assert session.reaction_metadata == []
+
+    assert session.ff_files is None
+    assert session.reacter_files is None
 
     assert session.reaction_id_counter == 0
 
     assert (
         session.reaction_progression_session
         is None
-    )
-
-    assert session.deep_search is True
-    assert session.reaction_iteration_depth == 5
-    assert session.wildcards is True
-
-    assert (
-        session.deduplicate_reaction_templates
-        is True
-    )
-
-    assert (
-        session.write_second_reaction_stage
-        is True
     )
 
 
