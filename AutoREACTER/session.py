@@ -85,14 +85,6 @@ class Session:
     reaction_id_counter: int = 0
     reaction_progression_session: object | None = None
 
-    # Workflow options copied from SimulationSetup
-    deep_search: bool = True
-    reaction_iteration_depth: int = 5
-    wildcards: bool = True
-    deduplicate_reaction_templates: bool = True
-    write_second_reaction_stage: bool = True
-
-
 
 def _resolve_input_path(input_file_path: str) -> Path:
     """
