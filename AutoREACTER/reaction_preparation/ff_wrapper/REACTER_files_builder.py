@@ -634,7 +634,7 @@ Types
                         with open(map_path_del, "w") as f:
                             f.write(map_file_contents_del)
 
-                return pre_out, post_out, map_path, map_path_del
+                return pre_out, post_out, map_path
     
     def _copy_lunar_files_to_cache(self, ff_files: FFFiles) -> tuple[Path, Path]:
         """
@@ -765,7 +765,7 @@ Types
             }
 
             # Build the per-reaction template files and mappings.
-            pre_out, post_out, map_path, map_path_del = self._build_bond_react_templates(
+            pre_out, post_out, map_path = self._build_bond_react_templates(
                 file_dict = current_rxn_files,
                 reactant_to_product = template_map,
                 initiator_atoms = initiators,
@@ -773,9 +773,14 @@ Types
                 delete_ids = delete_ids
             )
             current_rxn_metadata.map_file = Path(map_path)
-            current_rxn_metadata.map_file_with_delete_ids = (
-                Path(map_path_del) if map_path_del is not None else None
+
+            optional_delete_map = Path(map_path).with_name(
+                f"RXN_{id}_with_delete_ids.map"
             )
+            current_rxn_metadata.map_file_with_delete_ids = (
+                optional_delete_map if optional_delete_map.is_file() else None
+            )
+
             current_rxn_metadata.pre_reaction_file = Path(pre_out)
             current_rxn_metadata.post_reaction_file = Path(post_out)
         
