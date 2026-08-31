@@ -1,8 +1,8 @@
 # Advanced Options
 
-AutoREACTER gives users control over advanced reaction-generation behavior through the input JSON file. These options are intended for users who want to control reaction-product iteration and LAMMPS wildcard template generation.
+AutoREACTER gives users control over advanced workflow behavior through the input JSON file. These options are intended for users who want to control reaction-product iteration, LAMMPS wildcard template generation, and output-file placement.
 
-The following advanced options are available for users:
+The following user-facing advanced options are currently available:
 
 <table>
   <thead>
@@ -16,17 +16,22 @@ The following advanced options are available for users:
     <tr>
       <td style="white-space:nowrap;"><a href="#reaction_iteration_depth" style="color:black;"><strong>reaction_iteration_depth</strong></a></td>
       <td style="color:black;">5</td>
-      <td>Controls how many reaction-product iterations are attempted.</td>
+      <td>Controls the maximum number of reaction-product iterations used during reaction progression.</td>
     </tr>
     <tr>
       <td style="white-space:nowrap;"><a href="#wildcards" style="color:black;"><strong>wildcards</strong></a></td>
       <td style="color:black;">true</td>
-      <td>Uses LAMMPS wildcard maps to reduce edge-template duplication.</td>
+      <td>Generates LAMMPS wildcard map sections to reduce redundant edge-template cases.</td>
+    </tr>
+    <tr>
+      <td style="white-space:nowrap;"><a href="#output_dir" style="color:black;"><strong>output_dir</strong></a></td>
+      <td style="color:black;">AutoREACTER_outputs/&lt;simulation_name&gt;</td>
+      <td>Controls where AutoREACTER writes generated output files.</td>
     </tr>
   </tbody>
 </table>
 
-Default JSON block:
+Default behavior:
 
 ```json
 {
@@ -35,8 +40,13 @@ Default JSON block:
 }
 ```
 
-<p style="color:red;"><strong>Important: These options can change how many reaction products and LAMMPS reaction templates are generated.</strong></p>
+By default, `output_dir` does not need to be provided. If it is omitted, AutoREACTER writes outputs next to the input JSON file using:
 
+```text
+AutoREACTER_outputs/<simulation_name>
+```
+
+<p style="color:red;"><strong>Important: These options can change the number of generated reaction products, reaction templates, LAMMPS map files, and output locations.</strong></p>
 ---
 
 (reaction_iteration_depth)=
@@ -161,3 +171,79 @@ The following templates are generated with wildcards enabled.
 :width: 100%
 :align: center
 ```
+
+---
+
+(output_dir)=
+## output_dir
+
+`output_dir` is an optional top-level input setting that controls where AutoREACTER writes generated output files.
+
+If `output_dir` is not provided, AutoREACTER writes outputs next to the input JSON file using the default folder structure:
+
+```text
+AutoREACTER_outputs/<simulation_name>
+```
+
+Example:
+
+```json
+{
+  "simulation_name": "Polyamide_Count_Mode_Basic",
+  "force_field": "PCFF",
+  "output_dir": "my_outputs",
+  "simulations": [
+    {
+      "tag": "10k_300K",
+      "temperature": 300,
+      "density": 0.8,
+      "monomer_counts": {
+        "trimesoyl_chloride": 220,
+        "m_phenylenediamine": 330
+      }
+    }
+  ],
+  "monomers": [
+    {
+      "name": "trimesoyl_chloride",
+      "smiles": "ClC(=O)c1cc(cc(c1)C(Cl)=O)C(Cl)=O"
+    },
+    {
+      "name": "m_phenylenediamine",
+      "smiles": "C1=CC(=CC(=C1)N)N"
+    }
+  ]
+}
+```
+
+For this example, AutoREACTER writes output to:
+
+```text
+my_outputs
+```
+
+Relative paths are resolved relative to the input JSON file location. Absolute paths are used directly.
+
+Examples:
+
+```json
+{
+  "output_dir": "AutoREACTER_outputs/polyamide_test"
+}
+```
+
+```json
+{
+  "output_dir": "/home/user/AutoREACTER_runs/polyamide_test"
+}
+```
+
+On Windows or WSL, Windows-style paths can also be used:
+
+```json
+{
+  "output_dir": "C:/Users/Janitha/Documents/AutoREACTER_runs/polyamide_test"
+}
+```
+
+<p style="color:red;"><strong>Important: If the output directory already exists, AutoREACTER may overwrite or clear generated workflow files from the previous run.</strong></p>
