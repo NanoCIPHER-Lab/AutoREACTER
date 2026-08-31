@@ -1300,6 +1300,21 @@ class DeduplicationDetector:
             )
 
             template.map_file = map_file_path
+
+            delete_map_file = getattr(
+                template,
+                "map_file_with_delete_ids",
+                None,
+            )
+            if delete_map_file is not None:
+                delete_map_file = Path(delete_map_file)
+                if delete_map_file.is_file():
+                    self._write_lammps_wildcard_map_file(
+                        map_file_path=delete_map_file,
+                        wildcard_ids=wildcard_ids,
+                    )
+                    template.map_file_with_delete_ids = delete_map_file
+
             active_templates.append(template)
 
         return active_templates
@@ -1388,6 +1403,20 @@ class DeduplicationDetector:
                 )
 
                 template.map_file = map_file_path
+
+                delete_map_file = getattr(
+                    template,
+                    "map_file_with_delete_ids",
+                    None,
+                )
+                if delete_map_file is not None:
+                    delete_map_file = Path(delete_map_file)
+                    if delete_map_file.is_file():
+                        self._write_lammps_wildcard_map_file(
+                            map_file_path=delete_map_file,
+                            wildcard_ids=wildcard_ids,
+                        )
+                        template.map_file_with_delete_ids = delete_map_file
 
             template.activity_stats = True
             unique_templates.append(template)
