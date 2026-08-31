@@ -488,6 +488,13 @@ Types
                     template_indexes_reactant.append(int(key + 1))
                     template_indexes_product.append(int(value + 1))
 
+                # Deleted atoms do not have product equivalences, but they must still
+                # be present in the pre-reaction template so LAMMPS can delete them.
+                for atom_index in delete_ids:
+                    atom_index_1_based = int(atom_index + 1)
+                    if atom_index_1_based not in template_indexes_reactant:
+                        template_indexes_reactant.append(atom_index_1_based)
+
                 # Iterate the provided file dictionary and only process entries that start with "pre_"
                 # so that we can find their matching "post_{num}" counterparts.
                 # Wrapped file_dict.items() in list() to prevent RuntimeError
@@ -598,34 +605,36 @@ Types
                     ]
 
 
-                    # Construct the .map file contents using the reindexed template-space mappings
-                    # 1. Standard map file (Pass [] to suppress delete_ids)
+                    # 1. Standard map file.
+                    # This is the default map used by AutoREACTER-generated
+                    # LAMMPS scripts, so DeleteIDs are intentionally suppressed.
                     map_file_contents = self._map_file_write(
                         template_reactant_to_template_product,
                         initiator_atoms_t,
                         edge_atoms_t,
-                        [], 
+                        [],
                         file_name=map_file_name
                     )
                     map_path = os.path.join(self.cache_dir, map_file_name)
                     with open(map_path, "w") as f:
                         f.write(map_file_contents)
 
-                    # 2. Supplementary map file (With delete_ids, if any exist)
+                    # 2. Optional map file with DeleteIDs.
+                    map_path_del = None
                     if delete_ids_t:
                         map_file_name_del = f"RXN_{num}_with_delete_ids.map"
                         map_file_contents_del = self._map_file_write(
                             template_reactant_to_template_product,
                             initiator_atoms_t,
                             edge_atoms_t,
-                            delete_ids_t, 
+                            delete_ids_t,
                             file_name=map_file_name_del
                         )
                         map_path_del = os.path.join(self.cache_dir, map_file_name_del)
                         with open(map_path_del, "w") as f:
                             f.write(map_file_contents_del)
 
-                return pre_out, post_out, map_path
+                return pre_out, post_out, map_path, map_path_del
     
     def _copy_lunar_files_to_cache(self, ff_files: FFFiles) -> tuple[Path, Path]:
         """
@@ -756,7 +765,7 @@ Types
             }
 
             # Build the per-reaction template files and mappings.
-            pre_out, post_out, map_path = self._build_bond_react_templates(
+            pre_out, post_out, map_path, map_path_del = self._build_bond_react_templates(
                 file_dict = current_rxn_files,
                 reactant_to_product = template_map,
                 initiator_atoms = initiators,
@@ -764,6 +773,9 @@ Types
                 delete_ids = delete_ids
             )
             current_rxn_metadata.map_file = Path(map_path)
+            current_rxn_metadata.map_file_with_delete_ids = (
+                Path(map_path_del) if map_path_del is not None else None
+            )
             current_rxn_metadata.pre_reaction_file = Path(pre_out)
             current_rxn_metadata.post_reaction_file = Path(post_out)
         
