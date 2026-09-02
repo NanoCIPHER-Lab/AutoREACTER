@@ -50,18 +50,22 @@ class Writer:
             )
 
 
-            RxnSecondStageWriter(
-                out_dir=sub_dir,
-                settings=self.settings,
-                reacter_files=self.reacter_files,
-                simulation=simulation,
-                sim_name=sim_name
-            )
+            if simulation_setup.write_second_reaction_stage:
+                RxnSecondStageWriter(
+                    out_dir=sub_dir,
+                    settings=self.settings,
+                    reacter_files=self.reacter_files,
+                    simulation=simulation,
+                    sim_name=sim_name
+                )
 
             PostEqWriter(
                 out_dir=sub_dir,
                 settings=self.settings,
                 simulation=simulation,
-                sim_name=sim_name
+                sim_name=sim_name,
+                write_second_reaction_stage=(
+                    simulation_setup.write_second_reaction_stage
+                )
             )
         

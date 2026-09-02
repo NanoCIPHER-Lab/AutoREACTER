@@ -1,11 +1,12 @@
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/NanoCIPHER-Lab/AutoREACTER/main/docs/source/_static/logo.png" alt="AutoREACTER logo" width="220">
 </p>
 
-<p align="center"><b>Automated generation of LAMMPS/REACTER-ready reaction-template workflows.*</b></p>
+<p align="center"><b>Automated generation of LAMMPS/REACTER-ready reaction-template workflows.</b></p>
 
-> **Status:** AutoREACTER is currently in **v0.2.3** and under active development. APIs, configuration schemas, reaction libraries, and core functionality may change without notice.
-> Please refer to the [changelog](https://autoreacter.org/change_log.html) for the latest updates.
+> **Status:** AutoREACTER is currently in **v0.3** and under active development.
+> APIs, configuration schemas, reaction libraries, and core functionality may change.
 
 ## Documentation
 
@@ -13,19 +14,22 @@ Full documentation is available at:
 
 **[autoreacter.org](https://autoreacter.org/)**
 
-The documentation includes installation instructions, input configuration, supported reactions, supported force fields, cleanup utilities, and developer API references.
-
-For detailed functional-group mapping and reaction rules, see the [supported reactions documentation](https://autoreacter.org/supported-reactions.html).
+The documentation covers installation, input configuration, supported reactions,
+force fields, workflow options, and API usage.
 
 ## Installation
 
-AutoREACTER can be installed directly from PyPI:
+Install AutoREACTER from PyPI:
 
 ```bash
 python -m pip install AutoREACTER
-```
+````
 
-For users who want to modify the source code or run the latest development version, AutoREACTER can also be installed from source:
+AutoREACTER also requires **LUNAR** for atom typing. See the
+[Getting Started documentation](https://autoreacter.org/getting-started.html)
+for setup instructions.
+
+For development or source installation:
 
 ```bash
 git clone https://github.com/NanoCIPHER-Lab/AutoREACTER.git
@@ -33,42 +37,52 @@ cd AutoREACTER
 python -m pip install -e .
 ```
 
-AutoREACTER also requires **LUNAR** for atom typing. See the [getting started documentation](https://autoreacter.org/getting-started.html) for the full setup guide.
+## Quick Start
 
-## Quick start
+After installing AutoREACTER, create a Python script such as `run_autoreacter.py`:
 
-Run AutoREACTER with a JSON input file:
+```python
+import AutoREACTER as arx
 
-```bash
-python examples/example_1.py -i examples/example_1_inputs_count_mode.json
+arx.run("input.json")
+
+arx.select_reactions()
+arx.select_non_reactants()
+
+arx.prepare_reactions()
+
+session = arx.session()
+print(f"Review generated images in: {session.images_dir}")
+
+input("Press Enter to continue...")
+
+arx.process()
 ```
 
-or:
+Run it with:
 
 ```bash
-python examples/example_1.py --input examples/example_1_inputs_count_mode.json
+python run_autoreacter.py
 ```
 
-View available commands and options:
+Example JSON input files and complete workflows are available in the
+[`examples`](https://github.com/NanoCIPHER-Lab/AutoREACTER/tree/main/examples)
+directory.
+
+For users working directly from the source repository, the included example
+runner can also be used:
 
 ```bash
-python examples/example_1.py --help
+python examples/example_1.py -i examples/polyamide_count_mode_basic.json
 ```
 
-## Interactive notebook workflow
+## Help and Support
 
-AutoREACTER can also be used through Jupyter notebooks for an interactive, visual, step-by-step workflow. This mode is recommended for inspecting monomers, functional groups, reaction templates, and generated LAMMPS setup files before running larger workflows.
-
-See the examples directory for notebooks and usage notes:
-
-**[examples/README.md](https://autoreacter.org/getting_started_source_installation.html)**
-
-## Help and support
-
-If you find a bug, need a new reaction type, or want to request additional force-field support, please open an issue:
+For bugs, reaction requests, or force-field support requests, please open an issue:
 
 **[AutoREACTER Issues](https://github.com/NanoCIPHER-Lab/AutoREACTER/issues)**
 
 ## License
 
-AutoREACTER is released under the **MIT License**. See [LICENSE](https://github.com/NanoCIPHER-Lab/AutoREACTER/blob/main/LICENSE.md) for details.
+AutoREACTER is released under the **MIT License**.
+See [LICENSE](https://github.com/NanoCIPHER-Lab/AutoREACTER/blob/main/LICENSE.md).

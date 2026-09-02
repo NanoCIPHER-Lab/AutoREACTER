@@ -1,0 +1,36 @@
+{
+  "simulation_name": "Polyamide_Count_Mode_Basic",
+  "force_field": "PCFF",
+
+  "simulations": [
+    {
+      "tag": "10k_300K",
+      "temperature": 300,
+      "density": 0.8,
+      "monomer_counts": {
+        "trimesoyl_chloride": 220,
+        "m_phenylenediamine": 330
+      }
+    },
+    {
+      "tag": "100k_400K",
+      "temperature": 400,
+      "density": 0.8,
+      "monomer_counts": {
+        "trimesoyl_chloride": 2200,
+        "m_phenylenediamine": 3300
+      }
+    }
+  ],
+
+  "monomers": [
+    {
+      "name": "trimesoyl_chloride",
+      "smiles": "ClC(=O)c1cc(cc(c1)C(Cl)=O)C(Cl)=O"
+    },
+    {
+      "name": "m_phenylenediamine",
+      "smiles": "C1=CC(=CC(=C1)N)N"
+    }
+  ]
+}

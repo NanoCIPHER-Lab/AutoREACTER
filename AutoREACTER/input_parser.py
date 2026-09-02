@@ -2,6 +2,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from pathlib import Path
+
 from typing import Any, Literal, Optional
 
 from PIL.Image import Image
@@ -39,8 +40,10 @@ class SmilesValidationError(InputError):
 class DuplicateMonomerError(InputError):
     """Raised when duplicate monomer definitions are detected."""
 
+
 class CompatibilityError(InputError):
     """Raised when input combinations are incompatible with the current workflow."""
+
 
 # Type aliases for clarity and validation.
 CompositionMethodType = Literal["counts", "ratio"]
@@ -75,20 +78,21 @@ class MonomerEntry:
         count: Dictionary mapping replica tags to integer counts in counts mode.
         ratio: Molar ratio of the monomer in ratio mode.
         rdkit_mol: RDKit Mol object corresponding to the monomer SMILES.
-        molecule_3Dmol_path: Optional file path to the 3D .mol representation.
+        molecule_3Dmol_path: Optional file path to the 3D .mol representation. Later stages will generate this file.
+        lmp_molecule_file: Optional file path to the LAMMPS molecule file. Later stages will generate this file.
         num_atoms: Number of atoms in the monomer with hydrogens included.
         molecular_weight: Molecular weight of the monomer from RDKit.
         status: Boolean indicating whether the monomer should be included.
     """
-
     id: int
     data_id: str
     name: str | None
     smiles: str
-    count: dict | None  # None only if ratio mode.
-    ratio: float | None  # None only if counts mode.
+    count: dict | None
+    ratio: float | None
     rdkit_mol: Chem.Mol | None = None
     molecule_3Dmol_path: Optional[Path] = None
+    lmp_molecule_file: Optional[Path] = None
     num_atoms: int | None = None
     molecular_weight: float | None = None
     status: bool = True
@@ -142,6 +146,14 @@ class SimulationSetup:
         ratio: Optional mapping of monomer IDs to ratios.
         number_of_total_atoms: Optional list of total atom targets.
         box_estimates: Optional estimated box size placeholder.
+        deep_search: Enables deeper reaction/functional-group searching.
+        reaction_iteration_depth: Maximum reaction progression depth. Defaults
+            to 5 when omitted. A value of 0 disables looping. Values greater
+            than 0 enable looping for that many iterations.
+        wildcards: Enables wildcard handling when supported downstream.
+        deduplicate_reaction_templates: Enables LAMMPS template deduplication.
+        write_second_reaction_stage: Enables writing the second reaction-stage
+            LAMMPS input files.
     """
 
     simulation_name: str
@@ -149,12 +161,20 @@ class SimulationSetup:
     density: list[float]
     force_field: str | None
     monomers: list[MonomerEntry]
+    input_json: dict | None = None
+    max_loop_count: int | None = None
     simulations: list[Simulation] | None = None
     composition_method: CompositionMethodType | None = None
     composition: dict[str, Any] | None = None
     ratio: dict[int, float] | None = None
     number_of_total_atoms: list[int] | None = None
     box_estimates: float | None = None
+    deep_search: bool = True
+    loop: bool = True
+    reaction_iteration_depth: int = 5
+    wildcards: bool = True
+    deduplicate_reaction_templates: bool = True
+    write_second_reaction_stage: bool = False
 
 
 class InputParser:
@@ -179,7 +199,7 @@ class InputParser:
         self.validate_basic_format(inputs)
 
         simulation_name = inputs["simulation_name"]
-        simulations_list = inputs["simulations"] 
+        simulations_list = inputs["simulations"]
         composition_method = self._get_inputs_mode(simulations_list)
 
         validated_simulations = self._validate_simulations(
@@ -203,6 +223,64 @@ class InputParser:
             inputs.get("force_field", None)
         )
 
+        reaction_iteration_depth = self._validate_reaction_iteration_depth(
+            inputs
+        )
+
+        if reaction_iteration_depth == 0:
+            loop = False
+            max_loop_count = None
+        else:
+            loop = True
+            max_loop_count = reaction_iteration_depth
+
+        deep_search = self._validate_bool_option(
+            inputs,
+            key="deep_search",
+            default=True,
+            aliases=[
+                "deepsearch",
+                "deep_search",
+                "deep-search",
+                "DEEP_SEARCH",
+            ],
+        )
+        wildcards = self._validate_bool_option(
+            inputs,
+            key="wildcards",
+            default=True,
+            aliases=[
+                "wildcard",
+                "wildcards",
+                "use_wildcards",
+                "use-wildcards",
+            ],
+        )
+        deduplicate_reaction_templates = self._validate_bool_option(
+            inputs,
+            key="deduplicate_reaction_templates",
+            default=True,
+            aliases=[
+                "deduplicate_reaction_templates",
+                "deduplicate-templates",
+                "template_deduplication",
+                "template_dedup",
+                "dedup_templates",
+            ],
+        )
+        write_second_reaction_stage = self._validate_bool_option(
+            inputs,
+            key="write_second_reaction_stage",
+            default=True,
+            aliases=[
+                "write_second_reaction_stage",
+                "write-second-reaction-stage",
+                "second_stage",
+                "write_stage_2",
+                "stage_2",
+            ],
+        )
+
         return SimulationSetup(
             simulation_name=simulation_name,
             temperature=validated_simulations["temperatures"],
@@ -212,6 +290,14 @@ class InputParser:
             composition_method=composition_method,
             composition=validated_simulations,
             force_field=force_field,
+            loop=loop,
+            max_loop_count=max_loop_count,
+            input_json=inputs,
+            deep_search=deep_search,
+            reaction_iteration_depth=reaction_iteration_depth,
+            wildcards=wildcards,
+            deduplicate_reaction_templates=deduplicate_reaction_templates,
+            write_second_reaction_stage=write_second_reaction_stage,
         )
 
     def molecule_representation_of_initial_molecules(
@@ -281,7 +367,26 @@ class InputParser:
                 raise InputSchemaError(
                     f"Missing required key: {key!r} in inputs dictionary."
                 )
-            
+
+        simulation_name = inputs["simulation_name"]
+        if not isinstance(simulation_name, str) or not simulation_name.strip():
+            raise InputSchemaError(
+                "'simulation_name' must be a non-empty string. "
+                f"Got: {simulation_name!r}"
+            )
+
+        monomers = inputs["monomers"]
+
+        if not isinstance(monomers, list):
+            raise InputSchemaError(
+                "'monomers' must be a list."
+            )
+
+        for monomer in monomers:
+            if not isinstance(monomer, dict):
+                raise InputSchemaError(
+                    f"Each monomer entry must be a dictionary. Got: {monomer!r}"
+                )
 
     def _get_inputs_mode(self, simulations_list: list) -> CompositionMethodType:
         """
@@ -349,7 +454,9 @@ class InputParser:
             NumericFieldError: If the value is not a positive number.
         """
         if isinstance(temp, bool) or not isinstance(temp, (int, float)):
-            raise NumericFieldError(f"'temperature' must be a number. Got: {temp!r}")
+            raise NumericFieldError(
+                f"'temperature' must be a number. Got: {temp!r}"
+            )
 
         if temp <= 0:
             raise NumericFieldError(
@@ -384,11 +491,11 @@ class InputParser:
             )
 
         return density_value
-    
+
     _FF_ALIASES: dict[str, ForceFieldType] = {
         "pcff-iff": "PCFF-IFF",
         "pcff": "PCFF",
-        "compass": "compass",
+        "compass": "Compass",
         "cvff-iff": "CVFF-IFF",
         "cvff": "CVFF",
         "clay-ff": "Clay-FF",
@@ -401,7 +508,6 @@ class InputParser:
         "gaff": "GAFF",
     }
 
-    
     def _validate_force_field(self, force_field: Any) -> ForceFieldType:
         """
         Validates and normalizes the force field input.
@@ -417,9 +523,13 @@ class InputParser:
         normalized_input = force_field.strip().lower()
 
         if normalized_input not in self._FF_ALIASES:
-            raise InputSchemaError(f"Unsupported force field: {force_field!r}")
+            raise InputSchemaError(
+                f"Unsupported force field: {force_field!r}"
+            )
 
-        canonical_force_field = self._FF_ALIASES[normalized_input]
+        canonical_force_field = self._FF_ALIASES[
+            normalized_input
+        ]
 
         if canonical_force_field in ["OPLSAA", "GAFF"]:
             raise CompatibilityError(
@@ -478,7 +588,11 @@ class InputParser:
 
             if method == "ratio":
                 total_atoms = target.get("total_atoms")
-                if isinstance(total_atoms, bool) or not isinstance(total_atoms, int) or total_atoms <= 0:
+                if (
+                    isinstance(total_atoms, bool)
+                    or not isinstance(total_atoms, int)
+                    or total_atoms <= 0
+                ):
                     raise NumericFieldError(
                         f"'total_atoms' must be a positive integer for ratio mode. Got: {total_atoms!r}"
                     )
@@ -511,6 +625,11 @@ class InputParser:
         allowed_names: set[str] = set()
 
         for monomer_id, monomer in enumerate(monomers, start=1):
+            if not isinstance(monomer, dict):
+                raise InputSchemaError(
+                    f"Each monomer entry must be a dictionary. Got: {monomer!r}"
+                )
+
             name = monomer.get("name")
 
             if not isinstance(name, str) or not name.strip():
@@ -519,11 +638,17 @@ class InputParser:
 
             allowed_names.add(name)
 
-        field_name = "monomer_counts" if method == "counts" else "monomer_ratios"
+        field_name = (
+            "monomer_counts"
+            if method == "counts"
+            else "monomer_ratios"
+        )
 
         for system in systems:
             tag = system["tag"]
-            provided_names = set(system.get(field_name, {}).keys())
+            provided_names = set(
+                system.get(field_name, {}).keys()
+            )
 
             extra = provided_names - allowed_names
             missing = allowed_names - provided_names
@@ -560,9 +685,14 @@ class InputParser:
 
         monomers = inputs.get("monomers")
         if not isinstance(monomers, list):
-            raise InputSchemaError("'monomers' must be a list.")
+            raise InputSchemaError(
+                "'monomers' must be a list."
+            )
 
-        for monomer_id, monomer_dict in enumerate(monomers, start=1):
+        for monomer_id, monomer_dict in enumerate(
+            monomers,
+            start=1,
+        ):
             if not isinstance(monomer_dict, dict):
                 raise InputSchemaError(
                     f"Each monomer entry must be a dictionary. Got: {monomer_dict!r}"
@@ -573,17 +703,31 @@ class InputParser:
                 name = f"data_{monomer_id}"
 
             smiles_raw = monomer_dict.get("smiles")
-            smiles, mol = self._validate_smiles(smiles_raw)
-            seen_smiles = self.validate_no_duplicate_smiles(smiles, seen_smiles)
+            smiles, mol = self._validate_smiles(
+                smiles_raw
+            )
 
-            num_atoms, molecular_weight = self._derive_molecule_properties(mol)
+            seen_smiles = (
+                self.validate_no_duplicate_smiles(
+                    smiles,
+                    seen_smiles,
+                )
+            )
+
+            num_atoms, molecular_weight = (
+                self._derive_molecule_properties(
+                    mol
+                )
+            )
 
             if method == "counts":
                 count_map: dict[str, int] = {}
 
                 for system in systems:
                     tag = system["tag"]
-                    monomer_counts = system["monomer_counts"]
+                    monomer_counts = system[
+                        "monomer_counts"
+                    ]
 
                     if name not in monomer_counts:
                         raise InputSchemaError(
@@ -591,7 +735,12 @@ class InputParser:
                         )
 
                     value = monomer_counts[name]
-                    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+
+                    if (
+                        isinstance(value, bool)
+                        or not isinstance(value, int)
+                        or value < 0
+                    ):
                         raise NumericFieldError(
                             f"Invalid count for monomer {name!r} in system '{tag}'."
                         )
@@ -603,7 +752,9 @@ class InputParser:
 
             else:
                 first_system = systems[0]
-                ratios = first_system["monomer_ratios"]
+                ratios = first_system[
+                    "monomer_ratios"
+                ]
 
                 if name not in ratios:
                     raise InputSchemaError(
@@ -612,7 +763,14 @@ class InputParser:
 
                 ratio_value = ratios[name]
 
-                if isinstance(ratio_value, bool) or not isinstance(ratio_value, (int, float)) or ratio_value < 0:
+                if (
+                    isinstance(ratio_value, bool)
+                    or not isinstance(
+                        ratio_value,
+                        (int, float),
+                    )
+                    or ratio_value < 0
+                ):
                     raise NumericFieldError(
                         f"Invalid ratio for monomer {name!r}."
                     )
@@ -636,7 +794,10 @@ class InputParser:
 
         return validated_monomers
 
-    def _derive_molecule_properties(self, mol: Chem.Mol) -> tuple[int, float]:
+    def _derive_molecule_properties(
+        self,
+        mol: Chem.Mol,
+    ) -> tuple[int, float]:
         """
         Derives simple molecule properties from an RDKit Mol object.
 
@@ -647,8 +808,14 @@ class InputParser:
             Tuple of number of atoms with hydrogens included and molecular weight.
         """
         mol_with_h = Chem.AddHs(mol)
-        num_atoms = int(mol_with_h.GetNumAtoms())
-        molecular_weight = float(Descriptors.MolWt(mol))
+        num_atoms = int(
+            mol_with_h.GetNumAtoms()
+        )
+
+        molecular_weight = float(
+            Descriptors.MolWt(mol)
+        )
+
         return num_atoms, molecular_weight
 
     def _int_to_dict(self, integer: int) -> dict:
@@ -661,7 +828,10 @@ class InputParser:
         """
         return {"_": integer}
 
-    def _validate_smiles(self, smiles: Any) -> tuple[str, Chem.Mol]:
+    def _validate_smiles(
+        self,
+        smiles: Any,
+    ) -> tuple[str, Chem.Mol]:
         """
         Validates a SMILES string through RDKit and canonicalizes it.
 
@@ -674,23 +844,35 @@ class InputParser:
         Raises:
             SmilesValidationError: If RDKit cannot parse the string.
         """
-        if not isinstance(smiles, str) or not smiles.strip():
+        if (
+            not isinstance(smiles, str)
+            or not smiles.strip()
+        ):
             raise SmilesValidationError(
                 f"SMILES must be a non-empty string. Got: {smiles!r}"
             )
 
         smiles_clean = smiles.strip()
-        mol = Chem.MolFromSmiles(smiles_clean)
+        mol = Chem.MolFromSmiles(
+            smiles_clean
+        )
 
         if mol is None:
             raise SmilesValidationError(
                 f"Invalid SMILES string: {smiles!r}. RDKit failed to parse it."
             )
 
-        canonical_smiles = Chem.MolToSmiles(mol, canonical=True)
+        canonical_smiles = Chem.MolToSmiles(
+            mol,
+            canonical=True,
+        )
+
         return canonical_smiles, mol
 
-    def _validate_numeric_fields(self, inputs: dict) -> None:
+    def _validate_numeric_fields(
+        self,
+        inputs: dict,
+    ) -> None:
         """
         Legacy numeric validation helper.
 
@@ -698,33 +880,74 @@ class InputParser:
             This method is kept for compatibility with older input schemas and is
             not currently used in the main validate_inputs flow.
         """
-        density = inputs.get("density", None)
-        if isinstance(density, bool) or not isinstance(density, (int, float)) or density <= 0:
+        density = inputs.get(
+            "density",
+            None,
+        )
+
+        if (
+            isinstance(density, bool)
+            or not isinstance(
+                density,
+                (int, float),
+            )
+            or density <= 0
+        ):
             raise NumericFieldError(
                 f"'density' must be a positive number. Got: {density!r}"
             )
 
-        temps = inputs.get("temperature", None)
+        temps = inputs.get(
+            "temperature",
+            None,
+        )
+
         if temps is None:
             raise NumericFieldError(
                 "'temperature' is required as a number or list of numbers."
             )
 
-        temps_list = temps if isinstance(temps, list) else [temps]
+        temps_list = (
+            temps
+            if isinstance(temps, list)
+            else [temps]
+        )
+
         for temp in temps_list:
-            if isinstance(temp, bool) or not isinstance(temp, (int, float)) or temp <= 0:
+            if (
+                isinstance(temp, bool)
+                or not isinstance(
+                    temp,
+                    (int, float),
+                )
+                or temp <= 0
+            ):
                 raise NumericFieldError(
                     f"Temperature values must be positive numbers. Got: {temp!r}"
                 )
 
-        num_monomers = inputs.get("number_of_monomers", None)
-        if not isinstance(num_monomers, dict) or not num_monomers:
+        num_monomers = inputs.get(
+            "number_of_monomers",
+            None,
+        )
+
+        if (
+            not isinstance(
+                num_monomers,
+                dict,
+            )
+            or not num_monomers
+        ):
             raise NumericFieldError(
                 "'number_of_monomers' must be a non-empty dict of monomer_id -> positive int."
             )
 
         for monomer_id, count in num_monomers.items():
-            if isinstance(count, bool) or not isinstance(count, int) or count <= 0:
+            if (
+                isinstance(count, bool)
+                or not isinstance(count, int)
+                or count <= 0
+            ):
                 raise NumericFieldError(
                     f"Monomer count for {monomer_id!r} must be a positive integer. Got: {count!r}"
                 )
@@ -750,7 +973,10 @@ class InputParser:
                 "Each monomer must have a unique SMILES string."
             )
 
-        seen_monomer_list.append(current_monomer)
+        seen_monomer_list.append(
+            current_monomer
+        )
+
         return seen_monomer_list
 
     def _validate_single_simulation(
@@ -761,46 +987,106 @@ class InputParser:
         """
         Validates one Simulation object after initial construction.
         """
-        if not isinstance(simulation.tag, str) or not simulation.tag.strip():
+        if (
+            not isinstance(simulation.tag, str)
+            or not simulation.tag.strip()
+        ):
             raise InputSchemaError(
                 "Each system must include a non-empty 'tag'."
             )
 
-        if isinstance(simulation.temperature, bool) or not isinstance(simulation.temperature, (int, float)) or simulation.temperature <= 0:
+        if (
+            isinstance(
+                simulation.temperature,
+                bool,
+            )
+            or not isinstance(
+                simulation.temperature,
+                (int, float),
+            )
+            or simulation.temperature <= 0
+        ):
             raise NumericFieldError(
                 f"Simulation '{simulation.tag}' has invalid temperature."
             )
 
-        if isinstance(simulation.density, bool) or not isinstance(simulation.density, (int, float)) or simulation.density <= 0:
+        if (
+            isinstance(
+                simulation.density,
+                bool,
+            )
+            or not isinstance(
+                simulation.density,
+                (int, float),
+            )
+            or simulation.density <= 0
+        ):
             raise NumericFieldError(
                 f"Simulation '{simulation.tag}' has invalid density."
             )
 
         if method == "counts":
-            if not isinstance(simulation.monomer_counts, dict) or not simulation.monomer_counts:
+            if (
+                not isinstance(
+                    simulation.monomer_counts,
+                    dict,
+                )
+                or not simulation.monomer_counts
+            ):
                 raise InputSchemaError(
                     "'monomer_counts' must be provided in counts mode."
                 )
 
-            for monomer, value in simulation.monomer_counts.items():
-                if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            for monomer, value in (
+                simulation.monomer_counts.items()
+            ):
+                if (
+                    isinstance(value, bool)
+                    or not isinstance(value, int)
+                    or value < 0
+                ):
                     raise NumericFieldError(
                         f"Invalid count for monomer {monomer!r}: {value!r}"
                     )
 
         elif method == "ratio":
-            if isinstance(simulation.total_atoms, bool) or not isinstance(simulation.total_atoms, int) or simulation.total_atoms <= 0:
+            if (
+                isinstance(
+                    simulation.total_atoms,
+                    bool,
+                )
+                or not isinstance(
+                    simulation.total_atoms,
+                    int,
+                )
+                or simulation.total_atoms <= 0
+            ):
                 raise NumericFieldError(
                     "'total_atoms' must be a positive integer in ratio mode."
                 )
 
-            if not isinstance(simulation.monomer_ratios, dict) or not simulation.monomer_ratios:
+            if (
+                not isinstance(
+                    simulation.monomer_ratios,
+                    dict,
+                )
+                or not simulation.monomer_ratios
+            ):
                 raise InputSchemaError(
                     "'monomer_ratios' must be provided in ratio mode."
                 )
 
-            for monomer, value in simulation.monomer_ratios.items():
-                if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
+            for monomer, value in (
+                simulation.monomer_ratios.items()
+            ):
+                if (
+                    isinstance(value, bool)
+                    or not isinstance(
+                        value,
+                        (int, float),
+                    )
+                    or value < 0
+                ):
                     raise NumericFieldError(
                         f"Invalid ratio value for monomer {monomer!r}: {value!r}"
                     )
@@ -839,7 +1125,10 @@ class InputParser:
 
             tag = system.get("tag")
 
-            if not isinstance(tag, str) or not tag.strip():
+            if (
+                not isinstance(tag, str)
+                or not tag.strip()
+            ):
                 raise InputSchemaError(
                     "Each system must include a non-empty 'tag'."
                 )
@@ -851,39 +1140,71 @@ class InputParser:
 
             seen_tags.add(tag)
 
-            system["temperature"] = self._validate_temperature(
-                system.get("temperature")
-            )
-            system["density"] = self._validate_density(
-                system.get("density")
+            system["temperature"] = (
+                self._validate_temperature(
+                    system.get("temperature")
+                )
             )
 
-            temperatures.append(system["temperature"])
-            density.append(system["density"])
+            system["density"] = (
+                self._validate_density(
+                    system.get("density")
+                )
+            )
+
+            temperatures.append(
+                system["temperature"]
+            )
+
+            density.append(
+                system["density"]
+            )
 
             if method == "ratio":
-                total_atoms = system.get("total_atoms")
+                total_atoms = system.get(
+                    "total_atoms"
+                )
 
-                if isinstance(total_atoms, bool) or not isinstance(total_atoms, int) or total_atoms <= 0:
+                if (
+                    isinstance(total_atoms, bool)
+                    or not isinstance(
+                        total_atoms,
+                        int,
+                    )
+                    or total_atoms <= 0
+                ):
                     raise NumericFieldError(
                         "'total_atoms' must be a positive integer in ratio mode."
                     )
 
-                ratios = system.get("monomer_ratios")
+                ratios = system.get(
+                    "monomer_ratios"
+                )
 
-                if not isinstance(ratios, dict) or not ratios:
+                if (
+                    not isinstance(ratios, dict)
+                    or not ratios
+                ):
                     raise InputSchemaError(
                         "'monomer_ratios' must be provided in ratio mode."
                     )
 
                 for monomer, value in ratios.items():
-                    if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
+                    if (
+                        isinstance(value, bool)
+                        or not isinstance(
+                            value,
+                            (int, float),
+                        )
+                        or value < 0
+                    ):
                         raise NumericFieldError(
                             f"Invalid ratio value for monomer {monomer!r}: {value!r}"
                         )
 
                 if reference_ratios is None:
                     reference_ratios = ratios
+
                 elif ratios != reference_ratios:
                     raise InputSchemaError(
                         "All systems must use identical 'monomer_ratios'."
@@ -891,26 +1212,46 @@ class InputParser:
 
                 simulation = Simulation(
                     tag=system["tag"],
-                    temperature=system["temperature"],
+                    temperature=system[
+                        "temperature"
+                    ],
                     density=system["density"],
                     monomer_counts=None,
                     monomer_ratios=ratios,
                     total_atoms=total_atoms,
                 )
 
-                self._validate_single_simulation(simulation, method)
-                simulations.append(simulation)
+                self._validate_single_simulation(
+                    simulation,
+                    method,
+                )
+
+                simulations.append(
+                    simulation
+                )
 
             elif method == "counts":
-                counts = system.get("monomer_counts")
+                counts = system.get(
+                    "monomer_counts"
+                )
 
-                if not isinstance(counts, dict) or not counts:
+                if (
+                    not isinstance(counts, dict)
+                    or not counts
+                ):
                     raise InputSchemaError(
                         "'monomer_counts' must be provided in counts mode."
                     )
 
                 for monomer, value in counts.items():
-                    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                    if (
+                        isinstance(value, bool)
+                        or not isinstance(
+                            value,
+                            int,
+                        )
+                        or value < 0
+                    ):
                         raise NumericFieldError(
                             f"Invalid count for monomer {monomer!r}: {value!r}"
                         )
@@ -922,15 +1263,23 @@ class InputParser:
 
                 simulation = Simulation(
                     tag=system["tag"],
-                    temperature=system["temperature"],
+                    temperature=system[
+                        "temperature"
+                    ],
                     density=system["density"],
                     monomer_counts=counts,
                     monomer_ratios=None,
                     total_atoms=None,
                 )
 
-                self._validate_single_simulation(simulation, method)
-                simulations.append(simulation)
+                self._validate_single_simulation(
+                    simulation,
+                    method,
+                )
+
+                simulations.append(
+                    simulation
+                )
 
         return {
             "method": method,
@@ -939,6 +1288,247 @@ class InputParser:
             "systems": systems,
             "simulations": simulations,
         }
+
+    def _validate_loop(
+        self,
+        inputs: dict,
+    ) -> tuple[bool, int | None]:
+        """
+        Backward-compatible wrapper for older loop validation tests.
+
+        New logic is handled by _validate_reaction_iteration_depth.
+        """
+        reaction_iteration_depth = (
+            self._validate_reaction_iteration_depth(
+                inputs
+            )
+        )
+
+        if reaction_iteration_depth == 0:
+            return False, None
+
+        return True, reaction_iteration_depth
+
+    def _normalized_option_key(
+        self,
+        key: str,
+    ) -> str:
+        """
+        Normalize workflow option keys so common spellings are accepted.
+
+        This is intentionally used only for optional workflow switches, not for
+        the core input schema.
+        """
+        return (
+            key.strip()
+            .lower()
+            .replace("_", "")
+            .replace("-", "")
+            .replace(" ", "")
+        )
+
+    def _get_workflow_option(
+        self,
+        inputs: dict,
+        key: str,
+        default: Any,
+        aliases: list[str] | None = None,
+    ) -> Any:
+        """
+        Read an optional workflow setting using a canonical key plus aliases.
+
+        The lookup is case-insensitive and ignores underscores, hyphens, and
+        spaces. If multiple aliases are provided with conflicting values, the
+        input is rejected.
+        """
+        aliases = aliases or []
+        accepted_keys = [
+            key,
+            *aliases,
+        ]
+
+        accepted_normalized = {
+            self._normalized_option_key(
+                option_key
+            )
+            for option_key in accepted_keys
+        }
+
+        matches = []
+
+        for input_key, value in inputs.items():
+            if (
+                self._normalized_option_key(
+                    str(input_key)
+                )
+                in accepted_normalized
+            ):
+                matches.append(
+                    (
+                        input_key,
+                        value,
+                    )
+                )
+
+        if not matches:
+            return default
+
+        first_value = matches[0][1]
+
+        for input_key, value in matches[1:]:
+            if value != first_value:
+                raise InputConflictError(
+                    f"Conflicting values were provided for workflow option "
+                    f"'{key}': {matches!r}"
+                )
+
+        return first_value
+
+    def _validate_bool_option(
+        self,
+        inputs: dict,
+        key: str,
+        default: bool,
+        aliases: list[str] | None = None,
+    ) -> bool:
+        """
+        Validate an optional boolean workflow switch.
+
+        Only the new workflow options use this relaxed alias/lowercase lookup.
+        Core schema keys such as simulations and monomers remain strict.
+        """
+        value = self._get_workflow_option(
+            inputs=inputs,
+            key=key,
+            default=default,
+            aliases=aliases,
+        )
+
+        if isinstance(value, bool):
+            return value
+
+        if isinstance(value, str):
+            normalized_value = (
+                value.strip().lower()
+            )
+
+            if normalized_value in {
+                "true",
+                "yes",
+                "y",
+                "on",
+                "1",
+            }:
+                return True
+
+            if normalized_value in {
+                "false",
+                "no",
+                "n",
+                "off",
+                "0",
+            }:
+                return False
+
+        raise InputSchemaError(
+            f"'{key}' must be a boolean value. Got: {value!r}"
+        )
+
+    def _validate_reaction_iteration_depth(
+        self,
+        inputs: dict,
+    ) -> int:
+        """
+        Validate the reaction-iteration depth option.
+
+        Accepted keys include:
+            - reaction_iteration_depth
+            - rxn_iteration_depth
+            - reaction_depth
+            - loop
+            - max_loop_count
+            - iterations
+
+        Accepted values:
+            - missing key: defaults to 5
+            - positive integer: enables looping for that many iterations
+            - 0: disables looping
+            - False or false-like strings: disables looping
+
+        Raises:
+            InputSchemaError: If the value is negative, non-integer, or invalid.
+        """
+        value = self._get_workflow_option(
+            inputs=inputs,
+            key="reaction_iteration_depth",
+            default=5,
+            aliases=[
+                "rxn_iteration_depth",
+                "reaction_depth",
+                "iteration_depth",
+                "max_loop_count",
+                "max_iterations",
+                "iterations",
+                "loop",
+            ],
+        )
+
+        if isinstance(value, bool):
+            return 5 if value else 0
+
+        if isinstance(value, str):
+            normalized_value = (
+                value.strip().lower()
+            )
+
+            if normalized_value in {
+                "false",
+                "no",
+                "n",
+                "off",
+                "0",
+                "none",
+            }:
+                return 0
+
+            if normalized_value in {
+                "true",
+                "yes",
+                "y",
+                "on",
+            }:
+                return 5
+
+            try:
+                value = int(
+                    normalized_value
+                )
+
+            except ValueError as error:
+                raise InputSchemaError(
+                    "'reaction_iteration_depth' must be an integer greater "
+                    "than or equal to 0, or a boolean value. "
+                    f"Got: {value!r}"
+                ) from error
+
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, int)
+        ):
+            raise InputSchemaError(
+                "'reaction_iteration_depth' must be an integer greater "
+                f"than or equal to 0, or a boolean value. Got: {value!r}"
+            )
+
+        if value < 0:
+            raise InputSchemaError(
+                "'reaction_iteration_depth' must be greater than or equal to 0. "
+                f"Got: {value!r}"
+            )
+
+        return value
+
+
 
 
 if __name__ == "__main__":

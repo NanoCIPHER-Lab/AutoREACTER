@@ -24,14 +24,56 @@ def prepare_paths( cache, subdir):
     os.makedirs(csv_cache, exist_ok=True)
     return csv_cache
 
-def add_dict_as_new_columns(df_existing, data_dict, titles=("template_reactant_idx", "template_product_idx")):
-    df_existing[titles[0]] = pd.Series(list(data_dict.keys())).astype("Int64")
-    df_existing[titles[1]] = pd.Series(list(data_dict.values())).astype("Int64")
+def add_dict_as_new_columns(
+    df_existing,
+    data_dict,
+    titles=("template_reactant_idx", "template_product_idx"),
+):
+    reactant_values = list(data_dict.keys())
+    product_values = list(data_dict.values())
+
+    # These values represent dataframe row positions, not pandas index labels.
+    # Trim values longer than the dataframe and pad shorter values with pd.NA.
+    reactant_values = reactant_values[:len(df_existing)]
+    product_values = product_values[:len(df_existing)]
+
+    reactant_values += [pd.NA] * (
+        len(df_existing) - len(reactant_values)
+    )
+    product_values += [pd.NA] * (
+        len(df_existing) - len(product_values)
+    )
+
+    df_existing[titles[0]] = pd.array(
+        reactant_values,
+        dtype="Int64",
+    )
+    df_existing[titles[1]] = pd.array(
+        product_values,
+        dtype="Int64",
+    )
+
     return df_existing
 
 
-def add_column_safe(df, list_data, column_name):
-    df[column_name] = pd.Series(list_data).astype("Int64")
+def add_column_safe(
+    df,
+    list_data,
+    column_name,
+):
+    values = list(list_data)
+
+    # Assign by row position rather than pandas index-label alignment.
+    values = values[:len(df)]
+    values += [pd.NA] * (
+        len(df) - len(values)
+    )
+
+    df[column_name] = pd.array(
+        values,
+        dtype="Int64",
+    )
+
     return df
 
 
@@ -107,7 +149,10 @@ def compare_set(reaction_metadata_list, _react2, _prod2):
     return True
 
 
-def compare_rdkit_molecules_canonical(data_smiles_list, mol_smi_2):
+def compare_rdkit_molecules_canonical(
+    data_smiles_list,
+    mol_smi_2,
+):
     """
     Compares two RDKit molecule SMILES strings to determine if they
     represent the same chemical structure using canonical SMILES.
@@ -121,24 +166,42 @@ def compare_rdkit_molecules_canonical(data_smiles_list, mol_smi_2):
     """
     if not mol_smi_2:
         return data_smiles_list, False
+
     mol2 = Chem.MolFromSmiles(mol_smi_2)
+
     if mol2 is None:
         return data_smiles_list, False
-        
-    for mol_smi_1 in data_smiles_list:
-        mol1 = Chem.MolFromSmiles(mol_smi_1)
-        
-        # Handle cases where SMILES might be invalid
-        if mol1 is None or mol2 is None:
-            return data_smiles_list, False  # or raise a ValueError
-        # Generate canonical SMILES and compare them
-        canonical_smi_1 = Chem.MolToSmiles(mol1, canonical=True)
-        canonical_smi_2 = Chem.MolToSmiles(mol2, canonical=True)
 
-        if canonical_smi_1 == canonical_smi_2:
+    canonical_smi_2 = Chem.MolToSmiles(
+        mol2,
+        canonical=True,
+    )
+
+    for mol_smi_1 in data_smiles_list:
+        mol1 = Chem.MolFromSmiles(
+            mol_smi_1
+        )
+
+        # A malformed existing cache entry should not prevent checking the
+        # remaining valid entries for an already-known molecule.
+        if mol1 is None:
+            continue
+
+        canonical_smi_1 = Chem.MolToSmiles(
+            mol1,
+            canonical=True,
+        )
+
+        if (
+            canonical_smi_1
+            == canonical_smi_2
+        ):
             return data_smiles_list, True
-    
-    data_smiles_list.append(mol_smi_2)
+
+    data_smiles_list.append(
+        mol_smi_2
+    )
+
     return data_smiles_list, False
 
 

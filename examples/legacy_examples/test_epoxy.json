@@ -1,0 +1,31 @@
+{
+  "simulation_name": "DGEBA_1,5-Diaminopentane_Epoxy_Curing_wo-loop",
+
+  "reaction_iteration_depth": false,
+
+  "simulations": [
+    {
+      "tag": "DGEBA_1,5-diaminopentane",
+
+      "temperature": 300,
+
+      "density": 1.0,
+
+      "monomer_counts": {
+        "bisphenol_A_diglycidyl_ether": 200,
+        "1,5_diaminopentane": 100
+      }
+    }
+  ],
+
+  "monomers": [
+    {
+      "name": "bisphenol_A_diglycidyl_ether",
+      "smiles": "CC(C)(c1ccc(OCC2CO2)cc1)c1ccc(OCC2CO2)cc1"
+    },
+    {
+      "name": "1,5_diaminopentane",
+      "smiles": "NCCCCCN"
+    }
+  ]
+}
