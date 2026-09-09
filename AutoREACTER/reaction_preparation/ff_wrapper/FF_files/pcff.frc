@@ -3325,6 +3325,8 @@
  1.0  1   hn2   na    c_2   na       0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for validator
  1.0  1   hn    na    c_2   o_1      0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER addition; tiny non-zero for validator
  2.1  8   o_1   c_1   c     c=       0.0442      0.0    0.0292      0.0    0.0562      0.0    # AutoREACTER addition; copied from c c c_1 o_1 reversed; mapped terminal c -> c=
+ 1.0  1   cp    n=2   ct    o_1      0.0001      0.0    0.0000      0.0    0.0000      0.0    # AutoREACTER fallback; unsupported cp-n=2-ct-o_1 torsion; near-zero barrier
+ 2.1  7   c1    o_2   c_2   nn      -2.9522      0.0    2.4047      0.0    0.0000      0.0    # AutoREACTER addition; mapped from nn-c_2-o_2-c2 reversed; c2->c1 terminal mapping
  
 #wilson_out_of_plane  cff91
 
