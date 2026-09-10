@@ -248,7 +248,7 @@ class InputParser:
         wildcards = self._validate_bool_option(
             inputs,
             key="wildcards",
-            default=True,
+            default=False,
             aliases=[
                 "wildcard",
                 "wildcards",

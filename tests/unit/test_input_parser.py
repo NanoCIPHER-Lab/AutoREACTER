@@ -191,7 +191,7 @@ def test_simulation_setup_workflow_defaults():
     assert setup.deep_search is True
     assert setup.loop is True
     assert setup.reaction_iteration_depth == 5
-    assert setup.wildcards is True
+    assert setup.wildcards is False
 
     assert (
         setup.deduplicate_reaction_templates
@@ -1673,7 +1673,7 @@ def test_validate_inputs_counts_mode_end_to_end(
     assert result.reaction_iteration_depth == 5
 
     assert result.deep_search is True
-    assert result.wildcards is True
+    assert result.wildcards is False
 
     assert (
         result.deduplicate_reaction_templates

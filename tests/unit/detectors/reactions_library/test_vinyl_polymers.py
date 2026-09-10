@@ -10,6 +10,15 @@ from AutoREACTER.detectors.reactions_library.vinyl_polymers import (
 
 INITIATION = "Vinyl Addition Polymerization Initiation"
 PROPAGATION = "Vinyl Addition Polymerization Propagation"
+
+SAME_CHAIN_TERMINATION = (
+    "Vinyl Radical Coupling Termination (Same Chain)"
+)
+
+CROSS_CHAIN_TERMINATION = (
+    "Vinyl Radical Coupling Termination (Cross Chain)"
+)
+
 CO_INITIATION = "Vinyl Copolymerization Initiation"
 TFE_INITIATION = "Tetrafluoroethylene Initiation"
 TFE_PROPAGATION = "Tetrafluoroethylene Propagation"
@@ -18,6 +27,8 @@ TFE_PROPAGATION = "Tetrafluoroethylene Propagation"
 EXPECTED_REACTIONS = {
     INITIATION,
     PROPAGATION,
+    SAME_CHAIN_TERMINATION,
+    CROSS_CHAIN_TERMINATION,
     CO_INITIATION,
     TFE_INITIATION,
     TFE_PROPAGATION,
@@ -60,7 +71,7 @@ def test_expected_active_reactions():
     """
     This deliberately catches accidental dictionary nesting.
 
-    All five currently enabled vinyl/TFE reactions are intended to be
+    All seven currently enabled vinyl/TFE reactions are intended to be
     top-level reaction-library entries.
     """
     assert set(REACTIONS) == EXPECTED_REACTIONS
@@ -122,6 +133,49 @@ def test_vinyl_propagation_metadata():
     )
 
     assert reaction["product"] == "vinyl_chain_end_radical"
+
+
+def test_same_chain_termination_metadata():
+    reaction = REACTIONS[SAME_CHAIN_TERMINATION]
+
+    assert reaction["same_reactants"] is True
+
+    assert (
+        reaction["reactant_1"]
+        == "vinyl_chain_end_radical"
+    )
+
+    assert reaction.get("reactant_2") is None
+
+    assert (
+        reaction["product"]
+        == "vinyl_terminated_chain"
+    )
+
+    assert reaction["delete_atom"] is False
+
+
+def test_cross_chain_termination_metadata():
+    reaction = REACTIONS[CROSS_CHAIN_TERMINATION]
+
+    assert reaction["same_reactants"] is False
+
+    assert (
+        reaction["reactant_1"]
+        == "vinyl_chain_end_radical"
+    )
+
+    assert (
+        reaction["reactant_2"]
+        == "vinyl_chain_end_radical"
+    )
+
+    assert (
+        reaction["product"]
+        == "vinyl_terminated_chain"
+    )
+
+    assert reaction["delete_atom"] is False
 
 
 def test_copolymerization_initiation_metadata():
@@ -222,6 +276,60 @@ def test_vinyl_propagation_retains_new_active_map_3():
     )
 
     assert 3 in product_maps
+
+
+# =============================================================================
+# Vinyl radical coupling termination
+# =============================================================================
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        SAME_CHAIN_TERMINATION,
+        CROSS_CHAIN_TERMINATION,
+    ],
+)
+def test_vinyl_termination_forms_new_1_2_bond(
+    name,
+):
+    reactants, products = reaction_templates(
+        name
+    )
+
+    assert registry._has_bond_between_atom_maps(
+        reactants,
+        1,
+        2,
+    ) is False
+
+    assert registry._has_bond_between_atom_maps(
+        products,
+        1,
+        2,
+    ) is True
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        SAME_CHAIN_TERMINATION,
+        CROSS_CHAIN_TERMINATION,
+    ],
+)
+def test_vinyl_termination_retains_maps_1_and_2(
+    name,
+):
+    _, products = reaction_templates(
+        name
+    )
+
+    product_maps = registry._atom_maps_in_templates(
+        products
+    )
+
+    assert 1 in product_maps
+    assert 2 in product_maps
 
 
 # =============================================================================
