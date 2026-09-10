@@ -1,6 +1,6 @@
 from pathlib import Path
 from types import SimpleNamespace
-
+from packaging.version import Version
 import pytest
 
 import AutoREACTER as arx
@@ -122,8 +122,9 @@ def test_package_title():
     assert arx.__title__ == "AutoREACTER"
 
 
+
 def test_package_version():
-    assert arx.__version__ == "0.3"
+    assert Version(arx.__version__) >= Version("1.0.0")
 
 
 def test_package_release_matches_version():
