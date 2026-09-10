@@ -4,7 +4,7 @@ This guide explains how to install AutoREACTER from PyPI and run your first work
 
 ## Step 1: Create a Python Virtual Environment
 
-We recommend using a virtual environment so AutoREACTER and its dependencies do not interfere with your system Python installation.
+Using a virtual environment is recommended so AutoREACTER and its dependencies do not interfere with your system Python installation.
 
 ```bash
 python -m venv arx_env

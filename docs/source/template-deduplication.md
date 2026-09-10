@@ -157,7 +157,7 @@ AutoREACTER first generates all possible reactions and then generates LAMMPS rea
 
 This deduplication step is one of the final steps in the AutoREACTER workflow. If `deduplicate_reaction_templates` is set to `false`, AutoREACTER will keep all generated templates, including duplicates.
 
-We recommend keeping this option set to `true` so AutoREACTER only writes unique templates.
+Keeping this option set to `true` is recommended so AutoREACTER only writes unique templates.
 
 <p style="color:red;"><strong>Important: If deduplicate_reaction_templates is set to false, AutoREACTER may write many redundant LAMMPS reaction templates.</strong></p>
 
