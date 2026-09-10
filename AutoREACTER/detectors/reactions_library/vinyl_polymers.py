@@ -91,66 +91,47 @@ REACTIONS = {
             'radical detection during loop progression.'
         ),
     },
+'Vinyl Radical Coupling Termination (Same Chain)': {
+    'same_reactants': True,
+    'reactant_1': 'vinyl_chain_end_radical',
+    'product': 'vinyl_terminated_chain',
+    'delete_atom': False,
+    'reaction': (
+        '[C;!R;D3;v3;+0:1].'
+        '[C;!R;D3;v3;+0:2]'
+        '>>'
+        '[C:1]-[C:2]'
+    ),
+    'reference': {'smarts': None, 'reaction_and_mechanism': None},
+    'comments': None,
+    'notes': (
+        'Head-to-head radical coupling termination between two radical '
+        'chain ends of the SAME monomer type. Maps 1 and 2 are the two '
+        'active radical head carbons and form the new 1-2 termination bond.'
+    ),
+},
 
-
-    # =========================================================================
-    # Optional Vinyl Radical Coupling Termination
-    # =========================================================================
-    #
-    # Users can uncomment this reaction if they want to include vinyl radical
-    # coupling termination in the simulation.
-    #
-    # It is normally controlled separately from initiation and propagation
-    # so that vinyl growth is not terminated too early.
-    #
-    # 'Vinyl Radical Coupling Termination': {
-    #     'same_reactants': True,
-    #     'reactant_1': 'vinyl_chain_end_radical',
-    #     'product': 'vinyl_terminated_chain',
-    #     'delete_atom': False,
-    #
-    #     # H-H radical coupling termination:
-    #     #
-    #     #     chain-head* + *head-chain
-    #     #          ↓
-    #     #     chain-head-head-chain
-    #     #
-    #     # This is intentionally the only head-to-head vinyl step.
-    #     # Initiation and propagation remain head-to-tail.
-    #     #
-    #     # AutoREACTER/LAMMPS rule:
-    #     #     maps 1 and 2 are the initiator atoms.
-    #     #     the new termination bond is 1-2.
-    #     #
-    #     # Map 1 = active radical head carbon on one vinyl chain end.
-    #     # Map 2 = active radical head carbon on another vinyl chain end.
-    #     #
-    #     # The D3/v3/+0 constraints make this target the
-    #     # methacrylate-style chain-end radical center instead of
-    #     # an ordinary acyclic carbon.
-    #     'reaction': (
-    #         '[C;!R;D3;v3;+0:1].'
-    #         '[C;!R;D3;v3;+0:2]'
-    #         '>>'
-    #         '[C:1]-[C:2]'
-    #     ),
-    #
-    #     'reference': {
-    #         'smarts': None,
-    #         'reaction_and_mechanism': None
-    #     },
-    #
-    #     'comments': None,
-    #
-    #     'notes': (
-    #         'Head-to-head radical coupling termination for '
-    #         'PMMA/TEGDMA-style vinyl chain ends. Maps 1 and 2 are '
-    #         'the two active radical head carbons and form the new '
-    #         '1-2 termination bond. This reaction should be controlled '
-    #         'separately from initiation and propagation, usually turned '
-    #         'on late or pulsed so it does not kill vinyl growth too early.'
-    #     ),
-    # },
+'Vinyl Radical Coupling Termination (Cross Chain)': {
+    'same_reactants': False,
+    'reactant_1': 'vinyl_chain_end_radical',
+    'reactant_2': 'vinyl_chain_end_radical',   # FIXED: was missing entirely
+    'product': 'vinyl_terminated_chain',
+    'delete_atom': False,
+    'reaction': (
+        '[C;!R;D3;v3;+0:1].'
+        '[C;!R;D3;v3;+0:2]'
+        '>>'
+        '[C:1]-[C:2]'
+    ),
+    'reference': {'smarts': None, 'reaction_and_mechanism': None},
+    'comments': None,
+    'notes': (
+        'Same coupling chemistry as the same-chain entry above, but '
+        'reactant_2 is explicitly given so this pairs radical chain ends '
+        'coming from TWO DIFFERENT monomer types (e.g. a PMMA-derived '
+        'radical terminating against a TEGDMA-derived radical).'
+    ),
+},
 
 
     # =========================================================================
