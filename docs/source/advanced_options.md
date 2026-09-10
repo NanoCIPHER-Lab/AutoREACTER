@@ -36,7 +36,7 @@ Default behavior:
 ```json
 {
   "reaction_iteration_depth": 5,
-  "wildcards": true
+  "wildcards": false
 }
 ```
 
@@ -47,7 +47,6 @@ AutoREACTER_outputs/<simulation_name>
 ```
 
 <p style="color:red;"><strong>Important: These options can change the number of generated reaction products, reaction templates, LAMMPS map files, and output locations.</strong></p>
----
 
 (reaction_iteration_depth)=
 ## reaction_iteration_depth
@@ -126,7 +125,20 @@ For glycine polymerization, the input monomer is:
 :align: center
 ```
 
----
+```html
+<tr>
+  <td style="white-space:nowrap;"><a href="#wildcards" style="color:black;"><strong>wildcards</strong></a></td>
+  <td style="color:black;">false</td>
+  <td>Generates LAMMPS wildcard map sections to reduce redundant edge-template cases.</td>
+</tr>
+```
+
+```json
+{
+  "reaction_iteration_depth": 5,
+  "wildcards": false
+}
+```
 
 (wildcards)=
 ## wildcards
@@ -141,16 +153,22 @@ For glycine polymerization, the input monomer is:
 
 More information about REACTER wildcards can be found here:
 
-- [Type Label Framework for Bonded Force Fields in LAMMPS](https://doi.org/10.1021/acs.jpcb.3c08419)
-- [REACTER website](https://www.reacter.org/)
+* [Type Label Framework for Bonded Force Fields in LAMMPS](https://doi.org/10.1021/acs.jpcb.3c08419)
+* [REACTER website](https://www.reacter.org/)
 
-In LAMMPS bond/react, wildcards allow LAMMPS to infer the fourth atom used for dihedral typing from the first three atoms. This is useful for reactions where the fourth atom or edge atom is allowed to vary.
+In LAMMPS bond/react, wildcards can be used for atoms in a dihedral whose atom types are allowed to vary. If one or more atoms in the dihedral are represented by wildcards, LAMMPS infers the appropriate dihedral type from the resulting atom types during the reaction.
 
-When `wildcards` is enabled, AutoREACTER generates reaction templates that include the fourth atoms or edge atoms as wildcards in the map file. This reduces the number of templates generated for reactions where the edge environment varies.
+When `wildcards` is enabled, AutoREACTER generates reaction templates that use wildcard atom labels in the map file where appropriate. Multiple atoms within a dihedral may be represented by wildcards. This can reduce the number of templates required for reactions in which the local atom-type environment varies.
 
-We highly recommend using wildcards for most reactions because it can reduce the number of generated templates and make the simulation more efficient.
+Because wildcard support requires a relatively recent version of LAMMPS, `wildcards` is disabled by default. Users with LAMMPS 22 July 2025 or later can enable it by setting:
 
-However, if you want to control specific reactions during the reactive simulation, you may need to use templates without wildcards. In that case, keeping explicit edge atoms can help you control specific reaction sites more directly.
+```json
+{
+  "wildcards": true
+}
+```
+
+Using wildcards can reduce the number of generated templates and simplify reactive simulations. However, templates without wildcards may be useful when explicit atom types are needed to control specific reactions or reaction sites.
 
 For normal vinyl reactions, AutoREACTER may need three templates without wildcards. With wildcard support enabled, the same simulation can often be performed using only two templates.
 
@@ -172,7 +190,6 @@ The following templates are generated with wildcards enabled.
 :align: center
 ```
 
----
 
 (output_dir)=
 ## output_dir

@@ -172,7 +172,7 @@ class SimulationSetup:
     deep_search: bool = True
     loop: bool = True
     reaction_iteration_depth: int = 5
-    wildcards: bool = True
+    wildcards: bool = False
     deduplicate_reaction_templates: bool = True
     write_second_reaction_stage: bool = False
 
