@@ -1,107 +1,128 @@
 #!/usr/bin/env python3
 """
-AutoREACTER Workflow: Required Pipeline Example
-===============================================
+AutoREACTER Workflow Example
+============================
 
-This script demonstrates the required AutoREACTER workflow only.
-Visualization images are generated internally and saved in the session image directory.
+This script demonstrates the standard AutoREACTER workflow using a JSON
+input file.
 
-Usage:
-    python auto_reacter_workflow.py -i example_1_inputs_count_mode.json
+It is intended for users running AutoREACTER from the source repository.
+
+Example
+-------
+From the AutoREACTER repository root:
+
+    python examples/example_1.py \
+        -i examples/polyamide_count_mode_basic.json
+
+AutoREACTER can also be installed from PyPI and used directly from a
+user-created Python script:
+
+    python -m pip install AutoREACTER
 """
 
 import argparse
 import sys
 
 
-# ---------------------------------------------------------------------------
-# 1. Command-line arguments
-# ---------------------------------------------------------------------------
-parser = argparse.ArgumentParser(
-    description="Run the required AutoREACTER workflow from an input JSON file."
-)
-
-parser.add_argument(
-    "-i",
-    "--input",
-    "-in",
-    required=True,
-    help="Path to the AutoREACTER input JSON file."
-)
-
-args = parser.parse_args()
-
-
-# ---------------------------------------------------------------------------
-# 2. Import AutoREACTER
-# ---------------------------------------------------------------------------
-try:
-    import AutoREACTER as arx
-    print("AutoREACTER imported successfully.")
-except ImportError:
-    print(
-        "Failed to import AutoREACTER. "
-        "Ensure the package is installed in your environment."
+def parse_arguments():
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(
+        description=(
+            "Run the standard AutoREACTER workflow "
+            "from an input JSON file."
+        )
     )
-    raise
+
+    parser.add_argument(
+        "-i",
+        "--input",
+        "-in",
+        required=True,
+        help="Path to the AutoREACTER input JSON file.",
+    )
+
+    return parser.parse_args()
 
 
-# ---------------------------------------------------------------------------
-# 3. Version check & input load
-# ---------------------------------------------------------------------------
-# Print the installed version for reproducibility and debugging.
-print(arx.__version__)
+def main():
+    """Run the standard AutoREACTER workflow."""
 
-# Load the JSON input file and initialize the AutoREACTER session.
-arx.run(args.input)
-session = arx.session()
+    args = parse_arguments()
+
+    # -------------------------------------------------------------------------
+    # 1. Import AutoREACTER
+    # -------------------------------------------------------------------------
+
+    try:
+        import AutoREACTER as arx
+    except ImportError:
+        print(
+            "[ERROR] Failed to import AutoREACTER.\n"
+            "Install it with:\n\n"
+            "    python -m pip install AutoREACTER\n"
+        )
+        raise
+
+    print("[OK] AutoREACTER imported successfully.")
+    print(f"[INFO] AutoREACTER version: {arx.__version__}")
+
+    # -------------------------------------------------------------------------
+    # 2. Initialize workflow
+    # -------------------------------------------------------------------------
+
+    arx.run(args.input)
+
+    # -------------------------------------------------------------------------
+    # 3. Select reactions
+    # -------------------------------------------------------------------------
+
+    arx.select_reactions()
+
+    # -------------------------------------------------------------------------
+    # 4. Select non-reactants
+    # -------------------------------------------------------------------------
+
+    arx.select_non_reactants()
+
+    # -------------------------------------------------------------------------
+    # 5. Prepare reaction templates
+    # -------------------------------------------------------------------------
+
+    arx.prepare_reactions()
+
+    # -------------------------------------------------------------------------
+    # 6. Review checkpoint
+    # -------------------------------------------------------------------------
+
+    session = arx.session()
+
+    print(
+        "\n[INFO] Reaction preparation completed."
+        f"\n[INFO] Review generated images in: {session.images_dir}"
+    )
+
+    confirmation = input(
+        "\nType 'ok' to continue with final processing: "
+    ).strip().lower()
+
+    if confirmation != "ok":
+        print("[EXIT] Workflow stopped by user.")
+        return 0
+
+    # -------------------------------------------------------------------------
+    # 7. Final processing
+    # -------------------------------------------------------------------------
+
+    arx.process()
+
+    print(
+        "\n[INFO] AutoREACTER workflow completed successfully."
+        f"\n[INFO] Output directory: {session.output_dir}"
+    )
+
+    return 0
 
 
-# ---------------------------------------------------------------------------
-# 4. Select reactions and non-reactants
-# ---------------------------------------------------------------------------
-# Select which detected reactions should be processed.
-arx.select_reactions()
-
-# Select non-reactant molecules, if any are detected.
-arx.select_non_reactants()
-
-
-# ---------------------------------------------------------------------------
-# 5. Reaction template preparation
-# ---------------------------------------------------------------------------
-# Prepare reaction templates for downstream REACTER file generation.
-arx.prepare_reactions()
-
-
-# ---------------------------------------------------------------------------
-# 6. Review checkpoint
-# ---------------------------------------------------------------------------
-# AutoREACTER saves visualization images internally in the session image directory.
-print(
-    "\n[INFO] Reaction preparation completed."
-    "\n[INFO] Please review the generated images in the session image directory."
-)
-
-# Try to print the image directory if it is exposed by AutoREACTER.
-session = arx.session()
-img_dir = getattr(session, "img_dir", None) or getattr(session, "images_dir", None)
-
-if img_dir is not None:
-    print(f"[INFO] Image directory: {img_dir}")
-
-ok_pass = input("\nType 'ok' to continue with final processing: ").strip().lower()
-
-if ok_pass != "ok":
-    print("[EXIT] Workflow stopped by user.")
-    sys.exit(0)
-
-
-# ---------------------------------------------------------------------------
-# 7. Final processing
-# ---------------------------------------------------------------------------
-# Run 3D geometry setup, force-field generation, REACTER file building,
-# and LAMMPS simulation setup.
-arx.process()
-
-print("\n[INFO] AutoREACTER workflow completed successfully.")
+if __name__ == "__main__":
+    sys.exit(main())

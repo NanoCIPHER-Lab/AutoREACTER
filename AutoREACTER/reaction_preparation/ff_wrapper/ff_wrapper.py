@@ -1,8 +1,7 @@
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Optional, TYPE_CHECKING
-from AutoREACTER.input_parser import SimulationSetup
-from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import ReactionMetadata
+
 
 if TYPE_CHECKING:
     from AutoREACTER.session import Session

@@ -8,7 +8,7 @@ AutoREACTER accepts an input file path, initializes the session, and exposes met
 
 ---
 
-### Import AutoREACTER
+## Import AutoREACTER
 
 ```python
 import AutoREACTER as arx
@@ -20,7 +20,7 @@ Users can import AutoREACTER as `arx` so the code is shorter and the long module
 
 ## Required Functions in Order
 
-<span style="color:red">**Important**: Users must run these functions in the following order.</span> 
+<span style="color:red"><strong>Important: Users must run these functions in the following order.</strong></span>
 
 ### 1. Run AutoREACTER
 
@@ -63,6 +63,7 @@ Optional function available after `arx.select_reactions()`:
 ```python
 arx.show_non_reactants()
 ```
+
 ---
 
 ### 3. Select Non-Reactants
@@ -80,7 +81,7 @@ A molecule can be treated as a non-reactant if:
 * The molecule does not qualify as a monomer.
 * The molecule qualifies as a monomer, but the user chooses not to include it in any selected reaction.
 
-
+---
 
 ### 4. Prepare Reactions
 
@@ -92,12 +93,12 @@ This function prepares reaction templates from the selected reactions for downst
 
 This function marks the reaction-template preparation stage as complete.
 
-After this function, users can optionally visualize reaction templates.
+After this function, users can optionally visualize reaction templates before final processing.
 
 Optional function available after `arx.prepare_reactions()`:
 
 ```python
-arx.show_reaction_templates()
+arx.show_reaction_templates("template")
 ```
 
 ---
@@ -108,9 +109,9 @@ arx.show_reaction_templates()
 arx.process()
 ```
 
-This function executes the back-half of the AutoREACTER pipeline in one shot.
+This function executes the final AutoREACTER processing steps after reaction templates have been prepared.
 
-According to the docstring, this method runs reaction template preparation, 3D geometry setup, force-field generation through the LUNAR API, REACTER file building, and LAMMPS simulation writing.
+It performs 3D geometry setup, force-field generation through the LUNAR API, REACTER file building, and LAMMPS simulation writing.
 
 This function should be run only after the required stages are completed:
 
@@ -136,6 +137,9 @@ arx.select_reactions()
 arx.select_non_reactants()
 
 arx.prepare_reactions()
+
+# Optional review step before final processing
+arx.show_reaction_templates("template")
 
 arx.process()
 ```
@@ -264,20 +268,26 @@ Usage:
 arx.show_reaction_templates()
 ```
 
-This function returns an image grid visualizing the reaction templates.
+This function returns an image grid visualizing the generated reaction templates.
 
-The `highlight_type` parameter can be used to visualize different parts of the reaction templates. Default type is `"template"`
+By default, AutoREACTER shows the full reaction template:
 
 ```python
-arx.show_reaction_templates(highlight_type="template")
-arx.show_reaction_templates(highlight_type="edge")
-arx.show_reaction_templates(highlight_type="delete")
-arx.show_reaction_templates(highlight_type="initiators")
+arx.show_reaction_templates()
+```
+
+Users can also pass a template-highlight mode as a positional argument:
+
+```python
+arx.show_reaction_templates("template")
+arx.show_reaction_templates("edge")
+arx.show_reaction_templates("delete")
+arx.show_reaction_templates("initiators")
 ```
 
 #### Reaction Template Visualization Options
 
-Visualize reaction templates with different highlighting options by setting the `highlight_type` parameter to one of the following values:
+Visualize reaction templates with different highlighting options by passing one of the following values:
 
 * `template`: Highlights all structural changes in the reaction templates.
 * `edge`: Highlights edge atoms of the templates.
@@ -287,7 +297,7 @@ Visualize reaction templates with different highlighting options by setting the 
 The default value is:
 
 ```python
-highlight_type="template"
+"template"
 ```
 
 Returns:
@@ -296,18 +306,20 @@ Returns:
 Image
 ```
 
+---
 
 ## Summary of Public APIs
 
-| API                             | Required or Optional | When to Run                        |
-| ------------------------------- | -------------------: | ---------------------------------- |
-| `arx.run("input.json")`         |             Required | First                              |
-| `arx.select_reactions()`        |             Required | After `arx.run(...)`               |
-| `arx.select_non_reactants()`    |             Required | After `arx.select_reactions()`     |
-| `arx.prepare_reactions()`       |             Required | After `arx.select_non_reactants()` |
-| `arx.process()`                 |             Required | Final required step                |
-| `arx.show_molecules()`          |             Optional | After `arx.run(...)`               |
-| `arx.show_functional_groups()`  |             Optional | After `arx.run(...)`               |
-| `arx.show_reactions()`          |             Optional | After `arx.run(...)`               |
-| `arx.show_non_reactants()`      |             Optional | After `arx.select_reactions()`     |
-| `arx.show_reaction_templates()` |             Optional | After `arx.prepare_reactions()`    |
+| API                             | Required or Optional | When to Run                                      |
+| ------------------------------- | -------------------: | ------------------------------------------------ |
+| `arx.run("input.json")`         |             Required | First                                            |
+| `arx.select_reactions()`        |             Required | After `arx.run(...)`                             |
+| `arx.select_non_reactants()`    |             Required | After `arx.select_reactions()`                   |
+| `arx.prepare_reactions()`       |             Required | After `arx.select_non_reactants()`               |
+| `arx.process()`                 |             Required | Final required step                              |
+| `arx.show_molecules()`          |             Optional | After `arx.run(...)`                             |
+| `arx.show_functional_groups()`  |             Optional | After `arx.run(...)`                             |
+| `arx.show_reactions()`          |             Optional | After `arx.run(...)`                             |
+| `arx.show_non_reactants()`      |             Optional | After `arx.select_reactions()`                   |
+| `arx.show_reaction_templates()` |             Optional | After `arx.prepare_reactions()`, before `process()` |
+

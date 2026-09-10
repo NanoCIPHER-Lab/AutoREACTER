@@ -31,7 +31,14 @@ class PostEqWriter:
         sim_name (str): Base simulation name used in file naming.
     """
 
-    def __init__(self, out_dir: Path, settings: LammpsSettings, simulation: Simulation, sim_name: str):
+    def __init__(
+        self,
+        out_dir: Path,
+        settings: LammpsSettings,
+        simulation: Simulation,
+        sim_name: str,
+        write_second_reaction_stage: bool = True,
+    ):
         """
         Initialize the writer and generate the post-equilibration input script.
 
@@ -46,9 +53,16 @@ class PostEqWriter:
         self.sim_name = sim_name
 
         # Write the post-equilibration file immediately during construction.
-        self.write_post_eq_file(simulation=simulation)
+        self.write_post_eq_file(
+            simulation=simulation,
+            write_second_reaction_stage=write_second_reaction_stage,
+        )
 
-    def write_post_eq_file(self, simulation: Simulation) -> str:
+    def write_post_eq_file(
+        self,
+        simulation: Simulation,
+        write_second_reaction_stage: bool = True,
+    ) -> str:
         """
         Create the LAMMPS input script for the post-equilibration stage.
 
@@ -74,8 +88,11 @@ class PostEqWriter:
 
         s = self.settings
 
-        # Input is the reacted structure produced by the second reaction stage.
-        input_data = f"{tag}_reacted_1M-3.5_5.0A.data"
+        # Input is the reacted structure produced by the final reaction stage.
+        if write_second_reaction_stage:
+            input_data = f"{tag}_reacted_1M-3.5_5.0A.data"
+        else:
+            input_data = f"{tag}_reacted_0M-1M_3.5A.data"
 
         # Output files written after equilibration completes.
         output_xyz = f"{tag}_post_equilibration.xyz"

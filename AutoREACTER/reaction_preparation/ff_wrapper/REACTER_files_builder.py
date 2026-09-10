@@ -26,6 +26,7 @@ from dataclasses import dataclass
 from typing import Optional
 import datetime
 import re
+from AutoREACTER.reaction_preparation.deduplication_detector import DeduplicationDetector
 from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper import FFFiles
 from AutoREACTER.reaction_preparation.ff_wrapper.modifiers_molecule_files import (
     modify_types, modify_charges, modify_coords,
@@ -40,36 +41,14 @@ now = datetime.datetime.now()
 import logging
 logger = logging.getLogger(__name__)
 
-@dataclass(slots=True)
-class LMPMoleculeFiles:
-    """Simple container for paired LAMMPS data and molecule files."""
-    lmp_molecule_file: Path     # Associated *.molecule molecule template
-
-@dataclass(slots=True)
-class MoleculeFile:
-    """Wrapper associating a molecule ID with its generated data files."""
-    id: str
-    molecule_files: Optional[LMPMoleculeFiles]
-
-@dataclass(slots=True)
-class TemplateFile:
-    """
-    Container for pre- and post-reaction template file pairs.
-    """
-    reaction_id: Optional[int]
-    map_file: Optional[Path]
-    pre_reaction_file: Optional[LMPMoleculeFiles]
-    post_reaction_file: Optional[LMPMoleculeFiles]
 
 @dataclass(slots=True)
 class REACTERFiles:
-    """
-    Complete collection of output files from the LUNAR workflow.
-    """
-    force_field_data: Path             # force_field.data (FF parameters)
-    in_file: Path                      # in.fix_bond_react.script (LAMMPS input)
-    molecule_files: list[MoleculeFile]
-    template_files: list[TemplateFile]
+    """Run-level files plus final monomer/reaction metadata lists."""
+    force_field_data: Path
+    in_file: Path
+    molecule_files: list
+    template_files: list
 
 class REACTERFilesBuilder:
     def __init__(
@@ -92,7 +71,11 @@ class REACTERFilesBuilder:
         )
 
         self.force_field = self.updated_inputs_with_3d_mols.force_field
-            
+        self.wildcards = self.updated_inputs_with_3d_mols.wildcards
+        self.deduplicate_reaction_templates = (
+            self.updated_inputs_with_3d_mols.deduplicate_reaction_templates
+        )
+        
 
     def _get_ending_integer(self, s: str) -> int | None:
         """
@@ -406,7 +389,7 @@ Types
         current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         # 2. Build the custom header
-        map_file = f"# This nominal superimpose file for the {self.force_field} forcefield was generated on {current_time} for {file_name}.\n\n"
+        map_file = f"# This nominal superimpose file for the {self.force_field} forcefield was generated on {current_time} for {file_name} by AutoREACTER.\n\n"
 
         # Write counts
         map_file += f"{len(edge_atoms)} edgeIDs\n"
@@ -504,6 +487,13 @@ Types
                 for key, value in reactant_to_product.items():
                     template_indexes_reactant.append(int(key + 1))
                     template_indexes_product.append(int(value + 1))
+
+                # Deleted atoms do not have product equivalences, but they must still
+                # be present in the pre-reaction template so LAMMPS can delete them.
+                for atom_index in delete_ids:
+                    atom_index_1_based = int(atom_index + 1)
+                    if atom_index_1_based not in template_indexes_reactant:
+                        template_indexes_reactant.append(atom_index_1_based)
 
                 # Iterate the provided file dictionary and only process entries that start with "pre_"
                 # so that we can find their matching "post_{num}" counterparts.
@@ -615,27 +605,29 @@ Types
                     ]
 
 
-                    # Construct the .map file contents using the reindexed template-space mappings
-                    # 1. Standard map file (Pass [] to suppress delete_ids)
+                    # 1. Standard map file.
+                    # This is the default map used by AutoREACTER-generated
+                    # LAMMPS scripts, so DeleteIDs are intentionally suppressed.
                     map_file_contents = self._map_file_write(
                         template_reactant_to_template_product,
                         initiator_atoms_t,
                         edge_atoms_t,
-                        [], 
+                        [],
                         file_name=map_file_name
                     )
                     map_path = os.path.join(self.cache_dir, map_file_name)
                     with open(map_path, "w") as f:
                         f.write(map_file_contents)
 
-                    # 2. Supplementary map file (With delete_ids, if any exist)
+                    # 2. Optional map file with DeleteIDs.
+                    map_path_del = None
                     if delete_ids_t:
                         map_file_name_del = f"RXN_{num}_with_delete_ids.map"
                         map_file_contents_del = self._map_file_write(
                             template_reactant_to_template_product,
                             initiator_atoms_t,
                             edge_atoms_t,
-                            delete_ids_t, 
+                            delete_ids_t,
                             file_name=map_file_name_del
                         )
                         map_path_del = os.path.join(self.cache_dir, map_file_name_del)
@@ -644,29 +636,21 @@ Types
 
                 return pre_out, post_out, map_path
     
-    def _copy_lunar_files_to_cache(self, ff_files: FFFiles) -> tuple[Path, Path, list[MoleculeFile]]:
+    def _copy_lunar_files_to_cache(self, ff_files: FFFiles) -> tuple[Path, Path]:
         """
-        Copy all LUNAR output files into cache_dir.
-        
-        Copies force_field.data, in_file, and all molecule files (.lmpmol -> .molecule).
+        Copy LUNAR output files into cache_dir.
 
-        Parameters
-        ----------
-        ff_files : FFFiles
-
-        Returns
-        -------
-        tuple[Path, Path, list[MoleculeFile]]
-            - force_field_data destination path
-            - in_file destination path  
-            - list of MoleculeFile with updated cache paths
+        The run-level files are returned directly. Monomer-level molecule
+        files are attached to the existing MonomerEntry objects on
+        session.inputs.monomers.
         """
         ff_dest = self.cache_dir / ff_files.force_field_data.name
         try:
             shutil.copy2(ff_files.force_field_data, ff_dest)
         except Exception as e:
             raise FileNotFoundError(
-                f"Failed to copy force field data from '{ff_files.force_field_data}' to '{ff_dest}'."
+                f"Failed to copy force field data from "
+                f"'{ff_files.force_field_data}' to '{ff_dest}'."
             ) from e
 
         if not ff_dest.is_file():
@@ -677,17 +661,52 @@ Types
         in_dest = self.cache_dir / ff_files.in_file.name
         shutil.copy2(ff_files.in_file, in_dest)
 
-        molecule_files: list[MoleculeFile] = []
-        for mol in ff_files.molecule_files:
-            src = mol.molecule_files.lmp_molecule_file
-            dest = self.cache_dir / f"{mol.id}.molecule"
-            shutil.copy2(src, dest)
-            molecule_files.append(MoleculeFile(
-                id=mol.id,
-                molecule_files=LMPMoleculeFiles(lmp_molecule_file=dest)
-            ))
+        monomers_by_key = {}
+        for monomer_entry in self.session.inputs.monomers:
+            monomers_by_key[str(monomer_entry.id)] = monomer_entry
+            monomers_by_key[str(monomer_entry.data_id)] = monomer_entry
+            if monomer_entry.name is not None:
+                monomers_by_key[str(monomer_entry.name)] = monomer_entry
 
-        return ff_dest, in_dest, molecule_files
+        for mol_file in ff_files.molecule_files:
+            src = mol_file.molecule_files.lmp_molecule_file
+            mol_id = str(mol_file.id)
+            dest = self.cache_dir / f"{mol_id}.molecule"
+            shutil.copy2(src, dest)
+
+            monomer_entry = monomers_by_key.get(mol_id)
+            if monomer_entry is None:
+                logger.warning(
+                    "Could not attach copied molecule file %s to a MonomerEntry "
+                    "using molecule id %s.",
+                    dest,
+                    mol_id,
+                )
+                continue
+
+            monomer_entry.lmp_molecule_file = dest
+
+        return ff_dest, in_dest
+
+
+
+    def _copy_path_to_final(self, src: Path | str | None, final_dir: Path) -> Path | None:
+        """Copy one generated REACTER file to the final output directory."""
+        if src is None:
+            return None
+
+        src = Path(src)
+        if not src.is_file():
+            logger.warning("Skipping missing REACTER output file: %s", src)
+            return None
+
+        final_dir.mkdir(parents=True, exist_ok=True)
+        dest = final_dir / src.name
+
+        if src.resolve() != dest.resolve():
+            shutil.copy2(src, dest)
+
+        return dest
 
 
     def molecule_template_preparation(self, session: "Session") -> None:
@@ -709,9 +728,8 @@ Types
         """
         ff_files = session.ff_files
         prepared_reactions_with_3d_mols = session.reaction_metadata # <--- CHANGED FROM session.inputs
-        template_files = []
         pre_and_post_files = ff_files.template_files
-        force_field_data, in_file, molecule_files = self._copy_lunar_files_to_cache(ff_files)
+        force_field_data, in_file = self._copy_lunar_files_to_cache(ff_files)
         updated_inputs_with_3d_mols= session.inputs
         # Iterate each reaction entry and build templates for that single reaction only.
         for rxn in pre_and_post_files:
@@ -754,33 +772,98 @@ Types
                 edge_atoms = edge_atoms,
                 delete_ids = delete_ids
             )
-            template_files.append(TemplateFile(
-                reaction_id = id,
-                map_file = Path(map_path),
-                pre_reaction_file = LMPMoleculeFiles(
-                    lmp_molecule_file = Path(pre_out)
-                ),
-                post_reaction_file = LMPMoleculeFiles(
-                    lmp_molecule_file = Path(post_out)
-                )
-            ))
+            current_rxn_metadata.map_file = Path(map_path)
+
+            optional_delete_map = Path(map_path).with_name(
+                f"RXN_{id}_with_delete_ids.map"
+            )
+            current_rxn_metadata.map_file_with_delete_ids = (
+                optional_delete_map if optional_delete_map.is_file() else None
+            )
+
+            current_rxn_metadata.pre_reaction_file = Path(pre_out)
+            current_rxn_metadata.post_reaction_file = Path(post_out)
         
+        final_dir = Path(session.output_dir)
+
+        force_field_data = self._copy_path_to_final(force_field_data, final_dir)
+        in_file = self._copy_path_to_final(in_file, final_dir)
+
+        if force_field_data is None:
+            raise FileNotFoundError("force_field.data was not copied to final output.")
+        if in_file is None:
+            raise FileNotFoundError("LAMMPS input file was not copied to final output.")
+
+        # Store final monomer molecule paths directly on MonomerEntry.
+        for monomer_entry in session.inputs.monomers:
+            monomer_entry.lmp_molecule_file = self._copy_path_to_final(
+                monomer_entry.lmp_molecule_file,
+                final_dir,
+            )
+
+        # Store final reaction template/map paths directly on ReactionMetadata.
+        for reaction in session.reaction_metadata:
+            reaction.map_file = self._copy_path_to_final(
+                reaction.map_file,
+                final_dir,
+            )
+            if (
+                reaction.map_file_with_delete_ids is None
+                and reaction.map_file is not None
+                and reaction.reaction_id is not None
+            ):
+                delete_map_path = Path(reaction.map_file).with_name(
+                    f"RXN_{reaction.reaction_id}_with_delete_ids.map"
+                )
+                if delete_map_path.is_file():
+                    reaction.map_file_with_delete_ids = delete_map_path
+
+            reaction.map_file_with_delete_ids = self._copy_path_to_final(
+                reaction.map_file_with_delete_ids,
+                final_dir,
+            )
+            reaction.pre_reaction_file = self._copy_path_to_final(
+                reaction.pre_reaction_file,
+                final_dir,
+            )
+            reaction.post_reaction_file = self._copy_path_to_final(
+                reaction.post_reaction_file,
+                final_dir,
+            )
+
+        active_template_reactions = [
+            reaction
+            for reaction in session.reaction_metadata
+            if reaction.activity_stats
+            and reaction.map_file is not None
+            and reaction.pre_reaction_file is not None
+            and reaction.post_reaction_file is not None
+        ]
+
+        detector = DeduplicationDetector()
+
+        if self.deduplicate_reaction_templates:
+            active_template_reactions = detector.compare_lammps_templates(
+                template_files=active_template_reactions,
+                wildcards=self.wildcards,
+            )
+        else:
+            print("[INFO] Skipping LAMMPS reaction-template deduplication.")
+
+            if self.wildcards:
+                active_template_reactions = detector.write_wildcard_maps(
+                    template_files=active_template_reactions,
+                )
+
         reacter_files = REACTERFiles(
             force_field_data=force_field_data,
             in_file=in_file,
-            molecule_files=molecule_files,
-            template_files=template_files
-        )
-        from AutoREACTER.cache import RunDirectoryManager # Import here to avoid circular dependency issues, since RunDirectoryManager also imports REACTERFilesBuilder
-        # Move generated files to final output directory using RunDirectoryManager
-        run_manager = RunDirectoryManager(session.output_dir.parent)
-        reacter_files = run_manager.move_reacter_files(
-            reacter_files,
-            staging_dir=session.staging_dir,
-            final_dir=session.output_dir
+            molecule_files=list(session.inputs.monomers),
+            template_files=active_template_reactions,
         )
 
         session.reacter_files = reacter_files
 
+        print(f"[OK] Moved files → {final_dir}")
 
         return None

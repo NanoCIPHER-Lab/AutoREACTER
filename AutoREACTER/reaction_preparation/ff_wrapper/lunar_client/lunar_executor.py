@@ -174,6 +174,7 @@ class LunarExecutor:
         all2lmp_results: list[All2LMPResult]
     ) -> FFFiles:
         """Executes bond_react_merge.py to create the final unified simulation setup."""
+        print(f"[LUNAR bond_react_merge] Running bond_react_merge with input file {merge_input_file_path}")
         env = os.environ.copy()
         env["QT_QPA_PLATFORM"] = "offscreen"
         subprocess.run(
@@ -183,7 +184,8 @@ class LunarExecutor:
                 "-files", f"infile:{merge_input_file_path.name}", 
                 "-atomstyle", "full",
                 "-tl", "T",
-                "-wrd", "T",
+                "-wrd", "F",
+                "-map", "F"
             ],
             cwd=str(self.cache_bond_react_merge),
             env=env,

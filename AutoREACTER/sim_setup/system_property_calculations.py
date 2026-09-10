@@ -1,4 +1,5 @@
 import math
+from rdkit import Chem
 from rdkit.Chem import Descriptors
 
 from AutoREACTER.input_parser import SimulationSetup
@@ -56,11 +57,17 @@ class SystemPropertyCalculations:
     def _populate_monomer_properties(self) -> None:
         """
         Populate each active monomer with basic structural properties derived from its RDKit molecule.
-        
+
         For every monomer whose status is True:
-          - num_atoms is set to the heavy atom count.
-          - molecular_weight is set using RDKit's Descriptors.MolWt (g/mol).
-        
+        - num_atoms is set to the FULL atom count (heavy atoms + explicit hydrogens),
+            since this must match the atom count of the final built system, not just
+            the heavy-atom skeleton. Using AddHs() on a temporary copy avoids mutating
+            monomer.rdkit_mol, which other stages (e.g. functional group / reaction
+            detection) still expect in its original heavy-atom-only form.
+        - molecular_weight is set using RDKit's Descriptors.MolWt (g/mol). Unaffected
+            by explicit vs. implicit H representation -- MolWt already accounts for
+            implicit hydrogens correctly.
+
         Raises:
             NoneMonomerError: If a monomer is marked active but has no RDKit Mol object.
         """
@@ -75,8 +82,14 @@ class SystemPropertyCalculations:
                     f"Monomer with ID {monomer.id} has no RDKit Mol object."
                 )
 
-            monomer.num_atoms = monomer.rdkit_mol.GetNumAtoms()
+            # count on an AddHs'd copy so num_atoms reflects the true final
+            # atom count (heavy + explicit H), matching what total_atoms means
+            # to the rest of the simulation-setup pipeline. Original rdkit_mol
+            # is left untouched for downstream heavy-atom-based logic.
+            mol_with_hs = Chem.AddHs(monomer.rdkit_mol)
+            monomer.num_atoms = mol_with_hs.GetNumAtoms()
             monomer.molecular_weight = Descriptors.MolWt(monomer.rdkit_mol)
+            
 
     def _calculate_replica_properties(self) -> None:
         """

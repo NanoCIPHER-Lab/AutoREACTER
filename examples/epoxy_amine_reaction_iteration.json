@@ -1,0 +1,33 @@
+{
+  "simulation_name": "Epoxy_Amine_Reaction_Iteration",
+  "force_field": "PCFF",
+
+  "deep_search": true,
+  "reaction_iteration_depth": 5,
+  "wildcards": true,
+  "deduplicate_reaction_templates": true,
+  "write_second_reaction_stage": false,
+
+  "simulations": [
+    {
+      "tag": "10k_300K",
+      "temperature": 300,
+      "density": 1.0,
+      "monomer_counts": {
+        "bisphenol_A_diglycidyl_ether": 200,
+        "1_5_diaminopentane": 100
+      }
+    }
+  ],
+
+  "monomers": [
+    {
+      "name": "bisphenol_A_diglycidyl_ether",
+      "smiles": "CC(C)(c1ccc(OCC2CO2)cc1)c1ccc(OCC2CO2)cc1"
+    },
+    {
+      "name": "1_5_diaminopentane",
+      "smiles": "NCCCCCN"
+    }
+  ]
+}
