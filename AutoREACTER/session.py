@@ -12,6 +12,7 @@ from AutoREACTER.detectors.reaction_detector import ReactionInstance
 from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import ReactionMetadata
 from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper import FFFiles
 from AutoREACTER.reaction_preparation.ff_wrapper.REACTER_files_builder import REACTERFiles
+
 if TYPE_CHECKING:
     from AutoREACTER.detectors.functional_groups_detector import MonomerRole
 
@@ -84,6 +85,7 @@ class Session:
     # Runtime counters / sub-sessions attached during reaction preparation
     reaction_id_counter: int = 0
     reaction_progression_session: object | None = None
+    kinetics : bool = False
 
 
 def _resolve_input_path(input_file_path: str) -> Path:
