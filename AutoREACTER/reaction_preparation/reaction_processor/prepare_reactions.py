@@ -104,6 +104,9 @@ class ReactionMetadata:
         pre_reaction_file: Path to the pre-reaction molecule file.
         post_reaction_file: Path to the post-reaction molecule file.
         is_radical: Whether the reaction involves radical species.
+        A: Pre-exponential factor for the reaction rate.
+        n: Temperature exponent for the reaction rate.
+        Ea: Activation energy for the reaction.
         radical_atom_idxs: Tuple of reactant indices flagged as radical atoms.
         activity_stats: True if this reaction is active and unique; set to
             False for duplicate or failed reactions so they can be filtered
@@ -135,6 +138,9 @@ class ReactionMetadata:
     post_reaction_file: Optional[Path] = None
     is_radical: bool = False
     radical_atom_idxs: Optional[tuple[int, ...]] = ()
+    A: Optional[float] = None
+    n: Optional[float] = None
+    Ea: Optional[float] = None
     activity_stats: bool = True
 
 class PrepareReactions:
