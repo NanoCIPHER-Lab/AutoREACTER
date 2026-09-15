@@ -85,7 +85,7 @@ class Session:
     # Runtime counters / sub-sessions attached during reaction preparation
     reaction_id_counter: int = 0
     reaction_progression_session: object | None = None
-    kinetics : bool = False
+    kinetics : bool = True
 
 
 def _resolve_input_path(input_file_path: str) -> Path:

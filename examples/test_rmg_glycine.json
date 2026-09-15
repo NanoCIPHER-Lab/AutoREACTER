@@ -1,0 +1,23 @@
+{
+  "simulation_name": "Diene_2Plus2_RMG_Test",
+  "force_field": "PCFF",
+  "kinetics": true,
+
+  "simulations": [
+    {
+      "tag": "hexadiene_500K",
+      "temperature": 500,
+      "density": 0.75,
+      "monomer_counts": {
+        "1_5_hexadiene": 20
+      }
+    }
+  ],
+
+  "monomers": [
+    {
+      "name": "1_5_hexadiene",
+      "smiles": "C=CC"
+    }
+  ]
+}

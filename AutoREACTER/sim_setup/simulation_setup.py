@@ -61,6 +61,7 @@ class SimulationSetupManager:
 
         # Generate all LAMMPS input files for the five simulation stages
         self.generate_input_files(
+            session=session,
             setup=updated_setup,
             reacter_files=reacter_files,
             run_dir=run_dir
@@ -71,6 +72,7 @@ class SimulationSetupManager:
 
     def generate_input_files(
         self,
+        session: "Session",
         setup: SimulationSetup,
         reacter_files: REACTERFiles,
         run_dir: Path
@@ -82,10 +84,11 @@ class SimulationSetupManager:
         logic inside the dedicated Writer class.
         
         Args:
+            session: Session object containing all validated inputs, reaction data, and output directory information.
             setup: SimulationSetup containing all calculated physical properties.
             reacter_files: REACTERFiles object with molecule templates and reaction data.
             run_dir: Base output directory. The Writer will create a 'LAMMPS_input_files'
                      subdirectory inside it.
         """
-        writer = Writer(reacter_files=reacter_files)
+        writer = Writer(session=session, reacter_files=reacter_files)
         writer.write_all_files(run_dir, setup)
