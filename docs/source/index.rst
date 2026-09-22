@@ -15,11 +15,6 @@ Welcome to the AutoREACTER documentation.
 AutoREACTER is a tool for automated reaction-based molecular system generation.
 This documentation is organized into a user guide and a developer guide.
 
-**Note: AutoREACTER is currently under active development. APIs, configuration schemas, and core functionality may change or break without notice as reaction-library and force-field support expand.**
-
-User Guide
-----------
-
 .. toctree::
    :maxdepth: 1
    :caption: User Guide:
