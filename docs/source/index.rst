@@ -27,8 +27,6 @@ This documentation is organized into a user guide and a developer guide.
    supported-force-fields.md
    api_reference.md
 
-Developer Guide
----------------
 
 .. toctree::
    :maxdepth: 1
