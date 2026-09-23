@@ -130,13 +130,20 @@ def run(input_file):
         Active AutoREACTER workflow object.
     """
     global _active_workflow
+    
+    # Check if the input is a dictionary
+    if isinstance(input_file, dict):
+        pass  # Leave it as a dict to be handled by ARXCLI
+    else:
+        # Otherwise, treat it as a file path
+        input_file = Path(input_file).expanduser().resolve()
+        
+        if not input_file.exists():
+            raise FileNotFoundError(f"Input file not found: {input_file}")
 
-    input_file = Path(input_file).expanduser().resolve()
-
-    if not input_file.exists():
-        raise FileNotFoundError(f"Input file not found: {input_file}")
-
+    # Pass the dictionary or the resolved path to ARXCLI
     _active_workflow = ARXCLI(input_file)
+    
     return _active_workflow
 
 

@@ -130,7 +130,7 @@ def _resolve_output_dir(
 
     - If output_dir is a Linux/WSL absolute path, use it directly.
 
-    - If output_dir is a Windows-style path such as C:/Users/... or C:\Users\...,
+    - If output_dir is a Windows-style path such as C:/Users/... or C:\\Users\\...,
       convert it to the WSL form /mnt/c/Users/....
 
     This function returns an absolute path. Directory creation/clearing happens
