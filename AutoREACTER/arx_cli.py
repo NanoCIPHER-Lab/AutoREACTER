@@ -17,8 +17,9 @@ from pathlib import Path
 import shutil
 import sys
 import threading
+import json
 from PIL import Image
-from typing import Optional
+from typing import Dict, Optional
 
 from AutoREACTER.session import read_input
 from AutoREACTER.input_parser import InputParser
@@ -75,8 +76,8 @@ class ARXCLI:
 
     Parameters
     ----------
-    input : Path
-        Path to the input configuration file consumed by ``read_input``.
+    input : Path | Dict
+        Path to the input configuration file or a dictionary consumed by ``read_input``.
 
     Attributes
     ----------
@@ -89,21 +90,29 @@ class ARXCLI:
     # Shared error-handler instance across all ARXCLI objects
     EH = ErrorHandler()
 
-    def __init__(self, input: Path) -> None:
+    def __init__(self, input: Path | dict | Dict) -> None:
         # Initialise the waterfall tracker (all stages False)
         self.error_handler = self.EH.waterfall_order()
-
         self.input = input
-        abs_path = self.input.resolve()
-        print(f"[OK] Read input from {abs_path}")
+        
+        if isinstance(input, Path):
+            self._input_source = self.input.resolve()
+            print(f"[OK] Read input from {self._input_source}")
+        elif isinstance(input, dict):
+            self._input_source = input
+            print("[OK] Read input from dictionary")
+        else:
+            raise ValueError("Input must be a Path or a Dict.")
 
-        # Parse the input file and create the session
-        self.session = read_input(abs_path)
+        # Parse the input file (or dict) and create the session
+        self.session = read_input(self._input_source)
         self.img_dir = self.session.images_dir
         # with open(self.session.output_dir / "AutoREACTER.log", 'w') as f:
         #     f.write("--- Starting AutoREACTER Session ---\n")
-        # Save a copy of the input JSON to the output directory
-        self._save_input_json(abs_path)
+        
+        # Save a copy of the input JSON (or dump dict) to the output directory
+        self._save_input_json(self._input_source)
+        
         # Save an initial grid image of all monomers
         self._save_rdkit_img(
             InputParser().initial_molecules_image_grid(self.session),
@@ -123,8 +132,6 @@ class ARXCLI:
     # ------------------------------------------------------------------
     # Public visualisation / inspection helpers
     # ------------------------------------------------------------------
-
-    
 
     def show_molecules(self) -> Image:
         """
@@ -322,10 +329,15 @@ class ARXCLI:
     # ------------------------------------------------------------------
     # Internal helpers – lazy detection & image saving
     # ------------------------------------------------------------------
-    def _save_input_json(self, abs_path: Path): 
-            destination_file = "input.json"
-            destination_path = self.session.output_dir / destination_file
-            shutil.copy(abs_path, destination_path)
+    def _save_input_json(self, source: Path | dict | Dict): 
+        destination_file = "input.json"
+        destination_path = self.session.output_dir / destination_file
+        
+        if isinstance(source, Path):
+            shutil.copy(source, destination_path)
+        elif isinstance(source, dict):
+            with open(destination_path, "w") as f:
+                json.dump(source, f, indent=4)
 
     def _ensure_fg_detected(self):
         """
