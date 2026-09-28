@@ -794,7 +794,7 @@ def test_read_input_uses_absolute_custom_output_dir(
     assert custom_output.is_dir()
 
 
-def test_read_input_clears_existing_output_directory(
+def test_read_input_preserves_existing_output_directory(
     tmp_path,
     monkeypatch,
 ):
@@ -818,7 +818,8 @@ def test_read_input_clears_existing_output_directory(
     nested = output_dir / "old_folder"
     nested.mkdir()
 
-    (nested / "old_nested.txt").write_text(
+    old_nested_file = nested / "old_nested.txt"
+    old_nested_file.write_text(
         "old nested data",
         encoding="utf-8",
     )
@@ -837,12 +838,23 @@ def test_read_input_clears_existing_output_directory(
 
     assert result.output_dir == output_dir.resolve()
 
-    assert not old_file.exists()
-    assert not nested.exists()
+    assert old_file.exists()
+    assert old_file.read_text(
+        encoding="utf-8"
+    ) == "old data"
 
-    assert (
+    assert nested.exists()
+    assert old_nested_file.exists()
+
+    assert old_nested_file.read_text(
+        encoding="utf-8"
+    ) == "old nested data"
+
+    assert result.images_dir == (
         output_dir / "images"
-    ).is_dir()
+    ).resolve()
+
+    assert result.images_dir.is_dir()
 
 
 def test_read_input_rejects_output_path_that_is_file(
