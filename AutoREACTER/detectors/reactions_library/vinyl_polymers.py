@@ -91,47 +91,47 @@ REACTIONS = {
             'radical detection during loop progression.'
         ),
     },
-'Vinyl Radical Coupling Termination (Same Chain)': {
-    'same_reactants': True,
-    'reactant_1': 'vinyl_chain_end_radical',
-    'product': 'vinyl_terminated_chain',
-    'delete_atom': False,
-    'reaction': (
-        '[C;!R;D3;v3;+0:1].'
-        '[C;!R;D3;v3;+0:2]'
-        '>>'
-        '[C:1]-[C:2]'
-    ),
-    'reference': {'smarts': None, 'reaction_and_mechanism': None},
-    'comments': None,
-    'notes': (
-        'Head-to-head radical coupling termination between two radical '
-        'chain ends of the SAME monomer type. Maps 1 and 2 are the two '
-        'active radical head carbons and form the new 1-2 termination bond.'
-    ),
-},
+# 'Vinyl Radical Coupling Termination (Same Chain)': {
+#     'same_reactants': True,
+#     'reactant_1': 'vinyl_chain_end_radical',
+#     'product': 'vinyl_terminated_chain',
+#     'delete_atom': False,
+#     'reaction': (
+#         '[C;!R;D3;v3;+0:1].'
+#         '[C;!R;D3;v3;+0:2]'
+#         '>>'
+#         '[C:1]-[C:2]'
+#     ),
+#     'reference': {'smarts': None, 'reaction_and_mechanism': None},
+#     'comments': None,
+#     'notes': (
+#         'Head-to-head radical coupling termination between two radical '
+#         'chain ends of the SAME monomer type. Maps 1 and 2 are the two '
+#         'active radical head carbons and form the new 1-2 termination bond.'
+#     ),
+# },
 
-'Vinyl Radical Coupling Termination (Cross Chain)': {
-    'same_reactants': False,
-    'reactant_1': 'vinyl_chain_end_radical',
-    'reactant_2': 'vinyl_chain_end_radical',   # FIXED: was missing entirely
-    'product': 'vinyl_terminated_chain',
-    'delete_atom': False,
-    'reaction': (
-        '[C;!R;D3;v3;+0:1].'
-        '[C;!R;D3;v3;+0:2]'
-        '>>'
-        '[C:1]-[C:2]'
-    ),
-    'reference': {'smarts': None, 'reaction_and_mechanism': None},
-    'comments': None,
-    'notes': (
-        'Same coupling chemistry as the same-chain entry above, but '
-        'reactant_2 is explicitly given so this pairs radical chain ends '
-        'coming from TWO DIFFERENT monomer types (e.g. a PMMA-derived '
-        'radical terminating against a TEGDMA-derived radical).'
-    ),
-},
+# 'Vinyl Radical Coupling Termination (Cross Chain)': {
+#     'same_reactants': False,
+#     'reactant_1': 'vinyl_chain_end_radical',
+#     'reactant_2': 'vinyl_chain_end_radical',   # FIXED: was missing entirely
+#     'product': 'vinyl_terminated_chain',
+#     'delete_atom': False,
+#     'reaction': (
+#         '[C;!R;D3;v3;+0:1].'
+#         '[C;!R;D3;v3;+0:2]'
+#         '>>'
+#         '[C:1]-[C:2]'
+#     ),
+#     'reference': {'smarts': None, 'reaction_and_mechanism': None},
+#     'comments': None,
+#     'notes': (
+#         'Same coupling chemistry as the same-chain entry above, but '
+#         'reactant_2 is explicitly given so this pairs radical chain ends '
+#         'coming from TWO DIFFERENT monomer types (e.g. a PMMA-derived '
+#         'radical terminating against a TEGDMA-derived radical).'
+#     ),
+# },
 
 
     # =========================================================================
