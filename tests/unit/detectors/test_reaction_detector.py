@@ -55,16 +55,21 @@ def homo_reaction(
     reactant="vinyl",
     *,
     reaction_name="vinyl_polymerization",
+    include_reference=True,
 ):
+    reaction_info = {
+        "reactant_1": reactant,
+        "reactant_2": None,
+        "same_reactants": True,
+        "reaction": "[*:1]>>[*:1]",
+        "delete_atom": False,
+    }
+
+    if include_reference:
+        reaction_info["reference"] = {"test": "reference"}
+
     return {
-        reaction_name: {
-            "reactant_1": reactant,
-            "reactant_2": None,
-            "same_reactants": True,
-            "reaction": "[*:1]>>[*:1]",
-            "delete_atom": False,
-            "reference": {"test": "reference"},
-        }
+        reaction_name: reaction_info,
     }
 
 
@@ -73,16 +78,21 @@ def co_reaction(
     reactant_2="B",
     *,
     reaction_name="A_B_polymerization",
+    include_reference=True,
 ):
+    reaction_info = {
+        "reactant_1": reactant_1,
+        "reactant_2": reactant_2,
+        "same_reactants": False,
+        "reaction": "[*:1].[*:2]>>[*:1]-[*:2]",
+        "delete_atom": True,
+    }
+
+    if include_reference:
+        reaction_info["reference"] = {"test": "reference"}
+
     return {
-        reaction_name: {
-            "reactant_1": reactant_1,
-            "reactant_2": reactant_2,
-            "same_reactants": False,
-            "reaction": "[*:1].[*:2]>>[*:1]-[*:2]",
-            "delete_atom": True,
-            "reference": {"test": "reference"},
-        }
+        reaction_name: reaction_info,
     }
 
 
@@ -290,6 +300,26 @@ def test_homopolymerization_preserves_reaction_metadata():
     assert rxn.references == {"doi": "123"}
 
 
+def test_homopolymerization_missing_reference_defaults_to_empty_dict():
+    detector = ReactionDetector()
+    detector.reactions = homo_reaction(
+        include_reference=False,
+    )
+
+    monomer = make_role(
+        "styrene",
+        "C=Cc1ccccc1",
+        ["vinyl"],
+    )
+
+    session = make_session([monomer])
+
+    detector.reaction_detector(session)
+
+    assert len(session.reaction_instances) == 1
+    assert session.reaction_instances[0].references == {}
+
+
 def test_duplicate_homo_functionalities_do_not_create_duplicate_reactions():
     detector = ReactionDetector()
     detector.reactions = homo_reaction()
@@ -345,6 +375,25 @@ def test_copolymerization_detects_A_plus_B():
     assert rxn.functional_group_1.fg_name == "A"
     assert rxn.functional_group_2.fg_name == "B"
     assert rxn.same_reactants is False
+
+
+def test_copolymerization_missing_reference_defaults_to_empty_dict():
+    detector = ReactionDetector()
+    detector.reactions = co_reaction(
+        include_reference=False,
+    )
+
+    monomer_a = make_role("A", "CCO", ["A"])
+    monomer_b = make_role("B", "CCN", ["B"])
+
+    session = make_session(
+        [monomer_a, monomer_b]
+    )
+
+    detector.reaction_detector(session)
+
+    assert len(session.reaction_instances) == 1
+    assert session.reaction_instances[0].references == {}
 
 
 def test_copolymerization_reverse_scan_does_not_duplicate_pair():
@@ -410,6 +459,26 @@ def test_single_monomer_with_both_functional_groups_can_react():
     assert rxn.monomer_2 is monomer
     assert rxn.functional_group_1.fg_name == "A"
     assert rxn.functional_group_2.fg_name == "B"
+
+
+def test_same_monomer_AB_missing_reference_defaults_to_empty_dict():
+    detector = ReactionDetector()
+    detector.reactions = co_reaction(
+        include_reference=False,
+    )
+
+    monomer = make_role(
+        "AB",
+        "NCC(=O)O",
+        ["A", "B"],
+    )
+
+    session = make_session([monomer])
+
+    detector.reaction_detector(session)
+
+    assert len(session.reaction_instances) == 1
+    assert session.reaction_instances[0].references == {}
 
 
 def test_same_monomer_AB_reaction_not_duplicated():
@@ -478,6 +547,27 @@ def test_index_homo_fresh_role_is_detected():
     assert len(result) == 1
 
 
+def test_index_homo_missing_reference_defaults_to_empty_dict():
+    detector = ReactionDetector()
+    detector.reactions = homo_reaction(
+        include_reference=False,
+    )
+
+    monomer = make_role(
+        "M",
+        "C=C",
+        ["vinyl"],
+        is_looped=False,
+    )
+
+    result = detector.index_based_reaction_detector(
+        [monomer]
+    )
+
+    assert len(result) == 1
+    assert result[0].references == {}
+
+
 def test_index_homo_looped_role_is_skipped():
     detector = ReactionDetector()
     detector.reactions = homo_reaction()
@@ -508,6 +598,34 @@ def test_index_co_two_fresh_roles_are_detected():
     result = detector.index_based_reaction_detector([a, b])
 
     assert len(result) == 1
+
+
+def test_index_co_missing_reference_defaults_to_empty_dict():
+    detector = ReactionDetector()
+    detector.reactions = co_reaction(
+        include_reference=False,
+    )
+
+    a = make_role(
+        "A",
+        "CCO",
+        ["A"],
+        is_looped=False,
+    )
+
+    b = make_role(
+        "B",
+        "CCN",
+        ["B"],
+        is_looped=False,
+    )
+
+    result = detector.index_based_reaction_detector(
+        [a, b]
+    )
+
+    assert len(result) == 1
+    assert result[0].references == {}
 
 
 @pytest.mark.parametrize(
@@ -583,6 +701,27 @@ def test_index_same_monomer_AB_fresh_role_is_detected():
 
     assert result[0].monomer_1 is monomer
     assert result[0].monomer_2 is monomer
+
+
+def test_index_same_monomer_AB_missing_reference_defaults_to_empty_dict():
+    detector = ReactionDetector()
+    detector.reactions = co_reaction(
+        include_reference=False,
+    )
+
+    monomer = make_role(
+        "AB",
+        "NCC(=O)O",
+        ["A", "B"],
+        is_looped=False,
+    )
+
+    result = detector.index_based_reaction_detector(
+        [monomer]
+    )
+
+    assert len(result) == 1
+    assert result[0].references == {}
 
 
 def test_index_same_monomer_AB_looped_role_is_skipped():
