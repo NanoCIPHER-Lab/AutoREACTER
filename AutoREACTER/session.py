@@ -216,8 +216,8 @@ def read_input(input_file_path: str | Path | dict | Dict, clear_staging: bool = 
             f"Resolved output_dir exists but is not a directory: {output_dir}"
         )
 
-    if output_dir.exists():
-        _clear_directory(output_dir)
+    # if output_dir.exists():
+    #     _clear_directory(output_dir)
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
