@@ -63,7 +63,7 @@ class CitationWriter:
   journal = {Computer Physics Communications},
   year    = 2024,
   volume  = 304,
-  number  = 109287,
+  pages   = {109287},
   doi     = {10.1016/j.cpc.2024.109287},
 }
 """
