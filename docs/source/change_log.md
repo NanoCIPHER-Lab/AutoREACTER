@@ -38,7 +38,7 @@ This serves two purposes:
 * Implemented timeouts for subprocess calls to prevent workflows from hanging indefinitely (#116).
 
 
-## [1.0.1] - 2026-09-29
+## [1.0.1] - 2026-09-30
 
 ### Added
 - Support for direct dictionary inputs (including those containing `Path` objects) in the `run` function and `ARXCLI` class, enabling seamless integration with external APIs and tools.
