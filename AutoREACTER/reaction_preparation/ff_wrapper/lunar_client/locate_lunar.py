@@ -31,40 +31,96 @@ except ImportError:
 USE_GUI = False
 
 
+def _is_wsl() -> bool:
+    """
+    Return True only when running inside Windows Subsystem for Linux.
+
+    A generic Linux system may contain /mnt, so the existence of /mnt
+    alone is not sufficient to identify WSL.
+    """
+    if os.name == "nt":
+        return False
+
+    if os.environ.get("WSL_DISTRO_NAME"):
+        return True
+
+    if os.environ.get("WSL_INTEROP"):
+        return True
+
+    try:
+        return "microsoft" in Path(
+            "/proc/version"
+        ).read_text(
+            encoding="utf-8",
+            errors="ignore",
+        ).lower()
+    except OSError:
+        return False
+
+
 def _normalize_path(p):
     """
-    Normalize a path string by stripping whitespace, removing surrounding quotes,
-    expanding user and environment variables, and converting Windows paths to WSL format
-    if running in a WSL environment (detected by /mnt/c existence).
+    Normalize a LUNAR path.
+
+    Behavior:
+    - Empty input returns None.
+    - Surrounding quotes are removed.
+    - User-home and environment variables are expanded.
+    - Native paths are resolved normally.
+    - Windows drive paths are converted to /mnt/<drive>/... only when
+      running inside WSL.
 
     Args:
-        p (str): The input path string.
+        p:
+            Input path as a string or path-like object.
 
     Returns:
-        str or None: The normalized and resolved path as a string, or None if input is empty.
+        str or None:
+            Normalized path string, or None for empty input.
     """
+    if p is None:
+        return None
+
+    p = str(p).strip()
+
     if not p:
         return None
 
-    p = p.strip()
-
-    # Remove surrounding quotes if present.
-    if (p.startswith('"') and p.endswith('"')) or (p.startswith("'") and p.endswith("'")):
+    # Remove surrounding quotes.
+    if (
+        (p.startswith('"') and p.endswith('"'))
+        or
+        (p.startswith("'") and p.endswith("'"))
+    ):
         p = p[1:-1].strip()
 
-    # Expand user home directory (~) and environment variables.
+    if not p:
+        return None
+
+    # Expand ~ and environment variables.
     p = os.path.expanduser(p)
     p = os.path.expandvars(p)
 
-    # Convert Windows drive paths to WSL format if in a WSL environment.
-    if len(p) > 2 and p[1] == ":" and os.path.exists("/mnt"):
+    # Convert an absolute Windows drive path to WSL format only when
+    # AutoREACTER is actually running under WSL.
+    if (
+        _is_wsl()
+        and len(p) >= 3
+        and p[1] == ":"
+        and p[2] in {"/", "\\"}
+    ):
         drive = p[0].lower()
-        rest = p[2:].replace("\\", "/")
-        p = f"/mnt/{drive}{rest}"
 
-    # Resolve the path to an absolute path.
-    return str(Path(p).resolve())
+        rest = (
+            p[2:]
+            .replace("\\", "/")
+        )
 
+        return f"/mnt/{drive}{rest}"
+
+    return str(
+        Path(p).resolve()
+    )
 
 def _ask_gui():
     """

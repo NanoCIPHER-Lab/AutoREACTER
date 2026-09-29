@@ -3,7 +3,8 @@ AutoREACTER
 
 AutoREACTER is a tool for automated reaction-based molecular system generation.
 """
-__version__ = "1.0.0"
+
+__version__ = "1.0.1"
 
 __title__ = "AutoREACTER"
 __author__ = "Janitha Mahanthe, Jacob Gissinger"
@@ -23,9 +24,8 @@ __author__ = ", ".join(__authors__)
 from importlib.metadata import version, PackageNotFoundError
 from pathlib import Path
 from typing import Optional
+
 from .session import Session
-
-
 
 
 """
@@ -34,7 +34,7 @@ Public API for the AutoREACTER (ARX) pipeline.
 This module exposes a **global-session** interface: call :func:`run` once to
 bootstrap a workflow from an input file, then use the remaining functions to
 inspect molecules, select reactions and non-reactants, and finally run the
-full simulation pipeline.  Each function delegates to the currently active
+full simulation pipeline. Each function delegates to the currently active
 :class:`ARXCLI` instance behind the scenes.
 
 Usage (e.g. in a Jupyter notebook)::
@@ -66,10 +66,12 @@ All public symbols are listed in :data:`__all__`.
 from .arx_cli import ARXCLI
 from PIL import Image
 
+
 # ---------------------------------------------------------------------------
 # Global session handle – holds the *single* active workflow instance.
 # The `run()` function is the only way to create (or replace) it.
 # ---------------------------------------------------------------------------
+
 _active_workflow = None  # type: ARXCLI | None
 
 
@@ -78,7 +80,7 @@ def _ensure_workflow() -> ARXCLI:
     Return the active :class:`ARXCLI` instance, raising if none exists.
 
     This is the single choke-point used by every public function before
-    delegating.  It guarantees that the user called :func:`run` first.
+    delegating. It guarantees that the user called :func:`run` first.
 
     Returns
     -------
@@ -94,7 +96,50 @@ def _ensure_workflow() -> ARXCLI:
         raise RuntimeError(
             "No active session. Please run `arx.run('your_file.json')` first."
         )
+
     return _active_workflow
+
+
+def _make_json_safe(value):
+    """
+    Recursively convert values that are not directly JSON serializable.
+
+    In particular, pathlib.Path objects are converted to strings. This allows
+    external tools and APIs to pass dictionaries containing filesystem paths
+    directly to :func:`run`.
+
+    Parameters
+    ----------
+    value
+        Value to convert.
+
+    Returns
+    -------
+    object
+        JSON-compatible representation of the supplied value.
+    """
+    if isinstance(value, Path):
+        return str(value)
+
+    if isinstance(value, dict):
+        return {
+            key: _make_json_safe(item)
+            for key, item in value.items()
+        }
+
+    if isinstance(value, list):
+        return [
+            _make_json_safe(item)
+            for item in value
+        ]
+
+    if isinstance(value, tuple):
+        return [
+            _make_json_safe(item)
+            for item in value
+        ]
+
+    return value
 
 
 # ===================================================================
@@ -104,12 +149,14 @@ def _ensure_workflow() -> ARXCLI:
 def session() -> Session:
     """
     Get the active :class:`Session` object from the current workflow.
+
     Returns
     -------
     Session
         The active session object containing all workflow state and data.
     """
     return _ensure_workflow().session
+
 
 # ===================================================================
 # PUBLIC API
@@ -121,8 +168,11 @@ def run(input_file):
 
     Parameters
     ----------
-    input_file : str or pathlib.Path
-        Path to the AutoREACTER input JSON file.
+    input_file : str, pathlib.Path, or dict
+        Path to the AutoREACTER input JSON file, or an input dictionary.
+
+        Dictionaries may contain pathlib.Path objects; these are converted
+        recursively to strings before being passed to the workflow.
 
     Returns
     -------
@@ -131,12 +181,23 @@ def run(input_file):
     """
     global _active_workflow
 
-    input_file = Path(input_file).expanduser().resolve()
+    # Dictionaries can be supplied directly by external APIs such as MuPT.
+    # Convert Path objects recursively so the dictionary remains JSON-safe.
+    if isinstance(input_file, dict):
+        input_file = _make_json_safe(input_file)
 
-    if not input_file.exists():
-        raise FileNotFoundError(f"Input file not found: {input_file}")
+    else:
+        # Otherwise, treat the input as a file path.
+        input_file = Path(input_file).expanduser().resolve()
 
+        if not input_file.exists():
+            raise FileNotFoundError(
+                f"Input file not found: {input_file}"
+            )
+
+    # Pass the dictionary or resolved path to ARXCLI.
     _active_workflow = ARXCLI(input_file)
+
     return _active_workflow
 
 
@@ -160,7 +221,7 @@ def show_functional_groups() -> Image:
     Display the detected functional groups for each molecule.
 
     Functional-group detection must have completed; if it hasn't, this method
-    triggers it automatically (idempotent).  The visualisation highlights the
+    triggers it automatically (idempotent). The visualisation highlights the
     matched SMARTS patterns on each molecule.
 
     Returns
@@ -175,7 +236,7 @@ def show_reactions() -> Image:
     """
     Display the chemical reactions identified by the pipeline.
 
-    If reaction detection has not run yet, it is triggered first.  The output
+    If reaction detection has not run yet, it is triggered first. The output
     includes reaction templates and their mappings onto the input molecules.
 
     Returns
@@ -191,7 +252,7 @@ def select_reactions() -> None:
     Interactively select which reaction(s) to proceed with.
 
     If multiple candidate reactions were identified, the user is prompted to
-    choose.  When only one reaction is found it is auto-selected.  This step
+    choose. When only one reaction is found it is auto-selected. This step
     must complete before non-reactants can be selected or :func:`process` can
     be called.
 
@@ -222,7 +283,7 @@ def select_non_reactants() -> None:
     """
     Interactively select which non-reactant species to include.
 
-    This may prompt the user to pick from a list of detected species.  Must
+    This may prompt the user to pick from a list of detected species. Must
     be called after :func:`select_reactions` and before :func:`process`.
 
     Returns
@@ -232,12 +293,13 @@ def select_non_reactants() -> None:
     """
     _ensure_workflow().select_non_reactants()
 
+
 def prepare_reactions() -> None:
     """
     Prepare the reaction templates for simulation.
 
     This is an intermediate step that performs reaction-template preparation
-    without running the full pipeline.  It is not intended for end-users but
+    without running the full pipeline. It is not intended for end-users but
     may be useful for debugging or development.
 
     Returns
@@ -249,36 +311,57 @@ def prepare_reactions() -> None:
     _ensure_workflow().prepare_reactions()
 
 
-def show_reaction_templates(highlight_type: Optional[str] = "template") -> Image:
+def show_reaction_templates(
+    highlight_type: Optional[str] = "template",
+) -> Image:
     """
     Visualise the prepared reaction templates.
 
     This is an intermediate step that visualises the reaction templates after
-    preparation.  It is not intended for end-users but may be useful for
+    preparation. It is not intended for end-users but may be useful for
     debugging or development.
+
+    Parameters
+    ----------
+    highlight_type : str, optional
+        Type of reaction-template feature to highlight. Supported values are
+        ``template``, ``edge``, ``initiators``, and ``delete``.
 
     Returns
     -------
     Image
-        Visualisation of prepared reaction templates, saved to the session's output directory.
+        Visualisation of prepared reaction templates, saved to the session's
+        output directory.
     """
-    highlight_type = highlight_type.lower() if highlight_type else "template"
+    highlight_type = (
+        highlight_type.lower()
+        if highlight_type
+        else "template"
+    )
+
     highlight_types = [
-        "template",    # Highlight the reaction template itself (i.e. the changed bonds).
-        "edge",        # Highlight the edge atoms (dihedral distance away from the reaction center).
-        "initiators",  # Highlight the initiator atoms/bonds that trigger the reaction.
-        "delete"       # Highlight the atoms/bonds that are deleted in the reaction.
-        ]
+        "template",    # Changed bonds / reaction template.
+        "edge",        # Edge atoms around the reaction center.
+        "initiators",  # Initiator atoms/bonds.
+        "delete",      # Atoms/bonds deleted by the reaction.
+    ]
+
     if highlight_type not in highlight_types:
-        raise ValueError(f"Invalid highlight_type: {highlight_type}. Must be one of {highlight_types}.")
-    return _ensure_workflow().show_reaction_templates(highlight_type=highlight_type)
+        raise ValueError(
+            f"Invalid highlight_type: {highlight_type}. "
+            f"Must be one of {highlight_types}."
+        )
+
+    return _ensure_workflow().show_reaction_templates(
+        highlight_type=highlight_type
+    )
 
 
 def process() -> None:
     """
     Execute the full simulation setup pipeline.
 
-    This is the final step.  It performs, in order:
+    This is the final step. It performs, in order:
 
     1. 3D geometry generation
     2. Force-field assignment (via :class:`FFWrapper`)

@@ -5,6 +5,8 @@ Provides cross-platform path resolution, file movement, and CLI feedback
 helpers for the LUNAR preparation workflow.
 """
 
+import ntpath
+import posixpath
 import os
 import re
 import sys
@@ -17,44 +19,41 @@ def is_wsl() -> bool:
     """Check if running inside Windows Subsystem for Linux."""
     return ("microsoft" in platform.release().lower()) or ("WSL_INTEROP" in os.environ)
 
-def normalize_path(p: str | Path) -> str:
+def normalize_path(path):
+    """Normalize a user-supplied path for the current environment.
+
+    POSIX/WSL behavior is implemented with posixpath so it is identical on
+    every host OS; only a genuine native Windows run uses pathlib.
     """
-    Convert paths between Windows and WSL formats as needed.
-    
-    Handles the conversion of Windows paths (C:/path) to WSL paths 
-    (/mnt/c/path) and vice versa, ensuring compatibility with LUNAR 
-    scripts regardless of the execution environment.
-    
-    Args:
-        p: Input path string or Path object
-        
-    Returns:
-        Normalized path string appropriate for the current platform
-    """
-    p = str(p).strip().strip('"').strip("'")
-    p = p.replace("\\", "/")
+    raw = str(path).strip().strip("\"'").strip() or "."
 
-    # Convert Windows paths to WSL format
-    if is_wsl():
-        m = re.match(r"^([A-Za-z]):/(.*)$", p)
+    # Native Windows (not WSL): use pathlib.
+    if not is_wsl() and platform.system() == "Windows":
+        # WSL-style path -> drive path: /mnt/c/x or mnt/c/x -> C:\\x
+        m = re.match(r"^/?mnt/([A-Za-z])(?:/+(.*))?$", raw.replace("\\", "/"))
         if m:
-            drive = m.group(1).lower()
-            rest = m.group(2)
-            return f"/mnt/{drive}/{rest}"
-        return os.path.normpath(p)
+            rest = (m.group(2) or "").replace("/", "\\")
+            return ntpath.normpath(f"{m.group(1).upper()}:\\{rest}")
+        return str(Path(raw).resolve())
 
-    host = platform.system().lower()
+    posix = raw.replace("\\", "/")
 
-    # Convert WSL paths to Windows format
-    if host == "windows":
-        m = re.match(r"^/?mnt/([A-Za-z])/(.*)$", p)
-        if m:
-            drive = m.group(1).upper()
-            rest = m.group(2).replace("/", "\\")
-            return f"{drive}:\\{rest}"
-        return os.path.normpath(p.replace("/", "\\"))
+    # WSL: map "D:/x" -> "/mnt/d/x".
+    m = re.match(r"^([A-Za-z]):/*(.*)$", posix)
+    if m and is_wsl():
+        posix = "/mnt/" + m.group(1).lower() + "/" + m.group(2)
 
-    return os.path.normpath(p)
+    if not posixpath.isabs(posix):
+        posix = posixpath.join(os.getcwd().replace("\\", "/"), posix)
+
+    posix = posixpath.normpath(posix)
+
+    # Resolve symlinks only on a real POSIX host and only if it exists.
+    if os.name == "posix" and os.path.exists(posix):
+        posix = os.path.realpath(posix)
+
+    return posix
+
 
 def get_ending_integer(s: str) -> int | None:
     """Extract trailing digits from a string (e.g., 'pre12' -> 12)."""

@@ -1,6 +1,7 @@
 from __future__ import annotations  # 1. Must be the first line
 from typing import TYPE_CHECKING
 import json
+import os
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -9,7 +10,7 @@ from pathlib import Path
 from AutoREACTER.initialization import Initialization
 from AutoREACTER.input_parser import InputParser, SimulationSetup
 from AutoREACTER.detectors.reaction_detector import ReactionInstance
-from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import ReactionMetadata
+from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import Dict, ReactionMetadata
 from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper import FFFiles
 from AutoREACTER.reaction_preparation.ff_wrapper.REACTER_files_builder import REACTERFiles
 if TYPE_CHECKING:
@@ -86,7 +87,7 @@ class Session:
     reaction_progression_session: object | None = None
 
 
-def _resolve_input_path(input_file_path: str) -> Path:
+def _resolve_input_path(input_file_path: str | Path) -> Path:
     """
     Resolves the input file path, ensuring it exists and is a valid JSON file.
     """
@@ -112,6 +113,31 @@ def _clear_directory(path: Path):
             item.unlink()
         elif item.is_dir():
             shutil.rmtree(item) 
+
+
+def _is_wsl() -> bool:
+    """
+    Return True when AutoREACTER is running under Windows Subsystem
+    for Linux.
+
+    Windows-style paths should only be translated to /mnt/<drive>/...
+    inside WSL. Native Windows must preserve Windows paths.
+    """
+    if os.name == "nt":
+        return False
+
+    if os.environ.get("WSL_DISTRO_NAME"):
+        return True
+
+    try:
+        return "microsoft" in Path(
+            "/proc/version"
+        ).read_text(
+            encoding="utf-8",
+            errors="ignore",
+        ).lower()
+    except OSError:
+        return False
 
 def _resolve_output_dir(
     raw_output_dir: str | None,
@@ -147,7 +173,8 @@ def _resolve_output_dir(
 
     # Windows path while running from WSL/Linux.
     if (
-        len(raw_output_dir) >= 3
+        _is_wsl()
+        and len(raw_output_dir) >= 3
         and raw_output_dir[1] == ":"
         and raw_output_dir[2] in {"/", "\\"}
     ):
@@ -162,18 +189,29 @@ def _resolve_output_dir(
 
     return output_dir.resolve()
 
-def read_input(input_file_path: str, clear_staging: bool = True) -> Session:
+def read_input(input_file_path: str | Path | dict | Dict, clear_staging: bool = True) -> Session:
     """
     Standard read function to initialize the AutoREACTER environment.
     
-    1. Resolves the input file location.
+    1. Resolves the input file location or loads directly from a dictionary.
     2. Sets up a temporary staging directory.
     3. Validates the JSON inputs.
     4. Creates a permanent output directory named after the simulation.
     """
     from AutoREACTER.cache import GetCacheDir # Import here to avoid circular imports with Session
-    # 1. Resolve paths
-    input_path = _resolve_input_path(input_file_path)
+    
+    # 1. Resolve paths & populate input_data
+    if isinstance(input_file_path, dict):
+        # We are provided a dictionary directly instead of a file
+        input_data = input_file_path
+        # Assign a dummy path anchored at the current working directory 
+        # so _resolve_output_dir has a valid `.parent` to build relative to.
+        input_path = Path.cwd() / "dict_input.json"
+    else:
+        # We are provided a file path
+        input_path = _resolve_input_path(input_file_path)
+        with open(input_path, "r") as f:
+            input_data = json.load(f)
 
     # 2. Global Initialization
     Initialization()
@@ -184,9 +222,6 @@ def read_input(input_file_path: str, clear_staging: bool = True) -> Session:
 
     # 4. Parse and Validate Inputs First (so we can get the simulation_name)
     input_parser = InputParser()
-    with open(input_path, "r") as f:
-        input_data = json.load(f)
-    
     validated_inputs = input_parser.validate_inputs(input_data)
 
     # 5. Setup Output Directory
@@ -208,8 +243,8 @@ def read_input(input_file_path: str, clear_staging: bool = True) -> Session:
             f"Resolved output_dir exists but is not a directory: {output_dir}"
         )
 
-    if output_dir.exists():
-        _clear_directory(output_dir)
+    # if output_dir.exists():
+    #     _clear_directory(output_dir)
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -219,7 +254,10 @@ def read_input(input_file_path: str, clear_staging: bool = True) -> Session:
     # 6. Return the State Object
     print(f"[INFO] Initialized AutoREACTER Session")
     print(f"[INFO] Simulation Name: {validated_inputs.simulation_name}")
-    print(f"[INFO] Input File: {input_path}")
+    if isinstance(input_file_path, dict):
+        print(f"[INFO] Input Source: Loaded from dictionary")
+    else:
+        print(f"[INFO] Input File: {input_path}")
     print(f"[INFO] Temporary Staging: {staging_dir}")
     print(f"[INFO] Final Outputs will save to: {output_dir}")
 
@@ -229,4 +267,3 @@ def read_input(input_file_path: str, clear_staging: bool = True) -> Session:
         output_dir=output_dir,
         images_dir=images_dir,
     )
-
