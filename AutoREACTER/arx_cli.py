@@ -112,6 +112,7 @@ class ARXCLI:
         
         # Save a copy of the input JSON (or dump dict) to the output directory
         self._save_input_json(self._input_source)
+        self._dump_citations()
         
         # Save an initial grid image of all monomers
         self._save_rdkit_img(
@@ -338,6 +339,12 @@ class ARXCLI:
         elif isinstance(source, dict):
             with open(destination_path, "w") as f:
                 json.dump(source, f, indent=4)
+
+    def _dump_citations(self):
+        """Dump the citations to a file in the output directory."""
+        from .sim_setup.writers.citations import CitationWriter
+        CitationWriter(save_path=self.session.output_dir).write_citations()
+    
 
     def _ensure_fg_detected(self):
         """
