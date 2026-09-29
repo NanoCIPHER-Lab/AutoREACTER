@@ -457,13 +457,19 @@ def test_resolve_output_dir_absolute_path_is_preserved(
     assert result == absolute_output
 
 
-def test_resolve_output_dir_windows_forward_slash_path():
+def test_resolve_output_dir_windows_forward_slash_path(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        session_module,
+        "_is_wsl",
+        lambda: True,
+    )
+
     input_path = Path("/tmp/input.json")
 
     result = session_module._resolve_output_dir(
-        raw_output_dir=(
-            "C:/Users/Janitha/Documents/ARX"
-        ),
+        raw_output_dir="C:/Users/Janitha/Documents/ARX",
         input_path=input_path,
         simulation_name="sim",
     )
@@ -473,13 +479,19 @@ def test_resolve_output_dir_windows_forward_slash_path():
     ).resolve()
 
 
-def test_resolve_output_dir_windows_backslash_path():
+def test_resolve_output_dir_windows_backslash_path(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        session_module,
+        "_is_wsl",
+        lambda: True,
+    )
+
     input_path = Path("/tmp/input.json")
 
     result = session_module._resolve_output_dir(
-        raw_output_dir=(
-            r"D:\Projects\AutoREACTER\outputs"
-        ),
+        raw_output_dir=r"D:\Projects\AutoREACTER\outputs",
         input_path=input_path,
         simulation_name="sim",
     )
@@ -489,7 +501,15 @@ def test_resolve_output_dir_windows_backslash_path():
     ).resolve()
 
 
-def test_resolve_output_dir_windows_drive_is_lowercased():
+def test_resolve_output_dir_windows_drive_is_lowercased(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        session_module,
+        "_is_wsl",
+        lambda: True,
+    )
+
     result = session_module._resolve_output_dir(
         raw_output_dir=r"E:\Research\run",
         input_path=Path("/tmp/input.json"),
