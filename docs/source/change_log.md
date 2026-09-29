@@ -22,6 +22,21 @@ This serves two purposes:
     At release time, you can move the Unreleased section changes into a new release version section.
  -->
 
+## [1.0.1] - 2026-09-29
+
+### Added
+- Support for direct dictionary inputs (including those containing `Path` objects) in the `run` function and `ARXCLI` class, enabling seamless integration with external APIs and tools.
+- Automatic serialization and saving of the input source (whether file or dictionary) to the output directory as `input.json`.
+- Add `citations.bib` generation alongside the output files.
+
+### Changed
+- Disabled vinyl radical coupling termination reactions in the vinyl polymers library.
+- Improved input data processing by recursively converting `Path` objects to strings for JSON compatibility.
+- Minor codebase maintenance including import ordering, formatting adjustments, and docstring updates.
+
+### Fixed
+- Fixed potential `KeyError` crashes in the reaction detector by safely retrieving the `reference` field using `.get("reference", {})`, making workflows more tolerant of missing input fields.
+
 ---
 
 ## [1.0.0] - 2026-09-10
