@@ -505,30 +505,30 @@ def test_resolve_output_dir_expands_user_home(
     tmp_path,
     monkeypatch,
 ):
-    fake_home = tmp_path / "home"
-    fake_home.mkdir()
+    home = tmp_path / "home"
+    home.mkdir()
 
     monkeypatch.setenv(
         "HOME",
-        str(fake_home)
-    monkeypatch.setenv("USERPROFILE", str(fake_home)
-    monkeypatch.setenv("USERPROFILE", str(fake_home),
+        str(home),
     )
+
+    monkeypatch.setenv(
+        "USERPROFILE",
+        str(home),
+    )
+
+    input_path = tmp_path / "input.json"
 
     result = session_module._resolve_output_dir(
         raw_output_dir="~/arx_output",
-        input_path=tmp_path / "input.json",
-        simulation_name="sim",
+        input_path=input_path,
+        simulation_name="demo",
     )
 
     assert result == (
-        fake_home / "arx_output"
+        home / "arx_output"
     ).resolve()
-
-
-# =============================================================================
-# read_input
-# =============================================================================
 
 
 def test_read_input_calls_initialization_once(
