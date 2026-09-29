@@ -217,6 +217,11 @@ def test_normalize_path_expands_user_home(
         str(tmp_path),
     )
 
+    monkeypatch.setenv(
+        "USERPROFILE",
+        str(tmp_path),
+    )
+
     monkeypatch.setattr(
         locate_lunar.os.path,
         "exists",
@@ -244,45 +249,35 @@ def test_normalize_path_converts_windows_path_to_wsl_when_mnt_exists(
     monkeypatch,
 ):
     monkeypatch.setattr(
-        locate_lunar.os.path,
-        "exists",
-        lambda path: (
-            path == "/mnt"
-        ),
+        locate_lunar,
+        "_is_wsl",
+        lambda: True,
     )
 
-    result = (
-        locate_lunar._normalize_path(
-            r"C:\Users\Janitha\LUNAR"
-        )
+    result = locate_lunar._normalize_path(
+        r"C:\Users\Janitha\LUNAR"
     )
 
     assert result == (
         "/mnt/c/Users/Janitha/LUNAR"
     )
 
-
 def test_normalize_path_wsl_drive_is_lowercase(
     monkeypatch,
 ):
     monkeypatch.setattr(
-        locate_lunar.os.path,
-        "exists",
-        lambda path: (
-            path == "/mnt"
-        ),
+        locate_lunar,
+        "_is_wsl",
+        lambda: True,
     )
 
-    result = (
-        locate_lunar._normalize_path(
-            r"D:\Research\LUNAR"
-        )
+    result = locate_lunar._normalize_path(
+        r"D:\Research\LUNAR"
     )
 
     assert result == (
         "/mnt/d/Research/LUNAR"
     )
-
 
 def test_normalize_path_does_not_convert_windows_drive_without_mnt(
     tmp_path,
@@ -293,29 +288,21 @@ def test_normalize_path_does_not_convert_windows_drive_without_mnt(
     )
 
     monkeypatch.setattr(
-        locate_lunar.os.path,
-        "exists",
-        lambda path: False,
+        locate_lunar,
+        "_is_wsl",
+        lambda: False,
     )
 
-    result = (
-        locate_lunar._normalize_path(
-            r"C:\Users\Test"
-        )
+    result = locate_lunar._normalize_path(
+        r"C:\Users\Test"
     )
 
-    # Characterizes current non-WSL behavior.
+    # Characterizes non-WSL behavior.
     assert result == str(
         Path(
             r"C:\Users\Test"
         ).resolve()
     )
-
-
-# =============================================================================
-# _is_valid_dir
-# =============================================================================
-
 
 def test_is_valid_dir_none_is_false():
     assert (
