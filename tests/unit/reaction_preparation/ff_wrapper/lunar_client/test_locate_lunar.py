@@ -561,9 +561,9 @@ def test_set_lunar_loc_valid_path(
         encoding="utf-8",
     )
 
-    assert str(
-        root.resolve()
-    ) in text
+    ns = {}
+    exec(text, ns)
+    assert ns["LUNAR_ROOT_DIR"] == str(root.resolve())
 
 
 def test_set_lunar_loc_invalid_path_raises(
