@@ -1,6 +1,7 @@
 from __future__ import annotations  # 1. Must be the first line
 from typing import TYPE_CHECKING
 import json
+import os
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -113,6 +114,31 @@ def _clear_directory(path: Path):
         elif item.is_dir():
             shutil.rmtree(item) 
 
+
+def _is_wsl() -> bool:
+    """
+    Return True when AutoREACTER is running under Windows Subsystem
+    for Linux.
+
+    Windows-style paths should only be translated to /mnt/<drive>/...
+    inside WSL. Native Windows must preserve Windows paths.
+    """
+    if os.name == "nt":
+        return False
+
+    if os.environ.get("WSL_DISTRO_NAME"):
+        return True
+
+    try:
+        return "microsoft" in Path(
+            "/proc/version"
+        ).read_text(
+            encoding="utf-8",
+            errors="ignore",
+        ).lower()
+    except OSError:
+        return False
+
 def _resolve_output_dir(
     raw_output_dir: str | None,
     input_path: Path,
@@ -147,7 +173,8 @@ def _resolve_output_dir(
 
     # Windows path while running from WSL/Linux.
     if (
-        len(raw_output_dir) >= 3
+        _is_wsl()
+        and len(raw_output_dir) >= 3
         and raw_output_dir[1] == ":"
         and raw_output_dir[2] in {"/", "\\"}
     ):

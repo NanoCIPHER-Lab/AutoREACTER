@@ -510,7 +510,9 @@ def test_resolve_output_dir_expands_user_home(
 
     monkeypatch.setenv(
         "HOME",
-        str(fake_home),
+        str(fake_home)
+    monkeypatch.setenv("USERPROFILE", str(fake_home)
+    monkeypatch.setenv("USERPROFILE", str(fake_home),
     )
 
     result = session_module._resolve_output_dir(

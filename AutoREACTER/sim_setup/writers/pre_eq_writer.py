@@ -150,7 +150,7 @@ class PreEqWriter:
         ])
 
         in_dest_location = pre_eq_dir / f"in.{tag}_pre_equilibration"
-        with open(in_dest_location, 'w') as f:
+        with open(in_dest_location, "w", encoding="utf-8") as f:
             f.write("\n".join(lines))
 
         return in_dest_location.name
