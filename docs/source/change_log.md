@@ -22,6 +22,22 @@ This serves two purposes:
     At release time, you can move the Unreleased section changes into a new release version section.
  -->
 
+## [Unreleased]
+
+### Added
+
+* Support for GAFF and OPLS force fields via Foyer (#109).
+* A `skip-interactive` option to facilitate automated, high-throughput workflows (#113).
+
+### Changed
+
+* Refactored the core Workflow class to improve overall stability and maintainability (#115).
+
+### Fixed
+
+* Implemented timeouts for subprocess calls to prevent workflows from hanging indefinitely (#116).
+
+
 ## [1.0.1] - 2026-09-29
 
 ### Added
