@@ -32,6 +32,20 @@ from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper import FFWrapper
 from AutoREACTER.reaction_preparation.ff_wrapper.REACTER_files_builder import REACTERFilesBuilder
 from AutoREACTER.sim_setup.simulation_setup import SimulationSetupManager
 
+from pathlib import PurePath
+
+
+def _to_json_safe(value):
+    """Recursively convert Path objects (and containers of them) to JSON-safe values."""
+    if isinstance(value, PurePath):
+        return str(value)
+    if isinstance(value, dict):
+        return {k: _to_json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_to_json_safe(v) for v in value]
+    return value
+
+
 class NoReactionGenerated(Exception):
     """Custom exception raised when no reaction is generated in the pipeline.""" 
     pass
@@ -99,7 +113,7 @@ class ARXCLI:
             self._input_source = self.input.resolve()
             print(f"[OK] Read input from {self._input_source}")
         elif isinstance(input, dict):
-            self._input_source = input
+            self._input_source = _to_json_safe(input)
             print("[OK] Read input from dictionary")
         else:
             raise ValueError("Input must be a Path or a Dict.")
