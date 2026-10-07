@@ -146,7 +146,7 @@ def _make_json_safe(value):
 # UTILITY FUNCTIONS
 # ===================================================================
 
-def session() -> Session:
+def get_session() -> Session:
     """
     Get the active :class:`Session` object from the current workflow.
 
@@ -156,6 +156,18 @@ def session() -> Session:
         The active session object containing all workflow state and data.
     """
     return _ensure_workflow().session
+
+
+def session() -> Session:
+    """
+    Get the active :class:`Session` object from the current workflow.
+
+    Returns
+    -------
+    Session
+        The active session object containing all workflow state and data.
+    """
+    return get_session()
 
 
 # ===================================================================
@@ -387,6 +399,7 @@ __all__ = [
     "__authors__",
     "__license__",
     "run",
+    "get_session",
     "session",
     "show_molecules",
     "show_functional_groups",
