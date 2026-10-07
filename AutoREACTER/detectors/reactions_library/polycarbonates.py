@@ -21,7 +21,13 @@ REACTIONS = {
             'reactant_2': 'diphenyl_carbonate',
             'product': 'polycarbonate_chain',
             'delete_atom': True,
-            'reaction': '[OX2:1]-[H:4].[CX3:2](=[OX1:5])[OX2:3][c:6]>>[OX2:1]-[CX3:2](=[OX1:5]).[OX2:3](-[H:4])-[c:6]',
+            'reaction': (
+                '[OX2:1]-[H:4].'
+                '[c:7]-[OX2:8]-[CX3:2](=[OX1:5])-[OX2:3]-[c:6]'
+                '>>'
+                '[OX2:1]-[CX3:2](=[OX1:5])-[OX2:8]-[c:7].'
+                '[OX2:3](-[H:4])-[c:6]'
+            ),
             'reference': 
                 {
                     'smarts': None,
