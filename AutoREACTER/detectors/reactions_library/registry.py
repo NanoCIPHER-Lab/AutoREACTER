@@ -27,6 +27,7 @@ try:
     from .thiol_ene_polymers import REACTIONS as THIOL_ENE_POLYMERS
     # from .metathesis_polymers import REACTIONS as METATHESIS_POLYMERS
     # from .cycloaddition_polymers import REACTIONS as CYCLOADDITION_POLYMERS
+    from .polysaccharides import REACTIONS as POLYSACCHARIDES
 
 except ImportError as e:
     from polyesters import REACTIONS as POLYESTERS
@@ -61,6 +62,7 @@ _REACTION_MODULES = [
     THIOL_ENE_POLYMERS,
     # METATHESIS_POLYMERS,
     # CYCLOADDITION_POLYMERS,
+    POLYSACCHARIDES,
 ]
 
 
