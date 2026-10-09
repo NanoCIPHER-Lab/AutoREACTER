@@ -100,6 +100,7 @@ def _has_bond_between_atom_maps(
     return False
 
 
+
 def _validate_reaction_smarts(
     reaction_name: str,
     reaction: dict,
@@ -108,19 +109,13 @@ def _validate_reaction_smarts(
     Validate one reaction-library entry.
 
     AutoREACTER convention:
-        atom maps :1 and :2 are reserved as LAMMPS bond/react initiator atoms.
+        - Atom maps 1 and 2 are the default REACTER initiators.
+        - Initiator atoms must belong to different reactant molecules.
+        - Initiator atoms must be preserved in the product.
+        - Initiator atoms do not need to form the new bond.
 
-    By default this validator requires:
-        - reaction["reaction"] exists
-        - maps 1 and 2 exist in reactants
-        - maps 1 and 2 exist in products
-        - products contain a bond between map 1 and map 2
-
-    A reaction can override this with:
+    A reaction can override the default initiator maps using:
         "initiator_atom_maps": (a, b)
-
-    A special reaction can skip this check with:
-        "validate_initiator_bond": False
     """
     errors: list[str] = []
 
@@ -129,28 +124,54 @@ def _validate_reaction_smarts(
     if not smarts:
         return [f"{reaction_name}: missing required key 'reaction'"]
 
-    if reaction.get("validate_initiator_bond", True) is False:
-        return errors
-
     if rdChemReactions is None:
-        return [f"{reaction_name}: RDKit is required to validate reaction SMARTS"]
+        return [
+            f"{reaction_name}: RDKit is required to validate reaction SMARTS"
+        ]
 
     initiator_atom_maps = reaction.get("initiator_atom_maps", (1, 2))
+
+    if not isinstance(initiator_atom_maps, (tuple, list)):
+        return [
+            f"{reaction_name}: initiator_atom_maps must contain two atom maps"
+        ]
 
     if len(initiator_atom_maps) != 2:
         return [
             f"{reaction_name}: initiator_atom_maps must contain exactly two atom maps"
         ]
 
-    initiator_1, initiator_2 = map(int, initiator_atom_maps)
+    try:
+        initiator_1, initiator_2 = map(int, initiator_atom_maps)
+    except (TypeError, ValueError):
+        return [
+            f"{reaction_name}: initiator atom maps must be integers"
+        ]
+
+    if initiator_1 <= 0 or initiator_2 <= 0:
+        errors.append(
+            f"{reaction_name}: initiator atom maps must be positive"
+        )
+
+    if initiator_1 == initiator_2:
+        errors.append(
+            f"{reaction_name}: initiator atom maps must be different"
+        )
+
+    if errors:
+        return errors
 
     try:
         rdkit_reaction = rdChemReactions.ReactionFromSmarts(smarts)
     except Exception as error:
-        return [f"{reaction_name}: invalid reaction SMARTS: {error}"]
+        return [
+            f"{reaction_name}: invalid reaction SMARTS: {error}"
+        ]
 
     if rdkit_reaction is None:
-        return [f"{reaction_name}: RDKit could not parse reaction SMARTS"]
+        return [
+            f"{reaction_name}: RDKit could not parse reaction SMARTS"
+        ]
 
     reactant_templates = [
         rdkit_reaction.GetReactantTemplate(i)
@@ -162,38 +183,53 @@ def _validate_reaction_smarts(
         for i in range(rdkit_reaction.GetNumProductTemplates())
     ]
 
-    reactant_maps = _atom_maps_in_templates(reactant_templates)
+    # Find the reactant molecule containing each initiator atom.
+    initiator_locations = {
+        initiator_1: [],
+        initiator_2: [],
+    }
+
+    for molecule_index, template in enumerate(reactant_templates):
+        for atom in template.GetAtoms():
+            atom_map = atom.GetAtomMapNum()
+
+            if atom_map in initiator_locations:
+                initiator_locations[atom_map].append(molecule_index)
+
+    # Each initiator must appear exactly once in the reactants.
+    for atom_map, locations in initiator_locations.items():
+        if not locations:
+            errors.append(
+                f"{reaction_name}: initiator atom map {atom_map} "
+                "is missing from reactants"
+            )
+        elif len(locations) != 1:
+            errors.append(
+                f"{reaction_name}: initiator atom map {atom_map} "
+                "must appear exactly once in reactants"
+            )
+
+    # Initiators must belong to different reactant molecules.
+    locations_1 = initiator_locations[initiator_1]
+    locations_2 = initiator_locations[initiator_2]
+
+    if len(locations_1) == 1 and len(locations_2) == 1:
+        if locations_1[0] == locations_2[0]:
+            errors.append(
+                f"{reaction_name}: initiator atom maps "
+                f"{initiator_1} and {initiator_2} "
+                "must belong to different reactant molecules"
+            )
+
+    # Initiator atoms must still exist in the products.
     product_maps = _atom_maps_in_templates(product_templates)
 
-    required_maps = {initiator_1, initiator_2}
-
-    missing_reactant_maps = required_maps - reactant_maps
-    missing_product_maps = required_maps - product_maps
-
-    if missing_reactant_maps:
-        errors.append(
-            f"{reaction_name}: initiator atom maps missing from reactants: "
-            f"{sorted(missing_reactant_maps)}"
-        )
-
-    if missing_product_maps:
-        errors.append(
-            f"{reaction_name}: initiator atom maps missing from products: "
-            f"{sorted(missing_product_maps)}"
-        )
-
-    product_has_initiator_bond = _has_bond_between_atom_maps(
-        product_templates,
-        initiator_1,
-        initiator_2,
-    )
-
-    if not product_has_initiator_bond:
-        errors.append(
-            f"{reaction_name}: product does not contain required "
-            f"AutoREACTER initiator bond between atom maps "
-            f"{initiator_1} and {initiator_2}"
-        )
+    for atom_map in (initiator_1, initiator_2):
+        if atom_map not in product_maps:
+            errors.append(
+                f"{reaction_name}: initiator atom map {atom_map} "
+                "is missing from products"
+            )
 
     return errors
 
