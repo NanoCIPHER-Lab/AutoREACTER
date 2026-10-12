@@ -59,8 +59,6 @@ ForceFieldType = Literal[
 ]
 
 
-
-
 @dataclass(slots=True)
 class MonomerEntry:
     """
@@ -531,7 +529,7 @@ class InputParser:
             normalized_input
         ]
 
-        if canonical_force_field in ["OPLSAA", "GAFF"]:
+        if canonical_force_field in ["GAFF"]:
             raise CompatibilityError(
                 f"Force field '{canonical_force_field}' is currently not supported in the LUNAR workflow. "
                 "Please use a supported force field."
