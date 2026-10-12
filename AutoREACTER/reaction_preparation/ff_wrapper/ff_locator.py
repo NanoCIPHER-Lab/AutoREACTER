@@ -65,7 +65,13 @@ def get_force_field_file(force_field: str, lunar_location: Optional[Path] = None
         raise ValueError(f"Force field file not found at {ff_path}. Check LUNAR installation.")
 
     # 2. Foyer Force Fields (.xml files) - PLACEHOLDER
-    elif force_field in {"OPLSAA", "GAFF"}:
+    elif force_field in {"OPLSAA"}:
+        # Keep this as a working placeholder for future implementation
+        ff_path = None  
+        return ff_path
+
+
+    elif force_field in {"OPLSAA"}:
         # Keep this as a working placeholder for future implementation
         raise NotImplementedError(f"Foyer force field '{force_field}' support is currently in development.")
 
