@@ -77,7 +77,10 @@ class FFWrapper:
         if ff_name in foyer_supported:
             from AutoREACTER.reaction_preparation.ff_wrapper.foyer_client.foyer_api_wrapper import FoyerAPIWrapper
             print(f"Routing to Foyer for force field: {ff_name}")
-            foyer_wrapper = FoyerAPIWrapper(ARX=self.session, prepared_reactions_with_3d_mols=prepared_reactions)
+            foyer_wrapper = FoyerAPIWrapper(
+                                ARX=self.session, 
+                                prepared_reactions_with_3d_mols=prepared_reactions
+                            )
             session.ff_files = foyer_wrapper.final_foyer_files
             return None
 

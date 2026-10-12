@@ -84,85 +84,141 @@ class Molecule3DPreparation:
         """
         return self.cache_dir
 
+    
     def prepare_molecule_3d_geometry(
         self,
         session: Session,
     ) -> None:
-        """Prepare 3D geometries for all monomers and reaction complexes.
-
-        This method processes individual monomer molecules and the combined
-        reactant/product complexes for each reaction, optimizing their
-        3D structures and attaching the resulting file paths and mol blocks
-        to the respective data objects.
-
-        Args:
-            session: The current Session containing validated inputs and reaction metadata.
-
-        Returns:
-            None. This method updates the session's inputs and reaction metadata in place.
-
-        Raises:
-            OptimizationError: If any molecule fails to embed or optimize.
-            Molecule3DPreparationError: If RDKit Mol object is missing for a monomer.
         """
-        # Process individual monomer molecules
-        updated_inputs, prepared_reactions = session.inputs, session.reaction_metadata
-        monomer_entries = updated_inputs.monomers
-        for entry in monomer_entries:
+        Prepare optimized 3D RDKit molecules and retain them
+        directly in Session for Foyer atom typing.
+
+        Also save .mol files for the existing LUNAR workflow.
+        """
+        updated_inputs = session.inputs
+        prepared_reactions = session.reaction_metadata
+
+        # ===============================================
+        # Stage 1: Prepare monomer molecules
+        # ===============================================
+
+        for entry in updated_inputs.monomers:
+
             if not entry.status:
-                continue  # Skip monomers that ommitted during selections
+                continue
+
             if entry.rdkit_mol is None:
                 raise Molecule3DPreparationError(
-                    f"RDKit Mol object is missing for molecule {entry.name}. "
-                    "Cannot prepare 3D geometry without it."
+                    f"Missing RDKit molecule for {entry.name}"
                 )
 
             try:
+                # Explicit H atoms for monomer force-field typing.
                 mol = Chem.AddHs(entry.rdkit_mol)
-                optimized_path = self._optimization(
+
+                # Optimize, preserving the optimized RDKit object.
+                optimized_path, optimized_mol = self._optimization(
                     molecule_name=entry.name,
                     mol=mol,
                     cache_dir=self.molecule_3d_path,
                 )
+
+                # Preserve original LUNAR-compatible file path.
                 entry.molecule_3Dmol_path = optimized_path
+
+                # NEW: Store optimized RDKit object directly.
+                entry.rdkit_mol = optimized_mol
+
+                # NEW: Synchronize matching MonomerRole objects
+                # used by the current Foyer wrapper.
+                for role in session.monomer_roles:
+                    if role.name == entry.name:
+                        role.rdkit_mol = Chem.Mol(optimized_mol)
+
+                print(
+                    f"[3D] Monomer {entry.name}: "
+                    f"{optimized_mol.GetNumAtoms()} atoms, "
+                    f"{optimized_mol.GetNumConformers()} conformer(s)"
+                )
+
             except Exception as e:
                 raise OptimizationError(
-                    f"Error optimizing molecule {entry.name}: {str(e)}"
+                    f"Error optimizing monomer {entry.name}: {e}"
                 ) from e
 
-        # Process combined reactant and product complexes for each reaction
+        # ===============================================
+        # Stage 2: Prepare reaction templates
+        # ===============================================
+
         for reaction in prepared_reactions:
+
             if not reaction.activity_stats:
-                continue  # Skip reactions that were filtered out during duplicate filtering
+                continue
+
+            # -------------------------------------------
+            # Pre-reaction molecule
+            # -------------------------------------------
+
             if reaction.reactant_combined_RDmol is not None:
+
                 try:
-                    optimized_path = self._optimization(
+                    optimized_path, optimized_mol = self._optimization(
                         molecule_name=f"pre{reaction.reaction_id}",
                         mol=reaction.reactant_combined_RDmol,
                         cache_dir=self.full_templates_path,
                         separate_fragments=True,
                     )
+
                     reaction.reactant_combined_3Dmol_path = optimized_path
+
+                    # NEW: Store optimized reactant RDKit object.
+                    reaction.reactant_combined_RDmol = optimized_mol
+
+                    print(
+                        f"[3D] pre{reaction.reaction_id}: "
+                        f"{optimized_mol.GetNumAtoms()} atoms, "
+                        f"{optimized_mol.GetNumConformers()} conformer(s)"
+                    )
+
                 except Exception as e:
                     raise OptimizationError(
-                        f"Error optimizing reactant complex for reaction {reaction.reaction_id}: {str(e)}"
+                        f"Error optimizing pre-reaction "
+                        f"{reaction.reaction_id}: {e}"
                     ) from e
 
+            # -------------------------------------------
+            # Post-reaction molecule
+            # -------------------------------------------
+
             if reaction.product_combined_RDmol is not None:
+
                 try:
-                    optimized_path = self._optimization(
+                    optimized_path, optimized_mol = self._optimization(
                         molecule_name=f"post{reaction.reaction_id}",
                         mol=reaction.product_combined_RDmol,
                         cache_dir=self.full_templates_path,
                         separate_fragments=True,
                     )
+
                     reaction.product_combined_3Dmol_path = optimized_path
+
+                    # NEW: Store optimized product RDKit object.
+                    reaction.product_combined_RDmol = optimized_mol
+
+                    print(
+                        f"[3D] post{reaction.reaction_id}: "
+                        f"{optimized_mol.GetNumAtoms()} atoms, "
+                        f"{optimized_mol.GetNumConformers()} conformer(s)"
+                    )
+
                 except Exception as e:
                     raise OptimizationError(
-                        f"Error optimizing product complex for reaction {reaction.reaction_id}: {str(e)}"
+                        f"Error optimizing post-reaction "
+                        f"{reaction.reaction_id}: {e}"
                     ) from e
 
         return None
+
 
     def _separate_fragments_3d(
         self, mol: Mol,
@@ -218,13 +274,17 @@ class Molecule3DPreparation:
         mol: Mol,
         cache_dir: Path,
         separate_fragments: bool = False,
-    ) -> Path:
+    ) -> tuple[Path, Mol]:
         """Repair, embed, optimize, and save a molecule without adding hydrogens."""
 
         # Work on a copy so the ReactionMetadata molecule and its indexing remain
         # unchanged outside this 3D preparation step.
         mol = Chem.Mol(mol)
         n_atoms_start = mol.GetNumAtoms(onlyExplicit=True)
+        atomic_numbers_start = [
+            atom.GetAtomicNum()
+            for atom in mol.GetAtoms()
+        ]
 
         try:
             mol = self._repair_reaction_molecule_for_3d(mol)
@@ -310,8 +370,18 @@ class Molecule3DPreparation:
             includeStereo=True,
             kekulize=False,
         )
+        atomic_numbers_end = [
+        atom.GetAtomicNum()
+        for atom in mol.GetAtoms()
+        ]
 
-        return output_path
+        if atomic_numbers_start != atomic_numbers_end:
+            raise OptimizationError(
+                f"Atom order or atomic numbers changed "
+                f"during optimization of {molecule_name}."
+            )
+
+        return output_path, mol
 
     def _repair_reaction_molecule_for_3d(self, mol: Mol) -> Mol:
         """Repair RDKit reaction-product valence bookkeeping before 3D embedding.
