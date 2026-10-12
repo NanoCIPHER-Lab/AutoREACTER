@@ -1,0 +1,19 @@
+
+name: autoreacter-foyer-dev
+
+channels:
+  - conda-forge
+
+dependencies:
+  - python=3.12
+  - rdkit
+  - parmed>=3.4.3
+  - mbuild=0.17.1
+  - foyer=1.0.0
+  - numpy>=1.26,<2
+  - pandas
+  - networkx
+  - scipy
+  - pillow
+  - matplotlib-base
+  - pip
