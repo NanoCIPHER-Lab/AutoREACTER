@@ -1,5 +1,5 @@
 {
-  "simulation_name": "Polyamide_Count_Mode_Basic_opls",
+  "simulation_name": "Polyamide_Count_Mode_Basic",
   "force_field": "OPLS",
 
   "simulations": [
@@ -26,7 +26,7 @@
   "monomers": [
     {
       "name": "trimesoyl_chloride",
-      "smiles": "ClC(=O)c1cc(cc(c1)C(Cl)=O)C(Cl)=O"
+      "smiles": "OC(=O)c1cc(C(=O)O)cc(C(=O)O)c1"
     },
     {
       "name": "m_phenylenediamine",
