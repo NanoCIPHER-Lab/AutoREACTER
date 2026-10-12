@@ -1,0 +1,66 @@
+<!--
+  AutoREACTER supplement to the bundled OPLS-AA force field: atom types for the small
+  molecules that condensation reactions release (free H2O, HCl, HBr, HI), which OPLS-AA
+  as shipped with Foyer cannot type. Load it TOGETHER with a base force field (it adds
+  types, it does not replace any); AutoREACTER does this automatically.
+
+  Why these exist: oplsaa.xml has no rule for H bonded to a halogen, no rule for Br or I
+  (their types exist but have no SMARTS), only a chloride-ION rule for bare Cl, no
+  H-halogen bond term, and no free-water type. These atoms are deleted by the reaction
+  event itself and are never dynamically sampled, so they only need to be sane and
+  non-null; but cross-check the values before trusting them in anything published.
+
+  Provenance of every number (nothing here is a fitted or validated water/HX model):
+   * LJ (sigma, epsilon) are existing oplsaa.xml entries: opls_154/155 (hydroxyl O/H) for
+     water; opls_151 / opls_722 / opls_732 (covalent Cl / Br / I, the alkyl-halide LJ)
+     for HX; H LJ is zero as for opls_155.
+   * H2O bond (0.0945 nm, 462750.4) is oplsaa.xml's HO-OH bond; the H-O-H angle (108.5 deg,
+     460.24) borrows its CT-OH-HO angle, since OPLS-AA has no H-O-H angle.
+   * H2O charges are TIP3P-like (-0.834 / +0.417), recalled from widely cited literature.
+   * HX: bond k from k = mu*omega^2 using the gas-phase vibrational frequency, and
+     partial charges from q = dipole / r0, using gas-phase constants recalled from
+     memory (HCl 1.2746 A, 2990.95 cm-1, 1.109 D; HBr 1.4145 A, 2648.98 cm-1, 0.828 D;
+     HI 1.6092 A, 2309.01 cm-1, 0.448 D). NOT re-verified against a primary source.
+   * Units follow oplsaa.xml: nm, kJ/mol, radians, elementary charge.
+
+  NOT covered (needs real parameters, not guesses): acyl halides (-COCl etc.), which
+  OPLS-AA also cannot type; add them here, or use another force field, when a source exists.
+  ONE cross-file rule lives in code, not here: arx_HCl_Cl must override opls_401 (the
+  chloride-ION catch-all [Cl], which also matches the Cl of HCl). Foyer validates
+  `overrides` per file, so this file cannot name a type defined elsewhere; AutoREACTER
+  applies that override after loading. Loading this file by itself in plain Foyer will
+  raise "multiple types" for HCl until you add it.
+  Must keep combining_rule="geometric" and 1-4 scales of 0.5 to merge with OPLS-AA;
+  Foyer refuses to merge files with different combining rules.
+-->
+<ForceField name="AutoREACTER-supplement" version="0.1.0" combining_rule="geometric">
+ <AtomTypes>
+  <Type name="arx_H2O_O" class="arx_OW" element="O" mass="15.9994" def="[O;X2](H)H" desc="O of a free (disconnected) water molecule"/>
+  <Type name="arx_H2O_H" class="arx_HW" element="H" mass="1.008" def="H[O;%arx_H2O_O]" desc="H of a free water molecule"/>
+  <Type name="arx_HCl_Cl" class="arx_ClX" element="Cl" mass="35.453" def="[Cl;X1]H" desc="Cl of H-Cl (not the chloride ion)"/>
+  <Type name="arx_HCl_H" class="arx_HCl" element="H" mass="1.008" def="H[Cl;%arx_HCl_Cl]" desc="H of H-Cl"/>
+  <Type name="arx_HBr_Br" class="arx_BrX" element="Br" mass="79.904" def="[Br;X1]H" desc="Br of H-Br"/>
+  <Type name="arx_HBr_H" class="arx_HBr" element="H" mass="1.008" def="H[Br;%arx_HBr_Br]" desc="H of H-Br"/>
+  <Type name="arx_HI_I" class="arx_IX" element="I" mass="126.9045" def="[I;X1]H" desc="I of H-I"/>
+  <Type name="arx_HI_H" class="arx_HI" element="H" mass="1.008" def="H[I;%arx_HI_I]" desc="H of H-I"/>
+ </AtomTypes>
+ <HarmonicBondForce>
+  <Bond class1="arx_HW" class2="arx_OW" length="0.0945" k="462750.4"/>
+  <Bond class1="arx_HCl" class2="arx_ClX" length="0.12746" k="311055.3"/>
+  <Bond class1="arx_HBr" class2="arx_BrX" length="0.14145" k="247801.6"/>
+  <Bond class1="arx_HI" class2="arx_IX" length="0.16092" k="189150.3"/>
+ </HarmonicBondForce>
+ <HarmonicAngleForce>
+  <Angle class1="arx_HW" class2="arx_OW" class3="arx_HW" angle="1.8936822384" k="460.24"/>
+ </HarmonicAngleForce>
+ <NonbondedForce coulomb14scale="0.5" lj14scale="0.5">
+  <Atom type="arx_H2O_O" charge="-0.834" sigma="0.312" epsilon="0.71128"/>
+  <Atom type="arx_H2O_H" charge="0.417" sigma="1.0" epsilon="0.0"/>
+  <Atom type="arx_HCl_Cl" charge="-0.181" sigma="0.34" epsilon="1.2552"/>
+  <Atom type="arx_HCl_H" charge="0.181" sigma="1.0" epsilon="0.0"/>
+  <Atom type="arx_HBr_Br" charge="-0.122" sigma="0.347" epsilon="1.96648"/>
+  <Atom type="arx_HBr_H" charge="0.122" sigma="1.0" epsilon="0.0"/>
+  <Atom type="arx_HI_I" charge="-0.058" sigma="0.367" epsilon="2.42672"/>
+  <Atom type="arx_HI_H" charge="0.058" sigma="1.0" epsilon="0.0"/>
+ </NonbondedForce>
+</ForceField>
