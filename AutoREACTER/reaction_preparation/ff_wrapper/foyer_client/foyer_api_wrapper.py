@@ -1,6 +1,5 @@
 """
-Foyer API Wrapper Module
-
+Foyer force-field preparation package.
 This module provides a Python interface to the LUNAR (Lammps Utility for 
 Reactive Atomistic Simulations) software package. It orchestrates the 
 multi-step workflow required to prepare molecular dynamics simulations 
@@ -18,6 +17,7 @@ import re
 import time
 from pathlib import Path
 import numpy as np
+from rdkit import Chem
 import parmed as pmd
 from foyer import Forcefield
 from mbuild.formats.lammpsdata import write_lammpsdata
@@ -27,9 +27,7 @@ from typing import TYPE_CHECKING, List
 # Ensure these match your actual import paths
 from AutoREACTER.input_parser import SimulationSetup
 from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import ReactionMetadata
-from AutoREACTER.reaction_preparation.ff_wrapper.lunar_client.locate_lunar import get_LUNAR_loc
-from AutoREACTER.reaction_preparation.ff_wrapper.lunar_client.merge_builder import write_bond_react_merge_input
-from AutoREACTER.reaction_preparation.ff_wrapper.lunar_client.lunar_executor import LunarExecutor
+from AutoREACTER.detectors.functional_groups_detector import MonomerRole
 
 
 if TYPE_CHECKING:
@@ -48,13 +46,6 @@ class FoyerAtomTypingResult:
     molecule: bool           # True for data molecules, False for reaction templates
     typed_data_file: Path    # Path to generated *_typed.data file
 
-@dataclass(slots=True)
-class All2LMPResult:
-    """Container for all2lmp.py conversion results."""
-    id: str                  # Identifier matching the input
-    molecule: bool           # True for molecules, False for templates
-    all2lmp_data_file: Path  # Path to generated *_IFF.data file
-
 
 class FoyerAPIWrapper:
     """
@@ -67,270 +58,140 @@ class FoyerAPIWrapper:
         """
         self.session = ARX
         self.inputs = ARX.inputs
+        self.reaction_metadata = ARX.reaction_metadata
+        self.monomer_roles = ARX.monomer_roles
 
         # In AutoREACTER, staging_dir is the working/cache directory.
         self.cache_dir = Path(ARX.staging_dir) / "foyer"
-        
-        # Define specific sub-directories
         self.cache_atom_typing = self.cache_dir / "atom_typing"
-        self.cache_all2lmp = self.cache_dir / "all2lmp"
-        self.cache_bond_react_merge = self.cache_dir / "merged_files"
+        self.cache_merge_data = self.cache_dir / "merge_data"
 
         # Ensure all cache directories exist
-        for p in (self.cache_dir, self.cache_atom_typing, self.cache_all2lmp, self.cache_bond_react_merge):
+        for p in (self.cache_dir, self.cache_atom_typing, self.cache_merge_data):
             p.mkdir(parents=True, exist_ok=True)
 
         # Run Foyer atom typing and store results
-        self.atom_typing_results = self._run_foyer_atom_typing(
-            updated_inputs=self.inputs,
-            prepared_reactions=prepared_reactions_with_3d_mols,
-            force_field=self.inputs.force_field
-        )
-        self.LUNAR_LOCATION = Path(get_LUNAR_loc(use_gui=False))
-        
-        # Convert Foyer-typed files to LAMMPS format using LUNAR's all2lmp.py
-        self.all2lmp_results = self._convert_to_all_2_lmp(self.atom_typing_results)
-        self.executor = LunarExecutor(lunar_location=self.LUNAR_LOCATION, cache_dir=self.cache_dir)
-
-        merge_input_file = write_bond_react_merge_input(
-            cache_bond_react_merge=self.executor.cache_bond_react_merge,
-            cache_all2lmp=self.executor.cache_all2lmp,
-            all2lmp_results=self.all2lmp_results
+        self.atom_typing_results = (
+            self._run_atom_type_monomers(self.monomer_roles)
+            + self._atom_type_reactions(prepared_reactions_with_3d_mols)
         )
 
-        final_foyer_files = self.executor.run_bond_react_merge(
-            merge_input_file_path=merge_input_file,
-            all2lmp_results=self.all2lmp_results
-        )
+    def _atom_type_reactions(
+        self,
+        prepared_reactions: List[ReactionMetadata]
+    ) -> List[FoyerAtomTypingResult]:
 
-        self.final_foyer_files = final_foyer_files
+        results = []
 
-    @staticmethod
-    def _add_molecule_box(structure, padding=10.0, min_length=20.0):
-        """
-        Build a loose LAMMPS box around a single molecule.
-        Coordinates are in Angstrom.
-        mBuild 0.10.x writer scales mins/maxs by 10 for real units,
-        so we pass box bounds in nm-like units while atom coordinates remain Angstrom.
-        """
-        coords_A = np.array(
-            [[atom.xx, atom.xy, atom.xz] for atom in structure.atoms],
-            dtype=float,
-        )
-
-        coord_min_A = coords_A.min(axis=0)
-        coord_max_A = coords_A.max(axis=0)
-
-        box_min_A = coord_min_A - padding
-        box_max_A = coord_max_A + padding
-
-        lengths_A = box_max_A - box_min_A
-        lengths_A = np.maximum(lengths_A, min_length)
-
-        center_A = 0.5 * (coord_min_A + coord_max_A)
-        box_min_A = center_A - 0.5 * lengths_A
-        box_max_A = center_A + 0.5 * lengths_A
-
-        # mBuild writer expects box-ish values in nm, then writes Angstrom.
-        mins_for_writer = (box_min_A / 10.0).tolist()
-        maxs_for_writer = (box_max_A / 10.0).tolist()
-
-        structure.box = [
-            float(lengths_A[0] / 10.0),
-            float(lengths_A[1] / 10.0),
-            float(lengths_A[2] / 10.0),
-            90.0, 90.0, 90.0,
-        ]
-
-        return mins_for_writer, maxs_for_writer
-
-    def _foyer_atom_typing(self, mol_file: Path, output_dir: Path, entry_name: str, molecule: bool, force_field: str):
-        force_field = force_field.upper()
-
-        if force_field not in {"OPLSAA", "GAFF"}:
-            raise ValueError(
-                f"Unsupported force field '{force_field}'. "
-                "Supported options are 'OPLSAA' and 'GAFF'."
-            )
-
-        if force_field == "GAFF":
-            raise NotImplementedError(
-                "GAFF is AMBER-family. Use OPLSAA for this direct Foyer -> LAMMPS path for now."
-            )
-
-        output_dir = Path(output_dir)
-        output_dir.mkdir(parents=True, exist_ok=True)
-        mol_file = Path(mol_file)
-
-        # Load molecule as ParmEd Structure
-        untyped_molecule = pmd.load_file(str(mol_file), structure=True)
-
-        # Load Foyer force field
-        ff = Forcefield(name=force_field.lower())
-
-        # Apply atom typing / parameters
-        typed_molecule = ff.apply(
-            untyped_molecule, 
-            assert_bond_params=False, 
-            assert_angle_params=False, 
-            assert_dihedral_params=False
-        )
-
-        # FIX: Shift molecule IDs so they start at 1 instead of 0
-        # LAMMPS prefers molecule IDs to be >= 1 for many compute commands.
-        for atom in typed_molecule.atoms:
-            if atom.residue.number == 0:
-                atom.residue.number = 1
-
-        # Add required simulation box
-        mins, maxs = self._add_molecule_box(
-            typed_molecule,
-            padding=10.0,
-            min_length=20.0,
-        )
-
-        output_file_path = output_dir / f"{entry_name}_typed.data"
-
-        write_lammpsdata(
-            typed_molecule,
-            str(output_file_path),
-            atom_style="full",
-            # unit_style="real",
-            # mins=mins,
-            # maxs=maxs,
-            use_rb_torsions=True,
-            use_dihedrals=False,
-        )
-
-        print(f"Wrote LAMMPS data file: {output_file_path}")
-        return typed_molecule, output_file_path
-
-    def _run_foyer_atom_typing(self, updated_inputs: SimulationSetup, prepared_reactions: list[ReactionMetadata], force_field: str) -> list[FoyerAtomTypingResult]:
-        atom_typing_results = []
-        self.force_field = force_field
-
-        # Process each molecule in the updated_inputs
-        monomer_entries = updated_inputs.monomers
-        for entry in monomer_entries:
-            print(f"Processing molecule: {entry.name}") 
-            if getattr(entry, "status", True) is False:
-                continue
-
-            if not entry.molecule_3Dmol_path:
-                raise ValueError(
-                    f"Active monomer '{entry.name}' is missing molecule_3Dmol_path. "
-                    "Ensure 3D geometry preparation completed successfully before atom typing."
-                )
-
-            _, output_path = self._foyer_atom_typing(
-                mol_file=entry.molecule_3Dmol_path,
-                output_dir=self.cache_atom_typing,
-                entry_name=entry.name,
-                molecule=True,
-                force_field=force_field
-            )
-            
-            # Wrap result in the expected dataclass
-            atom_typing_results.append(FoyerAtomTypingResult(
-                id=entry.name,
-                molecule=True,
-                typed_data_file=output_path
-            ))
-            time.sleep(0.1)
-        
-        # Process each reaction template in the prepared_reactions
         for reaction in prepared_reactions:
-            for mol_path, label in [
-                (reaction.reactant_combined_3Dmol_path, "pre"),
-                (reaction.product_combined_3Dmol_path, "post")
-            ]:
-                if not mol_path:
+
+            pairs = [
+                ("pre", reaction.reactant_combined_RDmol),
+                ("post", reaction.product_combined_RDmol),
+            ]
+
+            for label, mol in pairs:
+                if mol is None:
                     raise ValueError(
-                        f"Reaction template '{reaction.reaction_id}' is missing {label}_combined_3Dmol_path. "
-                        "Ensure reaction template preparation completed successfully before atom typing."
+                        f"Missing {label} RDKit molecule "
+                        f"for reaction {reaction.reaction_id}"
                     )
-                    
-                output_dir = self.cache_atom_typing / f"{label}{reaction.reaction_id}"
-                
-                _, output_path = self._foyer_atom_typing(
-                    mol_file=mol_path,
-                    output_dir=output_dir,
-                    entry_name=f"{label}{reaction.reaction_id}",
-                    molecule=False,
-                    force_field=force_field
+
+                typed_data_file = self._run_foyer_atom_typing(mol)
+
+                results.append(
+                    FoyerAtomTypingResult(
+                        id=f"{label}{reaction.reaction_id}",
+                        molecule=False,
+                        typed_data_file=typed_data_file
+                    )
                 )
-                
-                atom_typing_results.append(FoyerAtomTypingResult(
-                    id=f"{label}{reaction.reaction_id}",
-                    molecule=False,
-                    typed_data_file=output_path
-                ))
-                time.sleep(0.1)
 
-        return atom_typing_results
+        return results
 
-    def _convert_to_all_2_lmp(self, atom_typing_results: list[FoyerAtomTypingResult], tag: str = "_IFF") -> list[All2LMPResult]:
-        """
-        Convert Foyer-typed data files to LAMMPS format using LUNAR's bond_react_merge.py script.
-        """
-        all2lmp_results = []
-        for entry in atom_typing_results:
-            all_2_lmp_file = self._rename_and_move_files(
-                src=entry.typed_data_file,
-                dest=self.cache_all2lmp,
-                additional_suffix=tag
+    def _run_atom_type_monomers(
+        self,
+        monomer_roles: List[MonomerRole]
+    ) -> List[FoyerAtomTypingResult]:
+
+        results = []
+
+        for role in monomer_roles:
+            mol = role.rdkit_mol
+
+            if mol is None:
+                raise ValueError(
+                    f"Missing RDKit molecule for {role.name}"
+                )
+
+            typed_data_file = self._run_foyer_atom_typing(mol)
+
+            results.append(
+                FoyerAtomTypingResult(
+                    id=role.name,
+                    molecule=True,
+                    typed_data_file=typed_data_file
+                )
             )
-            all2lmp_results.append(All2LMPResult(
-                id=entry.id,
-                molecule=entry.molecule,
-                all2lmp_data_file=all_2_lmp_file
-            ))
 
-        return all2lmp_results
-    @staticmethod
-    def _move_merge_outputs(src: Path, dest: Path):
-        """Helper to migrate files from all2lmp to bond_react_merge directory if needed."""
-        # Add your file moving logic here based on standard OS/Shutil commands if required
-        pass
+        return results
 
-    @staticmethod
-    def _rename_and_move_files(src: Path, dest: Path, additional_suffix: str):
+
+
+    def _run_foyer_atom_typing(self, mol: Chem.Mol) -> Path:
         """
-        Helper to rename files by adding a suffix and move them to a destination.
-        Returns the full Path of the moved file(s).
+        Atom-type a single RDKit molecule with the configured Foyer force field
+        and write the result out as a LAMMPS data file.
+
+        Parameters
+        ----------
+        mol : Chem.Mol
+            Must already have an embedded 3D conformer.
+
+        Returns
+        -------
+        Path
+            Path to the typed *.data file under self.cache_atom_typing.
         """
+        if mol.GetNumConformers() == 0:
+            raise ValueError(
+                f"Cannot atom-type a molecule with no embedded 3D conformer "
+                f"(SMILES: {Chem.MolToSmiles(mol)})."
+            )
 
-        src = Path(src)
-        dest = Path(dest)
-        
-        # Ensure destination directory exists
-        dest.mkdir(parents=True, exist_ok=True)
+        # Build a parmed Structure directly from the RDKit mol -- no mbuild/
+        # openbabel round-trip needed, since Forcefield.apply() and
+        # write_lammpsdata() both accept a parmed.Structure directly.
+        structure = pmd.load_rdkit(mol)
 
-        if src.is_file():
-            # Handle single file
-            new_name = f"{src.stem}{additional_suffix}{src.suffix}"
-            dest_file = dest / new_name
-            shutil.move(str(src), str(dest_file))
-            print(f"Moved and renamed: {src.name} -> {new_name}")
-            return dest_file
-            
-        elif src.is_dir():
-            # Handle directory
-            moved_files = []
-            for file_path in src.iterdir():
-                if file_path.is_file():
-                    new_name = f"{file_path.stem}{additional_suffix}{file_path.suffix}"
-                    dest_file = dest / new_name
-                    shutil.move(str(file_path), str(dest_file))
-                    print(f"Moved and renamed: {file_path.name} -> {new_name}")
-                    moved_files.append(dest_file)
-            return moved_files
-            
+        # pmd.load_rdkit() round-trips through a PDB block internally, which has
+        # no bond-order concept, so every bond comes back as order=1.0 -- silently
+        # destroying aromaticity. Patch real bond orders back in from the source
+        # RDKit mol (load_rdkit preserves atom indices 1:1, verified).
+        bond_orders = {
+            frozenset((b.GetBeginAtomIdx(), b.GetEndAtomIdx())): b.GetBondTypeAsDouble()
+            for b in mol.GetBonds()
+        }
+        for pbond in structure.bonds:
+            key = frozenset((pbond.atom1.idx, pbond.atom2.idx))
+            if key in bond_orders:
+                pbond.order = bond_orders[key]
+
+        # self.inputs.force_field may be a built-in name ("oplsaa") or a path to
+        # a custom/GAFF XML -- Foyer only ships oplsaa + trappe-ua by name.
+        ff_spec = self.inputs.force_field
+        if Path(ff_spec).exists():
+            forcefield = Forcefield(forcefield_files=str(ff_spec))
         else:
-            raise FileNotFoundError(f"Source path '{src}' does not exist.")
+            forcefield = Forcefield(name=ff_spec.lower())
 
-    @staticmethod
-    def _get_ending_integer(text: str) -> int:
-        """Extracts the trailing integer from strings like 'pre1' or 'post12'."""
-        match = re.search(r'\d+$', text)
-        return int(match.group()) if match else 0
+        typed_structure = forcefield.apply(
+            structure,
+            assert_dihedral_params=False,  # reaction-template fragments are
+                                            # partial molecules; boundary atoms
+                                            # often lack full dihedral coverage
+        )
+
+        out_path = self.cache_atom_typing / f"{time.time_ns()}_typed.data"
+        write_lammpsdata(typed_structure, str(out_path))
+        return out_path
