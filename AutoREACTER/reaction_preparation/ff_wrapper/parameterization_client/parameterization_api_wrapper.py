@@ -49,7 +49,7 @@ class ParameterizationAPIWrapper:
             self.backend = FoyerBackend(self.inputs.force_field)
 
         elif force_field_name in AVAILABLE_FORCE_FIELDS and force_field_name == "OPENFF":
-            from AutoREACTER.reaction_preparation.ff_wrapper.parameterization_client.openff import (
+            from AutoREACTER.reaction_preparation.ff_wrapper.parameterization_client.openff.openff_backend import (
                 OpenFFBackend,
             )
             self.backend = OpenFFBackend(self.inputs.force_field)

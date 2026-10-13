@@ -504,6 +504,7 @@ class InputParser:
         "opls": "OPLSAA",        # mapped to OPLSAA
         "opls-aa": "OPLSAA",     # mapped to OPLSAA
         "gaff": "GAFF",
+        "openff": "OPENFF",
     }
 
     def _validate_force_field(self, force_field: Any) -> ForceFieldType:
