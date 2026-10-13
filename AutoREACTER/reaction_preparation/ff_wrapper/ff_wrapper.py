@@ -75,13 +75,13 @@ class FFWrapper:
 
         # Route to FOYER
         if ff_name in foyer_supported:
-            from AutoREACTER.reaction_preparation.ff_wrapper.foyer_client.foyer_api_wrapper import FoyerAPIWrapper
+            from AutoREACTER.reaction_preparation.ff_wrapper.parameterization_client.parameterization_api_wrapper import ParameterizationAPIWrapper
             print(f"Routing to Foyer for force field: {ff_name}")
-            foyer_wrapper = FoyerAPIWrapper(
+            foyer_wrapper = ParameterizationAPIWrapper(
                                 ARX=self.session, 
                                 prepared_reactions_with_3d_mols=prepared_reactions
                             )
-            session.ff_files = foyer_wrapper.final_foyer_files
+            session.ff_files = foyer_wrapper.final_parameterization_files
             return None
 
         # Route to LUNAR
