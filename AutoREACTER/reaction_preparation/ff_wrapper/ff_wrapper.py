@@ -67,20 +67,21 @@ class FFWrapper:
         ff_name = updated_inputs.force_field or "PCFF"
 
         # Define engine routing based on strict canonical names from the parser
-        foyer_supported = {"OPLSAA", "GAFF"}
+        parameterization_client = {"OPLSAA", "GAFF", "OPENFF"} 
         lunar_supported = {
             "PCFF", "PCFF-IFF", "compass", 
             "CVFF", "CVFF-IFF", "DREIDING", "Clay-FF"
         }
 
         # Route to FOYER
-        if ff_name in foyer_supported:
+        if ff_name in parameterization_client:
             from AutoREACTER.reaction_preparation.ff_wrapper.parameterization_client.parameterization_api_wrapper import ParameterizationAPIWrapper
-            print(f"Routing to Foyer for force field: {ff_name}")
-            foyer_wrapper = ParameterizationAPIWrapper(
-                                ARX=self.session, 
+            print(f"Routing to Parameterization Client for force field: {ff_name}")
+            parameterization_wrapper = ParameterizationAPIWrapper(
+                                ARX=self.session,
+                                force_field_name=ff_name
                             )
-            session.ff_files = foyer_wrapper.final_parameterization_files
+            session.ff_files = parameterization_wrapper.final_parameterization_files
             return None
 
         # Route to LUNAR

@@ -18,6 +18,7 @@ from AutoREACTER.reaction_preparation.ff_wrapper.parameterization_client.lammps_
 if TYPE_CHECKING:
     from AutoREACTER.session import Session
 
+AVAILABLE_FORCE_FIELDS = {"OPLSAA", "GAFF", "OPENFF"}
 
 @dataclass(slots=True)
 class ParameterizationResult:
@@ -34,20 +35,24 @@ class ParameterizationAPIWrapper:
     def __init__(
         self,
         ARX: "Session",
-        backend=None,
+        force_field_name=None,
     ) -> None:
         self.session = ARX
         self.inputs = ARX.inputs
         self.reaction_metadata = ARX.reaction_metadata
         self.prepared_reactions_with_3d_mols = ARX.reaction_metadata
         # Default to Foyer until additional backends are registered.
-        if backend is None:
+        if force_field_name in AVAILABLE_FORCE_FIELDS and force_field_name == "OPLSAA":
             from AutoREACTER.reaction_preparation.ff_wrapper.parameterization_client.foyer.foyer_backend import (
                 FoyerBackend,
             )
-            backend = FoyerBackend(self.inputs.force_field)
+            self.backend = FoyerBackend(self.inputs.force_field)
 
-        self.backend = backend
+        elif force_field_name in AVAILABLE_FORCE_FIELDS and force_field_name == "OPENFF":
+            from AutoREACTER.reaction_preparation.ff_wrapper.parameterization_client.openff import (
+                OpenFFBackend,
+            )
+            self.backend = OpenFFBackend(self.inputs.force_field)
 
         # Preserve the original Foyer staging directory.
         self.cache_dir = Path(ARX.staging_dir) / self.backend.name
