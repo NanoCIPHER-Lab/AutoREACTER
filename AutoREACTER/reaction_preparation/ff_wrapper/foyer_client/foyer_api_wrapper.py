@@ -1,11 +1,8 @@
-"""Foyer atom typing for AutoREACTER.
+"""Foyer atom typing and shared LAMMPS outputs for AutoREACTER.
 
-Receives optimized RDKit molecules from the current Session, applies one
-Foyer force field (optionally augmented with an AutoREACTER XML supplement),
-and writes individually typed LAMMPS data files under deterministic names.
-
-This module does NOT yet build global LAMMPS type IDs, .lmpmol files,
-force_field.data, an input script, or the final shared FFFiles bundle.
+Uses optimized in-memory RDKit molecules for per-structure Foyer typing.
+FoyerMergeBuilder combines the typed .data files into globally consistent
+LAMMPS data files, molecule templates, and an FFFiles bundle.
 """
 
 from dataclasses import dataclass
@@ -21,6 +18,9 @@ from rdkit import Chem
 
 from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import (
     ReactionMetadata,
+)
+from AutoREACTER.reaction_preparation.ff_wrapper.foyer_client.foyer_merge_builder import (
+    FoyerMergeBuilder,
 )
 
 if TYPE_CHECKING:
@@ -81,9 +81,10 @@ class FoyerAPIWrapper:
             + self._atom_type_reactions(prepared_reactions_with_3d_mols)
         )
 
-        # The downstream FFWrapper expects self.final_foyer_files, but it
-        # cannot be made from these independent .data files alone: global
-        # type registration and .lmpmol/FFFiles assembly are still required.
+        # Required by FFWrapper; relies on the files written just above.
+        self.final_foyer_files = FoyerMergeBuilder(self.cache_merge_data).build(
+            self.atom_typing_results
+        )
 
     @staticmethod
     def _load_forcefield(
@@ -158,14 +159,12 @@ class FoyerAPIWrapper:
             if mol is None:
                 raise ValueError(f"Missing RDKit molecule for '{molecule_id}'.")
 
-            typed_data_file = self._run_foyer_atom_typing(
-                mol,
-                molecule_id=molecule_id,
-                output_dir=self.cache_molecules,
+            path = self._run_foyer_atom_typing(
+                mol, molecule_id=molecule_id, output_dir=self.cache_molecules
             )
             results.append(
                 FoyerAtomTypingResult(
-                    id=molecule_id, molecule=True, typed_data_file=typed_data_file
+                    id=molecule_id, molecule=True, typed_data_file=path
                 )
             )
         return results
@@ -187,24 +186,20 @@ class FoyerAPIWrapper:
                     raise ValueError(
                         f"Missing RDKit molecule for template '{molecule_id}'."
                     )
-                typed_data_file = self._run_foyer_atom_typing(
+                path = self._run_foyer_atom_typing(
                     mol, molecule_id=molecule_id, output_dir=self.cache_templates
                 )
                 results.append(
                     FoyerAtomTypingResult(
-                        id=molecule_id, molecule=False, typed_data_file=typed_data_file
+                        id=molecule_id, molecule=False, typed_data_file=path
                     )
                 )
         return results
 
     def _run_foyer_atom_typing(
-        self,
-        mol: Chem.Mol,
-        molecule_id: str,
-        *,
-        output_dir: Path,
+        self, mol: Chem.Mol, molecule_id: str, *, output_dir: Path
     ) -> Path:
-        """Apply Foyer to one RDKit Mol and write ``<id>_typed.data`` in the specified output directory.
+        """Apply Foyer to one RDKit Mol and write ``<id>_typed.data``.
 
         Only RDKit objects are used as molecular inputs; .mol files are not
         reloaded. Explicit hydrogens/3D conformers must already be present
@@ -260,7 +255,6 @@ class FoyerAPIWrapper:
         padded = extent + 20.0  # Å: 10 Å padding on each side.
         typed_structure.box = np.array([*padded, 90.0, 90.0, 90.0])
 
-        # Save to the caller-supplied directory, not the atom_typing root.
         out_path = output_dir / f"{molecule_id}_typed.data"
         write_lammpsdata(
             typed_structure,
