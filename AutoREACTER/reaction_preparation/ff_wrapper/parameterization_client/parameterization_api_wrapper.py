@@ -34,13 +34,12 @@ class ParameterizationAPIWrapper:
     def __init__(
         self,
         ARX: "Session",
-        prepared_reactions_with_3d_mols: list[ReactionMetadata],
         backend=None,
     ) -> None:
         self.session = ARX
         self.inputs = ARX.inputs
         self.reaction_metadata = ARX.reaction_metadata
-
+        self.prepared_reactions_with_3d_mols = ARX.reaction_metadata
         # Default to Foyer until additional backends are registered.
         if backend is None:
             from AutoREACTER.reaction_preparation.ff_wrapper.parameterization_client.foyer.foyer_backend import (
@@ -68,7 +67,7 @@ class ParameterizationAPIWrapper:
 
         self.atom_typing_results = (
             self._run_atom_type_monomers(self.inputs.monomers)
-            + self._atom_type_reactions(prepared_reactions_with_3d_mols)
+            + self._atom_type_reactions(self.prepared_reactions_with_3d_mols)
         )
 
         self.final_parameterization_files = LammpsMergeBuilder(

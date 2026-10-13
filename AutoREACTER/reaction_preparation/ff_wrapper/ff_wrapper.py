@@ -79,7 +79,6 @@ class FFWrapper:
             print(f"Routing to Foyer for force field: {ff_name}")
             foyer_wrapper = ParameterizationAPIWrapper(
                                 ARX=self.session, 
-                                prepared_reactions_with_3d_mols=prepared_reactions
                             )
             session.ff_files = foyer_wrapper.final_parameterization_files
             return None
