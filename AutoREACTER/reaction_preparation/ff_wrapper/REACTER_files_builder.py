@@ -28,10 +28,8 @@ import datetime
 import re
 from AutoREACTER.reaction_preparation.deduplication_detector import DeduplicationDetector
 from AutoREACTER.reaction_preparation.ff_wrapper.ff_wrapper import FFFiles
-from AutoREACTER.reaction_preparation.ff_wrapper.modifiers_molecule_files import (
-    modify_types, modify_charges, modify_coords,
-    modify_bonds, modify_angles, modify_dihedrals, modify_impropers,
-)
+from AutoREACTER.reaction_preparation.ff_wrapper import modifiers_molecule_files as extended_modifiers
+from AutoREACTER.reaction_preparation.ff_wrapper.parameterization_client import lammps_molecule_modifiers as standard_modifiers
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -339,16 +337,25 @@ Types
                                 improper_start_index = self._load_molecule_file(template_file_path)
         
         # Process types section - returns DataFrame for mapping and formatted string
-        # Foyer outputs standard LAMMPS .lmpmol rows. Keep the original
-        # LUNAR-specific annotated-row parser unchanged.
-        if str(self.force_field).upper() in {"OPLSAA", "GAFF"}:
-            from AutoREACTER.reaction_preparation.ff_wrapper.foyer_client import (
-                foyer_molecule_modifiers as chosen_modifiers,
-            )
-        else:
-            from AutoREACTER.reaction_preparation.ff_wrapper import (
-                modifiers_molecule_files as chosen_modifiers,
-            )
+        # Select by molecule-file format, not by force-field or backend.
+        # Extended: ID type # hash real_type; standard: ID type.
+        format_flags = []
+        for row in lines[type_start_index:]:
+            if not row:
+                if format_flags:
+                    break
+                continue
+            if row.startswith("#"):
+                continue
+            if row in {"Charges", "Coords", "Bonds", "Angles", "Dihedrals", "Impropers"}:
+                break
+            payload, marker, metadata = row.partition("#")
+            if len(payload.split()) != 2:
+                raise ValueError(f"{template_file_path}: invalid Types row: {row!r}")
+            format_flags.append(bool(marker) and len(metadata.split()) >= 2)
+        if not format_flags or len(set(format_flags)) != 1:
+            raise ValueError(f"{template_file_path}: empty or mixed-format Types section")
+        chosen_modifiers = extended_modifiers if format_flags[0] else standard_modifiers
 
         df_types, types_section, number_of_types, index_change_dict, legacy_mode = chosen_modifiers.modify_types(lines, template_indexes, type_start_index)
         
