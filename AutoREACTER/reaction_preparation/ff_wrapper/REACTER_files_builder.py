@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 class REACTERFiles:
     """Run-level files plus final monomer/reaction metadata lists."""
     force_field_data: Path
-    in_file: Path
+    in_file: Optional[Path]
     molecule_files: list
     template_files: list
 
@@ -339,25 +339,36 @@ Types
                                 improper_start_index = self._load_molecule_file(template_file_path)
         
         # Process types section - returns DataFrame for mapping and formatted string
-        df_types, types_section, number_of_types, index_change_dict, legacy_mode = modify_types(lines, template_indexes, type_start_index)
+        # Foyer outputs standard LAMMPS .lmpmol rows. Keep the original
+        # LUNAR-specific annotated-row parser unchanged.
+        if str(self.force_field).upper() in {"OPLSAA", "GAFF"}:
+            from AutoREACTER.reaction_preparation.ff_wrapper.foyer_client import (
+                foyer_molecule_modifiers as chosen_modifiers,
+            )
+        else:
+            from AutoREACTER.reaction_preparation.ff_wrapper import (
+                modifiers_molecule_files as chosen_modifiers,
+            )
+
+        df_types, types_section, number_of_types, index_change_dict, legacy_mode = chosen_modifiers.modify_types(lines, template_indexes, type_start_index)
         
         # Process charges section using atom mapping from types
-        charge_section = modify_charges(lines, df_types, charge_start_index)
+        charge_section = chosen_modifiers.modify_charges(lines, df_types, charge_start_index)
         
         # Process coordinates section using atom mapping from types
-        coord_section = modify_coords(lines, df_types, coord_start_index)
+        coord_section = chosen_modifiers.modify_coords(lines, df_types, coord_start_index)
         
         # Process bonds section and get count
-        bond_section, number_of_bonds = modify_bonds(lines, df_types, bond_start_index, legacy_mode=legacy_mode)
+        bond_section, number_of_bonds = chosen_modifiers.modify_bonds(lines, df_types, bond_start_index, legacy_mode=legacy_mode)
         
         # Process angles section and get count
-        angle_section, number_of_angles = modify_angles(lines, df_types, angle_start_index, legacy_mode=legacy_mode)
+        angle_section, number_of_angles = chosen_modifiers.modify_angles(lines, df_types, angle_start_index, legacy_mode=legacy_mode)
         
         # Process dihedrals section and get count
-        dihedral_section, number_of_dihedrals = modify_dihedrals(lines, df_types, dihedral_start_index, legacy_mode=legacy_mode)
+        dihedral_section, number_of_dihedrals = chosen_modifiers.modify_dihedrals(lines, df_types, dihedral_start_index, legacy_mode=legacy_mode)
         
         # Process impropers section and get count
-        improper_section, number_of_impropers = modify_impropers(lines, df_types, improper_start_index, legacy_mode=legacy_mode)
+        improper_section, number_of_impropers = chosen_modifiers.modify_impropers(lines, df_types, improper_start_index, legacy_mode=legacy_mode)
         
         # Assemble all sections into final molecule file format
         modified_molecule_file = self._molecule_file_format(number_of_types, number_of_bonds, number_of_angles, 
@@ -636,7 +647,7 @@ Types
 
                 return pre_out, post_out, map_path
     
-    def _copy_lunar_files_to_cache(self, ff_files: FFFiles) -> tuple[Path, Path]:
+    def _copy_lunar_files_to_cache(self, ff_files: FFFiles) -> tuple[Path, Optional[Path]]:
         """
         Copy LUNAR output files into cache_dir.
 
@@ -658,8 +669,10 @@ Types
                 f"Force field data was not copied successfully to '{ff_dest}'."
             )
 
-        in_dest = self.cache_dir / ff_files.in_file.name
-        shutil.copy2(ff_files.in_file, in_dest)
+        in_dest = None
+        if ff_files.in_file is not None:
+            in_dest = self.cache_dir / ff_files.in_file.name
+            shutil.copy2(ff_files.in_file, in_dest)
 
         monomers_by_key = {}
         for monomer_entry in self.session.inputs.monomers:
@@ -791,8 +804,7 @@ Types
 
         if force_field_data is None:
             raise FileNotFoundError("force_field.data was not copied to final output.")
-        if in_file is None:
-            raise FileNotFoundError("LAMMPS input file was not copied to final output.")
+        # Input script is optional: LUNAR provides it, Foyer does not.
 
         # Store final monomer molecule paths directly on MonomerEntry.
         for monomer_entry in session.inputs.monomers:
