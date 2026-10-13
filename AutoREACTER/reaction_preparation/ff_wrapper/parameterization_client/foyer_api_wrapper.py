@@ -19,7 +19,7 @@ from rdkit import Chem
 from AutoREACTER.reaction_preparation.reaction_processor.prepare_reactions import (
     ReactionMetadata,
 )
-from AutoREACTER.reaction_preparation.ff_wrapper.foyer_client.foyer_merge_builder import (
+from AutoREACTER.reaction_preparation.ff_wrapper.foyer_client.lammps_merge_builder import (
     FoyerMergeBuilder,
 )
 

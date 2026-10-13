@@ -1,10 +1,10 @@
-"""Merge independently Foyer-typed mBuild LAMMPS data files for AutoREACTER.
+"""Merge independently parameterized LAMMPS data files for AutoREACTER.
 
 Works on existing .data files, WITHOUT re-atom-typing or reading .mol files.
 Maintains global atom/bond/angle/dihedral/improper IDs, writes per-structure
 .data/.molecule files and a coefficient-only force_field.data with official
 LAMMPS Type Labels sections. Does NOT generate an input script.
-Assumes Foyer/mBuild full atom style, units real.
+Currently supports mBuild-compatible full atom style, units real.
 
 Unsupported/missing or conflicting parameters cause an explicit error rather
 than silently creating an unparameterized reactive force field.
@@ -262,7 +262,7 @@ def parse_lammps_data(path: Path) -> ParsedData:
     return ParsedData(path, counts, atom_labels, masses, params, styles, atoms, topology)
 
 
-class FoyerMergeBuilder:
+class LammpsMergeBuilder:
     """Compile globally consistent force-field and molecule/template file IDs."""
 
     def __init__(self, merge_dir: Path):
@@ -275,7 +275,7 @@ class FoyerMergeBuilder:
     def build(self, typing_results: Iterable[object]) -> FFFiles:
         results = list(typing_results)
         if not results:
-            raise ValueError("No Foyer-typed structures to merge")
+            raise ValueError("No parameterized structures to merge")
         parsed = [(result, parse_lammps_data(result.typed_data_file)) for result in results]
         atom_ids: dict[str, int] = {}
         atom_info: dict[str, tuple[float, tuple[float, ...]]] = {}
@@ -384,11 +384,11 @@ class FoyerMergeBuilder:
             molecule_files=molecule_files, template_files=templates,
             force_field_data=force_field_data, in_file=None,
         )
-        print("[Foyer merge] Global types: " + ", ".join(
+        print("[LAMMPS merge] Global types: " + ", ".join(
             f"{cat}={len(atom_ids) if cat == 'atom' else len(bonded_params[cat])}"
             for cat in CATEGORIES
         ))
-        print(f"[Foyer merge] Wrote {len(molecule_files)} monomer(s), {len(templates)} reaction(s) -> {self.merge_dir}")
+        print(f"[LAMMPS merge] Wrote {len(molecule_files)} monomer(s), {len(templates)} reaction(s) -> {self.merge_dir}")
         return final
 
     @staticmethod
@@ -397,7 +397,7 @@ class FoyerMergeBuilder:
                     atom_params: dict[int, tuple[str, float, tuple[float, ...]]],
                     bonded_params: dict[str, list[Parameter]], styles: dict[str, str],
                     coefficient_only: bool = False) -> None:
-        lines = [f"AutoREACTER Foyer global types: {path.name}; units = real", ""]
+        lines = [f"AutoREACTER global types: {path.name}; units = real", ""]
         lines.append(f"{len(atoms)} atoms")
         for cat in BONDED:
             lines.append(f"{len(topology[cat])} {TOPOLOGY_SECTIONS[cat].lower()}")
@@ -464,7 +464,7 @@ class FoyerMergeBuilder:
     @staticmethod
     def _write_molecule(path: Path, label: str, atoms: dict[int, list[str]],
                         topology: dict[str, list[list[int]]]) -> None:
-        lines = [f"# AutoREACTER Foyer {label}: global numeric type IDs", "",
+        lines = [f"# AutoREACTER {label}: global numeric type IDs", "",
                  f"{len(atoms)} atoms"]
         for cat in BONDED:
             lines.append(f"{len(topology[cat])} {TOPOLOGY_SECTIONS[cat].lower()}")
@@ -479,3 +479,6 @@ class FoyerMergeBuilder:
             lines.extend(" ".join(map(str, row)) for row in topology[cat])
         path.write_text("\n".join(lines) + "\n")
 
+
+# Backward compatibility for the existing Foyer backend.
+FoyerMergeBuilder = LammpsMergeBuilder
