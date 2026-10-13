@@ -1,13 +1,13 @@
-"""Standard LAMMPS molecule-file modifiers for AutoREACTER's Foyer pathway.
+"""Standard LAMMPS molecule-file modifiers for AutoREACTER's parameterization pathway.
 
-Companion to foyer_merge_builder.py.  The LUNAR modifiers expect extended
+Shared by Python-based parameterization backends.  The LUNAR modifiers expect extended
 nonstandard rows (``ID type # hash real_type``), whereas LAMMPS .molecule
 files use standard ``ID type``, ``ID charge``, and so on.  This module exposes
-the SAME six functions and return signatures as modifiers_molecule_files.py,
+the SAME seven functions and return signatures as modifiers_molecule_files.py,
 without relying on synthetic comment fields or changing the LUNAR parser.
 
 All atom/template index filtering is 1-based.  Bonded interaction numbers
-are global type IDs allocated by FoyerMergeBuilder, and are not renumbered.
+are global type IDs assigned by the parameterization backend, and are not renumbered.
 """
 from __future__ import annotations
 
