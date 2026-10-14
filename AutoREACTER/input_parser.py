@@ -175,6 +175,8 @@ class SimulationSetup:
     wildcards: bool = False
     deduplicate_reaction_templates: bool = True
     write_second_reaction_stage: bool = False
+    initiator_typing: bool = False
+    
 
 
 class InputParser:
@@ -219,8 +221,9 @@ class InputParser:
             validated_simulations["systems"],
         )
 
-        force_field = self._validate_force_field(
-            inputs.get("force_field", None)
+        force_field, initiator_typing = self._validate_force_field(
+            inputs.get("force_field", None),
+            initiator_typing=inputs.get("initiator_typing", False)
         )
 
         reaction_iteration_depth = self._validate_reaction_iteration_depth(
@@ -298,6 +301,7 @@ class InputParser:
             wildcards=wildcards,
             deduplicate_reaction_templates=deduplicate_reaction_templates,
             write_second_reaction_stage=write_second_reaction_stage,
+            initiator_typing=initiator_typing
         )
 
     def molecule_representation_of_initial_molecules(
@@ -508,12 +512,12 @@ class InputParser:
         "gaff": "GAFF",
     }
 
-    def _validate_force_field(self, force_field: Any) -> ForceFieldType:
+    def _validate_force_field(self, force_field: Any, initiator_typing: bool = False) -> tuple[ForceFieldType, bool]:
         """
         Validates and normalizes the force field input.
         """
         if force_field is None:
-            return "PCFF"
+            return "PCFF", initiator_typing
 
         if not isinstance(force_field, str) or not force_field.strip():
             raise InputSchemaError(
@@ -536,8 +540,19 @@ class InputParser:
                 f"Force field '{canonical_force_field}' is currently not supported in the LUNAR workflow. "
                 "Please use a supported force field."
             )
+        self._validate_initiator_typing(initiator_typing, canonical_force_field)
 
-        return canonical_force_field
+        return canonical_force_field, initiator_typing
+
+    def _validate_initiator_typing(self, initiator_typing: bool, force_field: ForceFieldType) -> None:
+        LUNAR_SUPPORTED = ["PCFF-IFF", "PCFF", "Compass", "CVFF-IFF", "CVFF", "Clay-FF", "DREIDING"]
+        if initiator_typing and force_field not in LUNAR_SUPPORTED:
+            raise CompatibilityError(
+                f"Initiator typing is supported only with LUNAR-compatible force fields. '{force_field}' is not supported. "
+                "Please use a supported force field."
+            )
+        
+
 
     def _validate_composition(
         self,
