@@ -130,7 +130,7 @@ class ReactionProgression:
 
     def reaction_progression(
         self,
-        max_loop: int = MAX_LOOP,
+        max_loop: int | None = None,
     ) -> list["ReactionMetadata"]:
         """Run progression until no further useful reactions are generated.
 
