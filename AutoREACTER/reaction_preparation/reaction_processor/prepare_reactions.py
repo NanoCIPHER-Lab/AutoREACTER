@@ -135,6 +135,7 @@ class ReactionMetadata:
     post_reaction_file: Optional[Path] = None
     is_radical: bool = False
     radical_atom_idxs: Optional[tuple[int, ...]] = ()
+    reactant_atom_origins: dict[int, tuple[str, str, int]] | None = None
     activity_stats: bool = True
 
 class PrepareReactions:
@@ -1265,12 +1266,16 @@ class PrepareReactions:
         if not mols:
             return None
 
+        # Scale large grids to avoid Cairo PNG size limits.
+        rows = (len(mols) + 1) // 2
+        panel_size = min(1000, max(1, 12000 // rows))
+
         return Draw.MolsToGridImage(
             mols,
             legends=names,
             molsPerRow=2,
             highlightAtomLists=highlight_lists,
             highlightAtomColors=highlight_colors,
-            subImgSize=(1000, 1000),
+            subImgSize=(panel_size, panel_size),
             useSVG=False,
         )
