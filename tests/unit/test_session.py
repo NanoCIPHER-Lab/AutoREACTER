@@ -457,13 +457,19 @@ def test_resolve_output_dir_absolute_path_is_preserved(
     assert result == absolute_output
 
 
-def test_resolve_output_dir_windows_forward_slash_path():
+def test_resolve_output_dir_windows_forward_slash_path(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        session_module,
+        "_is_wsl",
+        lambda: True,
+    )
+
     input_path = Path("/tmp/input.json")
 
     result = session_module._resolve_output_dir(
-        raw_output_dir=(
-            "C:/Users/Janitha/Documents/ARX"
-        ),
+        raw_output_dir="C:/Users/Janitha/Documents/ARX",
         input_path=input_path,
         simulation_name="sim",
     )
@@ -473,13 +479,19 @@ def test_resolve_output_dir_windows_forward_slash_path():
     ).resolve()
 
 
-def test_resolve_output_dir_windows_backslash_path():
+def test_resolve_output_dir_windows_backslash_path(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        session_module,
+        "_is_wsl",
+        lambda: True,
+    )
+
     input_path = Path("/tmp/input.json")
 
     result = session_module._resolve_output_dir(
-        raw_output_dir=(
-            r"D:\Projects\AutoREACTER\outputs"
-        ),
+        raw_output_dir=r"D:\Projects\AutoREACTER\outputs",
         input_path=input_path,
         simulation_name="sim",
     )
@@ -489,7 +501,15 @@ def test_resolve_output_dir_windows_backslash_path():
     ).resolve()
 
 
-def test_resolve_output_dir_windows_drive_is_lowercased():
+def test_resolve_output_dir_windows_drive_is_lowercased(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        session_module,
+        "_is_wsl",
+        lambda: True,
+    )
+
     result = session_module._resolve_output_dir(
         raw_output_dir=r"E:\Research\run",
         input_path=Path("/tmp/input.json"),
@@ -505,28 +525,30 @@ def test_resolve_output_dir_expands_user_home(
     tmp_path,
     monkeypatch,
 ):
-    fake_home = tmp_path / "home"
-    fake_home.mkdir()
+    home = tmp_path / "home"
+    home.mkdir()
 
     monkeypatch.setenv(
         "HOME",
-        str(fake_home),
+        str(home),
     )
+
+    monkeypatch.setenv(
+        "USERPROFILE",
+        str(home),
+    )
+
+    input_path = tmp_path / "input.json"
 
     result = session_module._resolve_output_dir(
         raw_output_dir="~/arx_output",
-        input_path=tmp_path / "input.json",
-        simulation_name="sim",
+        input_path=input_path,
+        simulation_name="demo",
     )
 
     assert result == (
-        fake_home / "arx_output"
+        home / "arx_output"
     ).resolve()
-
-
-# =============================================================================
-# read_input
-# =============================================================================
 
 
 def test_read_input_calls_initialization_once(
@@ -794,7 +816,7 @@ def test_read_input_uses_absolute_custom_output_dir(
     assert custom_output.is_dir()
 
 
-def test_read_input_clears_existing_output_directory(
+def test_read_input_preserves_existing_output_directory(
     tmp_path,
     monkeypatch,
 ):
@@ -818,7 +840,8 @@ def test_read_input_clears_existing_output_directory(
     nested = output_dir / "old_folder"
     nested.mkdir()
 
-    (nested / "old_nested.txt").write_text(
+    old_nested_file = nested / "old_nested.txt"
+    old_nested_file.write_text(
         "old nested data",
         encoding="utf-8",
     )
@@ -837,12 +860,23 @@ def test_read_input_clears_existing_output_directory(
 
     assert result.output_dir == output_dir.resolve()
 
-    assert not old_file.exists()
-    assert not nested.exists()
+    assert old_file.exists()
+    assert old_file.read_text(
+        encoding="utf-8"
+    ) == "old data"
 
-    assert (
+    assert nested.exists()
+    assert old_nested_file.exists()
+
+    assert old_nested_file.read_text(
+        encoding="utf-8"
+    ) == "old nested data"
+
+    assert result.images_dir == (
         output_dir / "images"
-    ).is_dir()
+    ).resolve()
+
+    assert result.images_dir.is_dir()
 
 
 def test_read_input_rejects_output_path_that_is_file(

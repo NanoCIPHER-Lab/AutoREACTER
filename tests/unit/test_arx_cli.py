@@ -206,6 +206,12 @@ def test_arxcli_constructor_initializes_expected_state(
         fake_ensure_reactions,
     )
 
+    monkeypatch.setattr(
+        ARXCLI,
+        "_dump_citations",
+        lambda self: None,
+    )
+
     cli = ARXCLI(input_path)
 
     assert cli.input == input_path
@@ -303,6 +309,12 @@ def test_arxcli_instances_do_not_share_waterfall_state(
     monkeypatch.setattr(
         ARXCLI,
         "_ensure_reactions_detected",
+        lambda self: None,
+    )
+
+    monkeypatch.setattr(
+        ARXCLI,
+        "_dump_citations",
         lambda self: None,
     )
 

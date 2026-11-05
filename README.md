@@ -1,12 +1,20 @@
-
 <p align="center">
   <img src="https://raw.githubusercontent.com/NanoCIPHER-Lab/AutoREACTER/main/docs/source/_static/logo.png" alt="AutoREACTER logo" width="220">
 </p>
 
 <p align="center"><b>Automated generation of LAMMPS/REACTER-ready reaction-template workflows.</b></p>
 
-> **Status:** AutoREACTER is currently in **v0.3** and under active development.
-> APIs, configuration schemas, reaction libraries, and core functionality may change.
+# AutoREACTER
+
+**Automated Generation of LAMMPS-Ready Reaction Templates for Polymerization Simulations**
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23046173.svg)](https://doi.org/10.5281/zenodo.23046173)
+[![GitHub Release](https://img.shields.io/github/v/release/NanoCIPHER-Lab/AutoREACTER)](https://github.com/NanoCIPHER-Lab/AutoREACTER/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+AutoREACTER automates the generation of reaction templates and molecular
+inputs for reactive polymer molecular dynamics simulations using LAMMPS
+`fix bond/react`.
 
 ## Documentation
 
@@ -23,7 +31,7 @@ Install AutoREACTER from PyPI:
 
 ```bash
 python -m pip install AutoREACTER
-````
+```
 
 AutoREACTER also requires **LUNAR** for atom typing. See the
 [Getting Started documentation](https://autoreacter.org/getting-started.html)

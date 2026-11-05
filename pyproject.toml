@@ -31,16 +31,14 @@ authors = [
 # The external Python packages required to run AutoREACTER.
 # Pip will automatically install these when someone installs your package.
 dependencies = [
-    "numpy",
-    "pandas",
-    "networkx",
-    "rdkit",
-    "pillow",
-    "setuptools",
-    "matplotlib",
-    "scipy",
+    "numpy==2.5.3",
+    "pandas>=3.0.6,<4",
+    "networkx>=3.7,<4",
+    "rdkit>=2026.3.6,<2027",
+    "pillow>=12.3.0,<13",
+    "matplotlib>=3.11.2,<4",
+    "scipy>=1.18.1,<2",
 ]
-
 
 # ==============================================================================
 # DYNAMIC FIELD MAPPING
